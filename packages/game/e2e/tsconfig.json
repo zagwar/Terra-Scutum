@@ -1,0 +1,9 @@
+{
+  // Playwright tests: they run in Node and also contain code that runs inside the browser page.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["."]
+}

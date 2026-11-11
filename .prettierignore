@@ -1,0 +1,10 @@
+node_modules
+dist
+package-lock.json
+# The design doc is written by the designer; don't reformat it.
+*.md
+docs/
+LICENSE
+packages/game/e2e/screenshots
+packages/game/test-results
+packages/game/playwright-report

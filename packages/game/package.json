@@ -1,0 +1,24 @@
+{
+  "name": "@terra-scutum/game",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The browser game: Babylon.js rendering, React UI, sim worker",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.35.0",
+    "@terra-scutum/sim": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.8"
+  }
+}

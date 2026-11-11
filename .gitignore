@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Playwright output (screenshots are looked at during development, not committed)
+packages/game/e2e/screenshots/
+packages/game/test-results/
+packages/game/playwright-report/
+
+.DS_Store
+*.log

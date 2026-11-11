@@ -1,0 +1,202 @@
+:root {
+  --color-background: #05080d;
+  --color-panel: rgba(12, 18, 26, 0.88);
+  --color-panel-border: #2a3a4a;
+  --color-text: #d7dee6;
+  --color-text-dim: #8b99a8;
+  --color-accent: #c8a85a;
+  --color-good: #7fc08a;
+  --color-pending: #d9b866;
+  --color-bad: #e07a6a;
+  --font-ui: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, 'Liberation Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* The 3D view fills the window. */
+#scene {
+  position: fixed;
+  inset: 0;
+}
+
+.scene-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: none;
+}
+
+/* The UI sits on top. Clicks pass through to the 3D view except on panels. */
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+}
+
+.title-block {
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+.game-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.game-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.panel {
+  pointer-events: auto;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-top: 2px solid var(--color-accent);
+  border-radius: 2px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.panel-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.foundation-panel {
+  width: 290px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 16px;
+  margin: 0 0 14px;
+}
+
+.facts dt {
+  color: var(--color-text-dim);
+}
+
+.facts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.facts dd[data-status='good'] {
+  color: var(--color-good);
+}
+
+.facts dd[data-status='pending'] {
+  color: var(--color-pending);
+}
+
+.facts dd[data-status='bad'] {
+  color: var(--color-bad);
+}
+
+.button {
+  width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: #1b2a3a;
+  border: 1px solid #3a5068;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #24384d;
+  border-color: var(--color-accent);
+}
+
+.button:active:not(:disabled) {
+  background: #162230;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 5, 8, 0.7);
+  pointer-events: auto;
+}
+
+.error-panel {
+  max-width: 720px;
+  max-height: 100%;
+  overflow: auto;
+  border-top-color: var(--color-bad);
+}
+
+.error-panel .panel-title {
+  color: var(--color-bad);
+}
+
+.error-detail {
+  margin: 10px 0 0;
+  padding: 10px;
+  max-height: 40vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  color: var(--color-text-dim);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-panel-border);
+}

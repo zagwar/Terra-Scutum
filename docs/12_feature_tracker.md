@@ -10,7 +10,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 
 | ID | Feature | Milestone | Status | Notes |
 |---|---|---|---|---|
-| F132 | Core architecture: npm-workspaces monorepo (sim, game, runner, tools), sim in a Web Worker, React UI shell, Babylon scene, data loading with zod schemas, daily tick, seeded RNG, performance budget, save versioning, Vitest + Playwright + CI, Cloudflare Pages previews | M1 | Planned | Section 17.3; build first; **⚑ Fable: foundations** |
+| F132 | Core architecture: npm-workspaces monorepo (sim, game, runner, tools), sim in a Web Worker, React UI shell, Babylon scene, data loading with zod schemas, daily tick, seeded RNG, performance budget, save versioning, Vitest + Playwright + CI, Cloudflare Pages previews | M1 | Done | Section 17.3; build first; **⚑ Fable: foundations**. Implementation notes: section 14 "What F132 built". The page shows a temporary "Foundation check" panel until F122 |
 | F01 | 3D world map: province meshes, adjacency graph, click a province for its info panel | M1 | Planned | Provinces loaded from a data file |
 | F02 | Countries layer: ownership of provinces, political overlay, country panel | M1 | Planned | |
 | F70 | Sea zones: ocean layer, adjacency to coastal provinces, sea zone overlay | M1 | Planned | Section 4.5 |

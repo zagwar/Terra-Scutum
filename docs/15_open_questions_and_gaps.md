@@ -72,8 +72,8 @@ All system design decisions have been made (2026-11-11). Resolved items are kept
 - [ ] **Balance numbers** for everything marked **[DEFAULT]**, tuned with the campaign runner.
 
 ### 17.3 Technical prep
-- [ ] **Data file schemas:** the exact fields for each JSON data file (regions, countries, provinces, sea zones, buildings, goods, techs, units, bugs, events). Define each schema when its system is first built; regions, countries, provinces and sea zones in M1.
+- [ ] **Data file schemas:** the exact fields for each JSON data file (regions, countries, provinces, sea zones, buildings, goods, techs, units, bugs, events). Define each schema when its system is first built; regions, countries, provinces and sea zones in M1. *(F132 built the framework: each data file has a zod schema listed in `packages/sim/src/data/game-data.ts`; the first file is `data/game_config.json`.)*
 - [x] **Glossary:** a starter glossary is in `GAME_DESIGN.md`. Add terms as new systems are built.
-- [ ] **Performance budget:** **[DEFAULT target, to verify in M1]** daily tick ≤ 30 ms on average and weekly calculations ≤ 150 ms on a mid-range PC, with ~1,000 provinces and every country simulated, so the top game speed can run several days per second. The campaign runner reports tick times.
-- [ ] **Save format versioning**, so saves survive game updates.
-- [ ] **Repository setup:** create the monorepo described in section 14 (sim, game, runner, tools; tests; CI; Cloudflare Pages previews) as the first step of M1 (F132).
+- [ ] **Performance budget:** **[DEFAULT target, to verify in M1]** daily tick ≤ 30 ms on average and weekly calculations ≤ 150 ms on a mid-range PC, with ~1,000 provinces and every country simulated, so the top game speed can run several days per second. The campaign runner reports tick times. *(F132: the targets live in `data/game_config.json`; the runner reports daily and weekly tick times against them and CI fails if they're exceeded. Still to verify with real data at the end of M1.)*
+- [x] **Save format versioning**, so saves survive game updates. *(F132: save format version 1 with a migration chain in `packages/sim/src/core/save.ts`; storing, compressing and export/import are F40.)*
+- [x] **Repository setup:** create the monorepo described in section 14 (sim, game, runner, tools; tests; CI; Cloudflare Pages previews) as the first step of M1 (F132).

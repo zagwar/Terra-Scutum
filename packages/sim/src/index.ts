@@ -1,0 +1,15 @@
+/**
+ * Public API of the sim package. Everything outside `packages/sim` imports
+ * from here ('@terra-scutum/sim'), never from the files inside.
+ */
+export * from './core/calendar';
+export * from './core/commands';
+export * from './core/events';
+export * from './core/game-state';
+export * from './core/rng';
+export * from './core/save';
+export * from './core/sim-error';
+export * from './core/snapshot';
+export * from './core/systems';
+export * from './data/game-config';
+export * from './data/game-data';

@@ -1,0 +1,10 @@
+{
+  // Sim source plus its tests (the tests run in Node, so Node types are allowed here).
+  // The sim source alone is checked more strictly by tsconfig.src.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}
