@@ -52,11 +52,12 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 
 1. Go to **claude.ai/code**.
 2. Under the message box, select **terra-scutum** (branch **main**).
+   - **Choose Claude Fable 5.2 as the model** for this first session. The first feature (the game's foundations) is the most important place to use it.
 3. Paste your **first prompt** (copy everything in the box):
    ```
    This is the first session for my game, Terra Scutum. We're in a Claude Code cloud session in the browser. Read CLAUDE.md and GAME_DESIGN.md first, then follow the "First session (start of M1)" steps in CLAUDE.md:
    1. Check the tools in this cloud environment and set up anything missing.
-   2. Before starting F132 (core architecture), remind me about Claude Fable 5.2 and wait for me.
+   2. F132 (core architecture) is a ⚑ Fable task. I've selected Claude Fable 5.2 for this session; if you're not running as Fable, tell me before starting.
    Then build F132 only. Read docs/12_feature_tracker.md, docs/13_technical.md and docs/15_open_questions_and_gaps.md (section 17.3) for it.
    After that, walk me through connecting Cloudflare Pages step by step so I get preview links.
    I'm a complete beginner (no programming or GitHub experience), so explain things simply and walk me through anything I need to do myself step by step.
@@ -89,7 +90,7 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 ## Part 4: Playing the game
 - **Newest feature (not merged yet):** the **preview link** on its pull request.
 - **Latest accepted version:** your main game link, `https://terra-scutum.pages.dev` (or similar; Cloudflare shows it after setup). Bookmark it.
-- **Saves** are stored in your browser. The game will have **Export save** / **Import save** buttons to back them up.
+- **Saves** are stored in your browser, **separately for each link**: a save made on the main link won't appear on a preview link, and vice versa. To move a save, use the game's **Export save** / **Import save** buttons. Clearing your browser data deletes saves, so export important ones.
 - If the game feels slow, try **Chrome** or **Edge**, and close other heavy tabs.
 
 ---

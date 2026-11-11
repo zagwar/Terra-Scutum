@@ -72,7 +72,7 @@ terra-scutum/
 ### Map data [DEFAULT]
 - Build provinces from public-domain map data (for example Natural Earth's first-level administrative boundaries). The import tool in `packages/tools` simplifies outlines, merges small ones to hit the target province count, computes adjacency, and writes `data/provinces.json`, `data/countries.json`, `data/regions.json`, `data/sea_zones.json` plus compact geometry files.
 - **Source downloads:** if the cloud machine can't download a source file (network allowlist), the tool says which file and the designer either allows that domain in the environment settings or uploads the file to the repo. Large source files are processed once, and only the much smaller game-ready output is committed.
-- **File size limit:** Cloudflare Pages serves files up to 25 MiB, so terrain and geometry are split into **tiles/chunks**, which is also how they're streamed by zoom level.
+- **Hosting limits (Cloudflare Pages free plan):** files up to 25 MiB, up to 20,000 files per site, and 500 builds per month. Terrain and geometry are split into **tiles/chunks** (also how they're streamed by zoom level), and Claude Code pushes at the end of a feature and after fixes, not after every small change.
 
 ### Rendering a living map [DEFAULT] (art direction in section 12.5)
 - **Flat 3D map** (not a globe), like HOI4, with an angled top-down camera (Babylon `ArcRotateCamera` or a custom strategy camera).
@@ -117,6 +117,6 @@ The sim serializes `GameState` (with a **save format version**) to compressed JS
 - **Headless campaign runner:** `npm run runner -- --days 3650 --seed 42` simulates N days with AI controlling every country, including the player's, and prints a summary (Swarm control %, population, hive tiers, refugees, relations, nukes used, **average and worst tick time**). Use it to catch crashes, runaway numbers and balance problems, and to check the performance budget.
 - **Browser and visual tests:** Playwright opens the real game in headless Chromium, loads a test scenario through debug hooks (`?debug=scenario-name`), moves the camera, clicks, and **saves screenshots**. Claude Code **looks at the screenshots** to check the result (missing models, wrong colors, broken layout, overlapping text). Stable views can also be compared against saved baseline images to catch accidental visual changes.
 - **Rendering in the cloud:** headless Chromium renders with a software graphics backend (WebGL through SwiftShader), which is slow but enough for screenshots. If it can't render a scene, say so and ask the designer to check the preview link.
-- **CI:** GitHub Actions runs typecheck, lint, data validation, unit tests and e2e tests on every pull request, so problems show up on the PR page.
+- **CI:** GitHub Actions runs typecheck, lint, data validation, unit tests and e2e tests on every pull request, so problems show up on the PR page. Private repositories on GitHub Free get a limited number of Actions minutes per month, so keep the CI run short (target under about 5 minutes; cache npm and the Playwright browser).
 - **Preview link:** every pull request gets a Cloudflare Pages preview link. The designer plays it before merging.
 - **What only the designer can test:** whether it's **fun**, whether it **feels** right, and whether it matches the vision.
