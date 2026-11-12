@@ -21,6 +21,7 @@ import {
 import {
   LINE_OTHER_COUNTRY,
   LINE_OTHER_REGION,
+  type LineGeometry,
   type MapPolygon,
   buildInnerBorders,
   buildLineGeometry,
@@ -31,6 +32,7 @@ import {
   decodePolygons,
   outlineOf,
   triangulate,
+  updateBorderKinds,
   wholeLine,
 } from './map-geometry';
 import {
@@ -39,6 +41,7 @@ import {
   createFillMaterial,
   createFillMesh,
   createLineMesh,
+  uploadLineKinds,
 } from './map-meshes';
 import { createMapProjection } from './map-projection';
 import { createShapeLookup } from './shape-lookup';
@@ -54,6 +57,10 @@ import { createShapeLookup } from './shape-lookup';
  *   scrolling never reaches an edge.
  * - Province colors come from a one-pixel-per-province texture, so map modes
  *   and highlights are instant.
+ * - Ownership (F02) comes from the sim through `setProvinceOwners`: the
+ *   political colors and the country borders follow the current owners.
+ *   Border lines know the provinces on their two sides, so a change of
+ *   owner only rewrites one small number per vertex of the lines it affects.
  * - Picking uses the shape lookup (exact, no GPU readback).
  * - The land has two levels of detail. Far away: simplified shapes, drawn as
  *   three copies. Close up: the full shapes, cut into chunks; only the chunks
@@ -92,6 +99,8 @@ export interface MapStats {
 export interface MapView {
   getStats(): MapStats;
   setMode(mode: MapMode): void;
+  /** Who owns each province now (country indices, from the sim's snapshot). */
+  setProvinceOwners(provinceOwner: Uint16Array): void;
   setSelectedProvince(province: number | null): void;
   /** The province index at a longitude/latitude, or -1 for the sea. */
   provinceAt(longitude: number, latitude: number): number;
@@ -132,6 +141,7 @@ function landLineStyles(mode: MapMode, lines: MapViewConfig['lines']): LineStyle
   return {
     plain: lines.provinceBorder,
     coast: lines.coast,
+    // Political and provinces modes: country borders stand out. Regions mode: region borders.
     emphasis: mode === 'regions' ? lines.regionBorder : lines.countryBorder,
     emphasisFlag: mode === 'regions' ? LINE_OTHER_REGION : LINE_OTHER_COUNTRY,
   };
@@ -228,7 +238,11 @@ export async function createMapView(
   allMeshes.push(...addWrapCopies(seaFill, worldWidth), ...addWrapCopies(seaLines, worldWidth));
 
   // The land. Both levels of detail share the color table and the materials.
-  let mode: MapMode = 'provinces';
+  let mode: MapMode = 'political';
+  // Until the sim's first owners arrive: the starting owners.
+  let owners: Uint16Array = world.provinceCountry.slice();
+  /** Every land border mesh with its geometry, to change border kinds when provinces change owner. */
+  const borderMeshes: { readonly mesh: Mesh; readonly geometry: LineGeometry }[] = [];
   const provinceTable = createColorTable('province-colors', scene, world.provinceIds.length);
   const provinceMaterial = createFillMaterial('provinces-material', scene, provinceTable);
   const landLines = lineMaterial('borders-material', landLineStyles(mode, config.lines));
@@ -255,17 +269,20 @@ export async function createMapView(
           LAND_GROUP,
         ),
       );
-    for (const [chunk, spans] of chunkLines(bordersOf(topology), grid))
-      meshes.push(
-        createLineMesh(
-          `borders-${name}-${chunk}`,
-          scene,
-          buildLineGeometry(spans),
-          landLines.material,
-          LAND_GROUP,
-          0,
-        ),
+    for (const [chunk, spans] of chunkLines(bordersOf(topology), grid)) {
+      const geometry = buildLineGeometry(spans);
+      updateBorderKinds(geometry, owners, world.provinceRegion);
+      const mesh = createLineMesh(
+        `borders-${name}-${chunk}`,
+        scene,
+        geometry,
+        landLines.material,
+        LAND_GROUP,
+        0,
       );
+      borderMeshes.push({ mesh, geometry });
+      meshes.push(mesh);
+    }
     allMeshes.push(...meshes);
     return meshes;
   };
@@ -309,7 +326,7 @@ export async function createMapView(
   };
 
   // ── Colors and highlights ─────────────────────────────────────────────────
-  let baseColors = provinceBaseColors(mode, world, config.colors);
+  let baseColors = provinceBaseColors(mode, world, config.colors, owners);
   const shownColors = new Uint8Array(baseColors.length);
   let selected: number | null = null;
   let hovered: number | null = null;
@@ -489,9 +506,23 @@ export async function createMapView(
     setMode(next) {
       if (next === mode) return;
       mode = next;
-      baseColors = provinceBaseColors(mode, world, config.colors);
+      baseColors = provinceBaseColors(mode, world, config.colors, owners);
       refreshColors();
       landLines.setStyles(landLineStyles(mode, config.lines));
+    },
+    setProvinceOwners(provinceOwner) {
+      if (provinceOwner.length !== owners.length)
+        throw new Error('the owners do not match the number of provinces');
+      if (provinceOwner.every((owner, province) => owner === owners[province])) return;
+      owners = provinceOwner.slice();
+      if (mode === 'political') {
+        baseColors = provinceBaseColors(mode, world, config.colors, owners);
+        refreshColors();
+      }
+      // Country borders follow the owners. (Wrap copies share the mesh's buffers.)
+      for (const { mesh, geometry } of borderMeshes)
+        if (updateBorderKinds(geometry, owners, world.provinceRegion))
+          uploadLineKinds(mesh, geometry);
     },
     setSelectedProvince(province) {
       if (province === selected) return;

@@ -171,6 +171,122 @@ export function labelPoint(polygons: Polygons): [number, number] {
   return [first[0], first[1]];
 }
 
+/** Squared distance from a point to a segment. */
+function segmentDistanceSquared(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  let x = ax;
+  let y = ay;
+  const dx = bx - ax;
+  const dy = by - ay;
+  if (dx !== 0 || dy !== 0) {
+    const t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+    if (t > 1) {
+      x = bx;
+      y = by;
+    } else if (t > 0) {
+      x += dx * t;
+      y += dy * t;
+    }
+  }
+  return (px - x) ** 2 + (py - y) ** 2;
+}
+
+/** Distance from a point to a polygon's outline: positive inside, negative outside (or in a hole). */
+function signedDistanceToOutline(polygon: Ring[], x: number, y: number): number {
+  let inside = false;
+  let best = Infinity;
+  for (const ring of polygon) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i] as [number, number];
+      const [xj, yj] = ring[j] as [number, number];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+      best = Math.min(best, segmentDistanceSquared(x, y, xi, yi, xj, yj));
+    }
+  }
+  return (inside ? 1 : -1) * Math.sqrt(best);
+}
+
+/**
+ * The best place for a name: the point of the largest polygon that is farthest
+ * from its outline (its "pole of inaccessibility"), so a label there sits well
+ * inside the shape even when the shape is a crescent or has a hole. Found by
+ * splitting the shape's box into ever smaller cells, keeping only cells that
+ * could still hold a better point. `precision` is in degrees.
+ */
+export function innerLabelPoint(polygons: Polygons, precision = 0.01): [number, number] {
+  let largest: Ring[] | undefined;
+  let largestArea = -1;
+  for (const polygon of polygons) {
+    const area = polygonPlanarArea(polygon);
+    if (area > largestArea) {
+      largestArea = area;
+      largest = polygon;
+    }
+  }
+  if (!largest || largestArea <= 0) return labelPoint(polygons);
+  const box = bboxOf([largest]);
+  // Measure east–west distances as on the ground at the shape's latitude.
+  const shrink = Math.max(0.05, Math.cos((((box.minY + box.maxY) / 2) * Math.PI) / 180));
+  const polygon = largest.map((ring) => ring.map(([x, y]) => [x * shrink, y]));
+  const minX = box.minX * shrink;
+  const maxX = box.maxX * shrink;
+  const size = Math.min(maxX - minX, box.maxY - box.minY);
+  if (size <= 0) return labelPoint(polygons);
+
+  interface Cell {
+    x: number;
+    y: number;
+    half: number;
+    distance: number;
+    /** The best distance any point of the cell could have. */
+    potential: number;
+  }
+  const cell = (x: number, y: number, half: number): Cell => {
+    const distance = signedDistanceToOutline(polygon, x, y);
+    return { x, y, half, distance, potential: distance + half * Math.SQRT2 };
+  };
+  const queue: Cell[] = [];
+  const half = size / 2;
+  for (let x = minX; x < maxX; x += size)
+    for (let y = box.minY; y < box.maxY; y += size) queue.push(cell(x + half, y + half, half));
+  const [cx, cy] = largestPolygonCentroid([largest]);
+  let best = cell(cx * shrink, cy, 0);
+  const tolerance = Math.min(precision, size / 20);
+  while (queue.length > 0) {
+    // Most promising cell first (ties: lowest x, then y, so the result is always the same).
+    let top = 0;
+    for (let i = 1; i < queue.length; i++) {
+      const a = queue[i];
+      const b = queue[top];
+      if (
+        a.potential > b.potential ||
+        (a.potential === b.potential && (a.x < b.x || (a.x === b.x && a.y < b.y)))
+      )
+        top = i;
+    }
+    const current = queue[top];
+    queue[top] = queue[queue.length - 1];
+    queue.pop();
+    if (current.distance > best.distance) best = current;
+    if (current.potential - best.distance <= tolerance) continue;
+    const h = current.half / 2;
+    queue.push(
+      cell(current.x - h, current.y - h, h),
+      cell(current.x + h, current.y - h, h),
+      cell(current.x - h, current.y + h, h),
+      cell(current.x + h, current.y + h, h),
+    );
+  }
+  if (best.distance <= 0) return labelPoint(polygons);
+  return [best.x / shrink, best.y];
+}
+
 /** Great-circle distance in km. */
 export function distanceKm(a: readonly [number, number], b: readonly [number, number]): number {
   const toRad = Math.PI / 180;

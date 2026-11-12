@@ -116,14 +116,21 @@ export function createLineMesh(
   mesh.setVerticesBuffer(
     new VertexBuffer(engine, geometry.neighbors, 'neighbors', false, false, 4),
   );
+  // Province borders change kind when provinces change owner (see `uploadLineKinds`).
+  const kindsCanChange = geometry.borders.length > 0;
   mesh.setVerticesBuffer(
-    new VertexBuffer(engine, geometry.sideAndKind, 'sideAndKind', false, false, 2),
+    new VertexBuffer(engine, geometry.sideAndKind, 'sideAndKind', kindsCanChange, false, 2),
   );
   mesh.setIndices(geometry.indices, geometry.sideAndKind.length / 2);
   finishMapMesh(mesh, material, renderingGroup);
   // Lines are see-through, so they're drawn after the fills, in this order.
   mesh.alphaIndex = drawOrder;
   return mesh;
+}
+
+/** Sends a line mesh its geometry's `sideAndKind` again, after `updateBorderKinds` changed it. */
+export function uploadLineKinds(mesh: Mesh, geometry: LineGeometry): void {
+  mesh.getVertexBuffer('sideAndKind')?.update(geometry.sideAndKind);
 }
 
 /**

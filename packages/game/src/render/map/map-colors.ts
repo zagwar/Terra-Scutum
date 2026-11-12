@@ -9,7 +9,7 @@ import { type MapViewConfig, type WorldMap, neighborsOf } from '@terra-scutum/si
  */
 
 /** The map modes that exist so far (section 12.2); more come with their features. */
-export const MAP_MODES = ['provinces', 'regions'] as const;
+export const MAP_MODES = ['political', 'provinces', 'regions'] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 type Rgb = readonly [number, number, number];
@@ -75,10 +75,29 @@ export function assignRegionPalette(world: WorldMap, paletteSize: number): Uint1
   return choice;
 }
 
-/** The color of every province in a map mode, before any highlighting. */
-export function provinceBaseColors(mode: MapMode, world: WorldMap, colors: Colors): Uint8Array {
+/**
+ * The color of every province in a map mode, before any highlighting.
+ * `provinceOwner` is the country (index) that owns each province right now;
+ * the political map mode colors each province by its owner.
+ */
+export function provinceBaseColors(
+  mode: MapMode,
+  world: WorldMap,
+  colors: Colors,
+  provinceOwner: ArrayLike<number>,
+): Uint8Array {
   const result = new Uint8Array(world.provinceIds.length * 4);
-  if (mode === 'regions') {
+  if (mode === 'political') {
+    const countryColors = world.countryMapColor.map(parseHexColor);
+    const unowned = parseHexColor(colors.land);
+    world.provinceIds.forEach((id, province) =>
+      write(
+        result,
+        province,
+        vary(countryColors[provinceOwner[province]] ?? unowned, id, colors.politicalVariation),
+      ),
+    );
+  } else if (mode === 'regions') {
     const palette = colors.regionPalette.map(parseHexColor);
     const choice = assignRegionPalette(world, palette.length);
     world.provinceIds.forEach((id, province) => {

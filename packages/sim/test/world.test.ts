@@ -140,6 +140,13 @@ describe('world map lookups', () => {
     expect(world.provinceAreaKm2[p('alpha_east')]).toBe(2000);
   });
 
+  it("knows each country's capital and map color", () => {
+    const c = (id: string) => world.countryIndex.get(id)!;
+    expect(world.provinceIds[world.countryCapital[c('AAA')]]).toBe('alpha_west');
+    expect(world.provinceIds[world.countryCapital[c('BBB')]]).toBe('beta_main');
+    expect(world.countryMapColor).toEqual(['#112233', '#445566']);
+  });
+
   it('is part of every game state', () => {
     const state = new GameState({ data: testData(), seed: 1 });
     expect(state.world.provinceIds).toHaveLength(3);

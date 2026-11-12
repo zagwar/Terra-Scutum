@@ -12,6 +12,30 @@ describe('commands and sim events', () => {
     expect(hashGameState(state)).toBe(before);
   });
 
+  it('debugSetProvinceOwner hands a province to another country', () => {
+    const state = new GameState({ data: testData(), seed: 1 });
+    const province = state.world.provinceIndex.get('alpha_east')!;
+    expect(
+      state.applyCommand({ type: 'debugSetProvinceOwner', province: 'alpha_east', country: 'BBB' }),
+    ).toEqual({ ok: true });
+    expect(state.world.countryIds[state.provinceOwner[province]]).toBe('BBB');
+    expect(state.drainEvents()).toEqual([
+      { type: 'provinceOwnerChanged', province: 'alpha_east', from: 'AAA', to: 'BBB' },
+    ]);
+
+    expect(
+      state.applyCommand({ type: 'debugSetProvinceOwner', province: 'atlantis', country: 'BBB' }),
+    ).toEqual({
+      ok: false,
+      reasonKey: 'COMMAND_UNKNOWN_PROVINCE',
+      params: { province: 'atlantis' },
+    });
+    expect(
+      state.applyCommand({ type: 'debugSetProvinceOwner', province: 'alpha_east', country: 'ZZZ' }),
+    ).toEqual({ ok: false, reasonKey: 'COMMAND_UNKNOWN_COUNTRY', params: { country: 'ZZZ' } });
+    expect(state.drainEvents()).toEqual([]);
+  });
+
   it('refuses unknown or malformed commands without throwing', () => {
     const state = new GameState({ data: testData(), seed: 1 });
     const unknown = { type: 'launchEverything' } as unknown as SimCommand;

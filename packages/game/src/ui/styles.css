@@ -216,6 +216,28 @@ body {
   margin-bottom: 0;
 }
 
+/* ── Country panel ─────────────────────────────────────────────────────── */
+.country-panel {
+  /* Top-left, under the title, until the UI shell (F122). */
+  position: absolute;
+  top: 96px;
+  left: 20px;
+  width: 300px;
+  /* Leaves room for the title above and the Foundation check panel underneath. */
+  max-height: calc(100% - 370px);
+  overflow-y: auto;
+}
+
+.country-color {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -1px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+}
+
 /* ── Map mode buttons ──────────────────────────────────────────────────── */
 .map-mode-bar {
   position: absolute;

@@ -82,6 +82,7 @@ export function testMapView() {
       background: '#000000',
       land: '#808080',
       landVariation: 0.1,
+      politicalVariation: 0.05,
       seaDeep: '#000040',
       seaShallow: '#000080',
       seaVariation: 0.05,

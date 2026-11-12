@@ -11,6 +11,12 @@ export interface AppState {
   readonly map: 'loading' | 'ready' | 'failed';
   /** The latest snapshot from the sim worker; null until the sim is ready. */
   readonly snapshot: SimSnapshot | null;
+  /**
+   * The country (index) that owns each province right now; null until the sim
+   * is ready. Kept apart from the snapshot because the sim only sends the
+   * owners again when they change.
+   */
+  readonly provinceOwner: Uint16Array | null;
   /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
   readonly world: WorldMap | null;
   readonly saveFormatVersion: number | null;
@@ -18,6 +24,8 @@ export interface AppState {
   /** Province indices (see `WorldMap`), or null for none. */
   readonly selectedProvince: number | null;
   readonly hoveredProvince: number | null;
+  /** The country (index) whose panel is open, or null. */
+  readonly selectedCountry: number | null;
   /** A problem to show the player: a translation key plus technical detail for bug reports. */
   readonly error: { readonly key: TranslationKey; readonly detail: string } | null;
 }
@@ -34,11 +42,13 @@ export function createAppStore(): AppStore {
     sim: 'starting',
     map: 'loading',
     snapshot: null,
+    provinceOwner: null,
     world: null,
     saveFormatVersion: null,
-    mapMode: 'provinces',
+    mapMode: 'political',
     selectedProvince: null,
     hoveredProvince: null,
+    selectedCountry: null,
     error: null,
   };
   const listeners = new Set<() => void>();

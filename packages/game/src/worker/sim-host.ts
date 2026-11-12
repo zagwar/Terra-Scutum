@@ -3,6 +3,7 @@ import {
   GameState,
   type RawGameData,
   SAVE_FORMAT_VERSION,
+  type SimSnapshot,
   createSnapshot,
   parseGameData,
 } from '@terra-scutum/sim';
@@ -22,6 +23,9 @@ export function createSimHost(
 ): SimHost {
   let state: GameState | null = null;
   let failed = false;
+  /** The last snapshot posted: the next one leaves out the parts that haven't changed since. */
+  let sent: SimSnapshot | undefined;
+  const snapshotOf = (current: GameState): SimSnapshot => (sent = createSnapshot(current, sent));
 
   function requireState(): GameState {
     if (!state) throw new Error('the sim received a request before "init"');
@@ -33,9 +37,10 @@ export function createSimHost(
       case 'init': {
         const data = parseGameData(rawData);
         state = new GameState({ data, seed: message.seed });
+        sent = undefined; // the first snapshot of a campaign is complete
         post({
           type: 'ready',
-          snapshot: createSnapshot(state),
+          snapshot: snapshotOf(state),
           saveFormatVersion: SAVE_FORMAT_VERSION,
           world: state.world,
           mapView: data.mapView,
@@ -48,7 +53,7 @@ export function createSimHost(
         post({
           type: 'update',
           requestId: message.requestId,
-          snapshot: createSnapshot(current),
+          snapshot: snapshotOf(current),
           events: current.drainEvents(),
           commandResult,
         });
@@ -64,7 +69,7 @@ export function createSimHost(
         post({
           type: 'update',
           requestId: message.requestId,
-          snapshot: createSnapshot(current),
+          snapshot: snapshotOf(current),
           events: current.drainEvents(),
         });
         return;

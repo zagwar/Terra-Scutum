@@ -11,7 +11,12 @@ import type { TextParams } from './sim-error';
  */
 export type SimCommand =
   /** Diagnostic: the sim answers with a `debugPong` event carrying the same token. Changes nothing. */
-  { readonly type: 'debugPing'; readonly token: number };
+  | { readonly type: 'debugPing'; readonly token: number }
+  /**
+   * Diagnostic: hands a province to a country (both by id), as a war or a collapse will later.
+   * Used by tests to check that the map and the panels follow ownership.
+   */
+  | { readonly type: 'debugSetProvinceOwner'; readonly province: string; readonly country: string };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -37,6 +42,26 @@ const HANDLERS: CommandHandlers = {
     state.emit({ type: 'debugPong', token: command.token });
     return OK;
   },
+  debugSetProvinceOwner(state, command): CommandResult {
+    const province = state.world.provinceIndex.get(command.province);
+    if (province === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_PROVINCE',
+        params: { province: String(command.province) },
+      };
+    }
+    const country = state.world.countryIndex.get(command.country);
+    if (country === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+        params: { country: String(command.country) },
+      };
+    }
+    state.setProvinceOwner(province, country);
+    return OK;
+  },
 };
 
 /** Applies one command to the state. Never throws for a bad command; it returns a refusal instead. */
@@ -45,6 +70,10 @@ export function applyCommand(state: GameState, command: SimCommand): CommandResu
   if (!Object.hasOwn(HANDLERS, type)) {
     return { ok: false, reasonKey: 'COMMAND_UNKNOWN', params: { type: String(type) } };
   }
-  const handler = HANDLERS[type as SimCommandType];
+  // The lookup above made sure this is the handler for exactly this command's type.
+  const handler = HANDLERS[type as SimCommandType] as (
+    state: GameState,
+    command: SimCommand,
+  ) => CommandResult;
   return handler(state, command);
 }

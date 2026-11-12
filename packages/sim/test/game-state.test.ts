@@ -61,7 +61,10 @@ describe('GameState.advanceDay', () => {
     expect(formatIsoDate(state.date)).toBe('2025-01-02');
     for (let i = 0; i < 730; i++) state.advanceDay();
     expect(formatIsoDate(state.date)).toBe('2027-01-02');
-    expect(createSnapshot(state)).toEqual({ day: 731, date: { year: 2027, month: 1, day: 2 } });
+    expect(createSnapshot(state)).toMatchObject({
+      day: 731,
+      date: { year: 2027, month: 1, day: 2 },
+    });
   });
 
   it('runs systems in tick order, whatever order they were registered in', () => {

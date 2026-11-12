@@ -21,7 +21,10 @@ export interface WorldMap {
   readonly countryIndex: ReadonlyMap<string, number>;
   readonly regionIndex: ReadonlyMap<string, number>;
   readonly seaZoneIndex: ReadonlyMap<string, number>;
-  /** Starting owner (country index) of each province. */
+  /**
+   * STARTING owner (country index) of each province. Ownership changes during a
+   * campaign: the current owner is `GameState.provinceOwner` (in the game: the snapshot).
+   */
   readonly provinceCountry: Uint16Array;
   readonly provinceRegion: Uint16Array;
   readonly provinceAreaKm2: Float32Array;
@@ -32,8 +35,13 @@ export interface WorldMap {
   readonly seaZoneNeighbors: Adjacency;
   /** Coastal provinces of each sea zone. */
   readonly seaZoneProvinces: Adjacency;
+  /** The provinces each country owns at the START of the campaign (see `provinceCountry`). */
   readonly countryProvinces: Adjacency;
   readonly regionProvinces: Adjacency;
+  /** The province (index) holding each country's capital at the start of the campaign. */
+  readonly countryCapital: Int32Array;
+  /** Each country's color on the political map, as #rrggbb. */
+  readonly countryMapColor: readonly string[];
 }
 
 /** The neighbors of item `index` in an adjacency list. */
@@ -96,6 +104,8 @@ export function buildWorldMap(data: GameData): WorldMap {
       seaZoneProvinces[lookup(seaZoneIndex, zone, 'sea zone')].push(i);
   });
 
+  const countries = [...data.countries.countries].sort((a, b) => byId(a.id, b.id));
+
   return {
     provinceIds,
     countryIds,
@@ -121,5 +131,9 @@ export function buildWorldMap(data: GameData): WorldMap {
     seaZoneProvinces: buildAdjacency(seaZoneProvinces),
     countryProvinces: buildAdjacency(countryProvinces),
     regionProvinces: buildAdjacency(regionProvinces),
+    countryCapital: Int32Array.from(countries, (c) =>
+      lookup(provinceIndex, c.capitalProvince, 'province'),
+    ),
+    countryMapColor: countries.map((c) => c.mapColor),
   };
 }

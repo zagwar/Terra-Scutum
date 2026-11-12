@@ -1,6 +1,6 @@
 import earcut from 'earcut';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import { feature, mesh } from 'topojson-client';
+import { feature, mesh, meshArcs, transform } from 'topojson-client';
 import type { GeometryCollection, GeometryObject, Topology } from 'topojson-specification';
 import type { MapProjection } from './map-projection';
 
@@ -130,16 +130,31 @@ export function projectLines(
   lines: readonly (readonly (readonly number[])[])[],
   projection: MapProjection,
 ): Points[] {
-  const result: Points[] = [];
+  return projectTaggedLines(lines, null, projection).map((line) => line.points);
+}
+
+/**
+ * `projectLines` for lines whose segments each carry a tag (`tags[line][segment]`):
+ * every resulting line comes with the tags of the segments it kept.
+ */
+function projectTaggedLines(
+  lines: readonly (readonly (readonly number[])[])[],
+  tags: readonly (readonly number[])[] | null,
+  projection: MapProjection,
+): { points: Points; tags: number[] }[] {
+  const result: { points: Points; tags: number[] }[] = [];
   const onDateLine = (longitude: number) =>
     Math.abs(Math.abs(longitude) - 180) < DATE_LINE_TOLERANCE;
   const offMap = (z: number) => z <= projection.minZ || z >= projection.maxZ;
 
-  for (const line of lines) {
+  for (const [lineIndex, line] of lines.entries()) {
     let current: number[] = [];
+    let currentTags: number[] = [];
     const flush = () => {
-      if (current.length >= 4) result.push(new Float32Array(current));
+      if (current.length >= 4)
+        result.push({ points: new Float32Array(current), tags: currentTags });
       current = [];
+      currentTags = [];
     };
     for (let i = 0; i + 1 < line.length; i++) {
       const [lonA, latA] = line[i];
@@ -156,6 +171,7 @@ export function projectLines(
       }
       if (current.length === 0) current.push(projection.x(lonA), zA);
       current.push(projection.x(lonB), zB);
+      if (tags) currentTags.push(tags[lineIndex][i]);
     }
     flush();
   }
@@ -178,12 +194,65 @@ export interface StyledLine {
   readonly points: Points;
   /** `LINE_*` flags. */
   readonly kind: number;
+  /**
+   * For province borders: the two provinces (indices) on either side of each
+   * segment, two numbers per segment (the same province twice for a coast).
+   * With it, the line's kind can follow the provinces' current owners
+   * (see `updateBorderKinds`).
+   */
+  readonly sides?: Int32Array;
+}
+
+/** The `LINE_*` flags of the border between provinces `a` and `b` (the same province twice: a coast). */
+export function borderKind(
+  a: number,
+  b: number,
+  ownerOf: ArrayLike<number>,
+  regionOf: ArrayLike<number>,
+): number {
+  if (a === b) return LINE_COAST;
+  return (
+    (ownerOf[a] !== ownerOf[b] ? LINE_OTHER_COUNTRY : 0) +
+    (regionOf[a] !== regionOf[b] ? LINE_OTHER_REGION : 0)
+  );
+}
+
+/**
+ * For every arc of the topology: the two shapes that use it, as indices (the
+ * same shape twice for a coast; -1 where unused). Like topojson's `mesh`, it
+ * takes the first and the last shape that use the arc.
+ */
+function arcSides(
+  topology: Topology,
+  collection: GeometryCollection,
+  index: ReadonlyMap<GeometryObject, number>,
+): Int32Array {
+  const sides = new Int32Array(topology.arcs.length * 2).fill(-1);
+  const visit = (rings: readonly (readonly number[])[], item: number) => {
+    for (const ring of rings) {
+      for (const reference of ring) {
+        const arc = reference < 0 ? ~reference : reference;
+        if (sides[arc * 2] === -1) sides[arc * 2] = item;
+        sides[arc * 2 + 1] = item;
+      }
+    }
+  };
+  for (const geometry of collection.geometries) {
+    const item = index.get(geometry)!;
+    if (geometry.type === 'Polygon') visit(geometry.arcs, item);
+    else if (geometry.type === 'MultiPolygon') for (const part of geometry.arcs) visit(part, item);
+  }
+  return sides;
 }
 
 /**
  * Every province border, marked as coast, country border, region border or
  * plain province border. TopoJSON stores each shared border once, so nothing
  * is drawn twice.
+ *
+ * `countryOf` (the starting owners) only decides which borders are joined
+ * into one line and the drawing order. Every line also knows the provinces
+ * on its two sides (`sides`), so its kind can change with ownership later.
  */
 export function buildProvinceBorders(
   topology: Topology,
@@ -196,11 +265,38 @@ export function buildProvinceBorders(
   const collection = topology.objects[objectName] as GeometryCollection;
   const index = new Map<GeometryObject, number>();
   for (const geometry of collection.geometries) index.set(geometry, indexOf(String(geometry.id)));
-  const lines = (kind: number, keep: (a: number, b: number) => boolean): StyledLine[] =>
-    projectLines(
-      mesh(topology, collection, (a, b) => keep(index.get(a)!, index.get(b)!)).coordinates,
-      projection,
-    ).map((points) => ({ points, kind }));
+  const sidesOfArc = arcSides(topology, collection, index);
+  const toLonLat = transform(topology.transform ?? null);
+  const lines = (kind: number, keep: (a: number, b: number) => boolean): StyledLine[] => {
+    // The borders of this kind, joined into long lines: each a list of arcs (~i = arc i backwards).
+    const joined = meshArcs(topology, collection, (a, b) => keep(index.get(a)!, index.get(b)!));
+    const coordinates: number[][][] = [];
+    const arcOfSegment: number[][] = [];
+    for (const arcs of joined.arcs) {
+      const points: number[][] = [];
+      const tags: number[] = [];
+      for (const reference of arcs) {
+        const arc = reference < 0 ? ~reference : reference;
+        const decoded = topology.arcs[arc].map((point, i) => toLonLat(point, i > 0));
+        if (reference < 0) decoded.reverse();
+        // Consecutive arcs share their end point.
+        for (let i = points.length > 0 ? 1 : 0; i < decoded.length; i++) {
+          if (points.length > 0) tags.push(arc);
+          points.push(decoded[i]);
+        }
+      }
+      coordinates.push(points);
+      arcOfSegment.push(tags);
+    }
+    return projectTaggedLines(coordinates, arcOfSegment, projection).map(({ points, tags }) => {
+      const sides = new Int32Array(tags.length * 2);
+      tags.forEach((arc, segment) => {
+        sides[segment * 2] = sidesOfArc[arc * 2];
+        sides[segment * 2 + 1] = sidesOfArc[arc * 2 + 1];
+      });
+      return { points, kind, sides };
+    });
+  };
   const border = (otherCountry: boolean, otherRegion: boolean) =>
     lines(
       (otherCountry ? LINE_OTHER_COUNTRY : 0) + (otherRegion ? LINE_OTHER_REGION : 0),
@@ -265,10 +361,15 @@ export function outlineOf(
   return result;
 }
 
-/** A stretch of a line: the points `from`…`to` (inclusive) of `points`. */
+/**
+ * A stretch of a line: the points `from`…`to` (inclusive) of `points`. A span
+ * cut from a province border lies between one pair of provinces (`sideA`, `sideB`).
+ */
 export interface LineSpan extends StyledLine {
   readonly from: number;
   readonly to: number;
+  readonly sideA?: number;
+  readonly sideB?: number;
 }
 
 export const wholeLine = (line: StyledLine): LineSpan => ({
@@ -291,6 +392,34 @@ export interface LineGeometry {
   /** Per vertex: which side of the line it's pushed to (-1 or +1), and the line's `LINE_*` flags. */
   readonly sideAndKind: Float32Array;
   readonly indices: Uint32Array;
+  /**
+   * The province-border spans in this geometry, four numbers each: first
+   * vertex, number of vertices, and the two provinces on either side.
+   */
+  readonly borders: Int32Array;
+}
+
+/**
+ * Sets the kind of every province border in a line geometry from who owns
+ * the provinces now (a border between two countries is a country border).
+ * Returns true if anything changed (then the mesh needs the new `sideAndKind`).
+ */
+export function updateBorderKinds(
+  geometry: LineGeometry,
+  ownerOf: ArrayLike<number>,
+  regionOf: ArrayLike<number>,
+): boolean {
+  const { borders, sideAndKind } = geometry;
+  let changed = false;
+  for (let i = 0; i < borders.length; i += 4) {
+    const first = borders[i];
+    const kind = borderKind(borders[i + 2], borders[i + 3], ownerOf, regionOf);
+    if (sideAndKind[first * 2 + 1] === kind) continue;
+    changed = true;
+    for (let vertex = first; vertex < first + borders[i + 1]; vertex++)
+      sideAndKind[vertex * 2 + 1] = kind;
+  }
+  return changed;
 }
 
 export function buildLineGeometry(spans: readonly LineSpan[]): LineGeometry {
@@ -301,9 +430,12 @@ export function buildLineGeometry(spans: readonly LineSpan[]): LineGeometry {
   const sideAndKind = new Float32Array(pointCount * 2 * 2);
   const indices = new Uint32Array((pointCount - spans.length) * 6);
 
+  const borders: number[] = [];
   let vertex = 0;
   let index = 0;
-  for (const { points, from, to, kind } of spans) {
+  for (const { points, from, to, kind, sideA, sideB } of spans) {
+    if (sideA !== undefined && sideB !== undefined)
+      borders.push(vertex, (to - from + 1) * 2, sideA, sideB);
     const last = points.length / 2 - 1;
     // A line that ends where it starts is a loop: its ends join like any other corner.
     const loop = last > 2 && points[0] === points[last * 2] && points[1] === points[last * 2 + 1];
@@ -328,7 +460,7 @@ export function buildLineGeometry(spans: readonly LineSpan[]): LineGeometry {
       }
     }
   }
-  return { positions, neighbors, sideAndKind, indices };
+  return { positions, neighbors, sideAndKind, indices, borders: Int32Array.from(borders) };
 }
 
 /**
@@ -383,8 +515,15 @@ export function chunkLines(lines: readonly StyledLine[], grid: ChunkGrid): Map<n
     else chunks.set(chunk, [span]);
   };
   for (const line of lines) {
-    const { points } = line;
+    const { points, sides } = line;
     const segmentCount = points.length / 2 - 1;
+    // A span also ends where the provinces beside the line change.
+    const span = (from: number, to: number): LineSpan =>
+      sides
+        ? { ...line, from, to, sideA: sides[from * 2], sideB: sides[from * 2 + 1] }
+        : { ...line, from, to };
+    const sameSides = (i: number, j: number) =>
+      !sides || (sides[i * 2] === sides[j * 2] && sides[i * 2 + 1] === sides[j * 2 + 1]);
     let from = 0;
     let current = -1;
     for (let i = 0; i < segmentCount; i++) {
@@ -393,13 +532,13 @@ export function chunkLines(lines: readonly StyledLine[], grid: ChunkGrid): Map<n
         (points[i * 2] + points[i * 2 + 2]) / 2,
         (points[i * 2 + 1] + points[i * 2 + 3]) / 2,
       );
-      if (chunk !== current) {
-        if (current >= 0) add(current, { ...line, from, to: i });
+      if (chunk !== current || !sameSides(from, i)) {
+        if (current >= 0) add(current, span(from, i));
         current = chunk;
         from = i;
       }
     }
-    if (current >= 0) add(current, { ...line, from, to: segmentCount });
+    if (current >= 0) add(current, span(from, segmentCount));
   }
   return chunks;
 }

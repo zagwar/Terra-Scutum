@@ -4,6 +4,8 @@ import { t, tKey } from './i18n';
 
 export interface MapTooltipProps {
   readonly world: WorldMap;
+  /** The country (index) that owns each province right now. */
+  readonly provinceOwner: Uint16Array;
   /** Index of the province under the mouse. */
   readonly province: number;
 }
@@ -22,7 +24,7 @@ window.addEventListener('pointermove', (event) => {
  * the mouse (without going through the app store), so React only re-renders
  * when the province changes.
  */
-export function MapTooltip({ world, province }: MapTooltipProps) {
+export function MapTooltip({ world, provinceOwner, province }: MapTooltipProps) {
   const element = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -47,7 +49,7 @@ export function MapTooltip({ world, province }: MapTooltipProps) {
     <div ref={element} className="map-tooltip" data-testid="map-tooltip">
       {t('MAP_TOOLTIP_PROVINCE', {
         province: tKey(provinceNameKey(world.provinceIds[province])),
-        country: tKey(countryNameKey(world.countryIds[world.provinceCountry[province]])),
+        country: tKey(countryNameKey(world.countryIds[provinceOwner[province]])),
       })}
     </div>
   );

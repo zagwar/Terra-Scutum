@@ -10,7 +10,9 @@ import { assignCountryColors, varyColor } from './colors';
 import { type MapConfig, loadMapConfig } from './config';
 import {
   type Polygons,
+  areaKm2,
   distanceKm,
+  innerLabelPoint,
   normalizeWinding,
   roundCoordinate,
   toMultiPolygon,
@@ -19,6 +21,7 @@ import {
 import { ensureSources, readSources } from './natural-earth';
 import { renderPreview } from './preview';
 import { type ProvinceDraft, buildProvinces } from './provinces';
+import { type TinyProvinceReport, applyTinyProvinces } from './tiny-provinces';
 import {
   createGrid,
   fillPolygons,
@@ -45,6 +48,8 @@ export const REPORT_DIR = join(REPO_ROOT, 'packages/tools/map-config/report');
 export const MAP_LOCALE_FILE = join(LOCALES_DIR, 'en.map.json');
 
 const OUTSIDE = 0xffff;
+/** A province whose final shape is smaller than this can't be seen or clicked: the import warns. */
+const MIN_VISIBLE_AREA_KM2 = 0.5;
 
 export interface ImportSummary {
   readonly countries: number;
@@ -87,12 +92,19 @@ export async function runMapImport(
   const unitSet = buildUnits(sources, config.countries, settings);
   log('Combining states into provinces…');
   const countryNames = new Map(config.countries.countries.map((c) => [c.id, c.name]));
-  const { provinces, report } = buildProvinces(
+  const built = buildProvinces(
     unitSet,
     settings,
     config.provinceGroups,
     config.provinceNames.provinces,
     countryNames,
+  );
+  const report = built.report;
+  // Provinces too small for the map data: enlarged to a clickable disc, or left out.
+  const { provinces, report: tinyReport } = applyTinyProvinces(
+    built.provinces,
+    config.tinyProvinces,
+    warn,
   );
   for (const code of report.unknownGroupCodes)
     warn(`province-groups.json lists ${code}, which matches no state/province`);
@@ -127,6 +139,10 @@ export async function runMapImport(
       (feature(provinceTopology, g as never) as unknown as Feature<MultiPolygon>).geometry,
     ),
   );
+  // Label points: well inside the final shape (an enlarged tiny province keeps its configured place).
+  const centers = provinces.map((p, i) =>
+    tinyReport.enlarged.includes(p.id) ? p.center : innerLabelPoint(decoded[i]),
+  );
 
   // ── The grid: land, sea zones, coasts ─────────────────────────────────────
   log('Drawing the world grid…');
@@ -140,9 +156,13 @@ export async function runMapImport(
     fillPolygons(grid, toPolygons(antarctica.geometry), OUTSIDE);
   }
   decoded.forEach((polygons, index) => {
+    if (areaKm2(polygons) < MIN_VISIBLE_AREA_KM2)
+      warn(
+        `province ${provinces[index].id} is too small for the map data (its shape has no area): add it to tiny-provinces.json`,
+      );
     const filled = fillPolygons(grid, polygons, index + 1);
     if (filled === 0) {
-      const [lon, lat] = provinces[index].center;
+      const [lon, lat] = centers[index];
       land[pixelAt(grid, lon, lat)] = index + 1;
     }
   });
@@ -285,7 +305,8 @@ export async function runMapImport(
   }
   const regionCenter = (id: string): readonly [number, number] => {
     const own = provinces
-      .filter((_, i) => provinceRegion[i] === id)
+      .map((p, i) => ({ areaKm2: p.areaKm2, center: centers[i], region: provinceRegion[i] }))
+      .filter((p) => p.region === id)
       .sort((a, b) => b.areaKm2 - a.areaKm2);
     return own[0]?.center ?? regionConfigs.find((r) => r.id === id)!.seeds[0];
   };
@@ -334,8 +355,9 @@ export async function runMapImport(
       id: p.id,
       country: p.country,
       region: provinceRegion[i],
-      center: center(p.center),
-      areaKm2: Math.round(p.areaKm2),
+      center: center(centers[i]),
+      // Whole km², except for the enlarged tiny provinces (their real area is in the config).
+      areaKm2: tinyReport.enlarged.includes(p.id) ? p.areaKm2 : Math.round(p.areaKm2),
       adjacentProvinces: [...landNeighbors[i]].map((j) => provinceIds[j]).sort(),
       adjacentSeaZones: [...provinceSeaZones[i]].map((z) => zones[z].id).sort(),
     })),
@@ -421,6 +443,7 @@ export async function runMapImport(
       provinceRegion,
       unitSet.droppedClusters,
       report,
+      tinyReport,
       zones.length,
       warnings,
     ),
@@ -441,6 +464,7 @@ function buildReport(
   provinceRegion: readonly string[],
   dropped: readonly { country: string; names: string[] }[],
   report: { merges: number },
+  tiny: TinyProvinceReport,
   seaZoneCount: number,
   warnings: readonly string[],
 ): string {
@@ -479,6 +503,15 @@ function buildReport(
   lines.push(`Territories: ${config.countries.leftOut.join(', ')}`, '');
   lines.push('Uninhabited islands (fewer people than `minClusterPopulation`):', '');
   for (const d of dropped) lines.push(`- ${d.country}: ${d.names.join(', ')}`);
+  const nameOf = (id: string) => provinces.find((p) => p.id === id)?.name ?? id;
+  lines.push(
+    '',
+    '## Tiny provinces',
+    '',
+    `Too small for the map data (\`tiny-provinces.json\`). Drawn as a disc of ${config.tinyProvinces.radiusKm} km radius so they can be seen and clicked (the data keeps their real area): ${tiny.enlarged.map(nameOf).join(', ') || 'none'}.`,
+    '',
+    `Left out of the game: ${tiny.leftOut.join(', ') || 'none'}.`,
+  );
   lines.push('', '## Regions', '', '| Region | Climate | Provinces |', '|---|---|---|');
   for (const r of config.regions.regions)
     lines.push(`| ${r.name} | ${r.climate} | ${perRegion.get(r.id) ?? 0} |`);

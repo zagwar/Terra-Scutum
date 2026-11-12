@@ -147,6 +147,26 @@ export const provinceNamesSchema = z.strictObject({
 });
 export type ProvinceNamesConfig = z.infer<typeof provinceNamesSchema>;
 
+export const tinyProvincesSchema = z.strictObject({
+  /** Radius of the disc an enlarged province is drawn as [DEFAULT]. */
+  radiusKm: z.number().positive(),
+  /** Corners of that disc. */
+  discPoints: z.number().int().min(8).max(128),
+  /** Provinces too small for the map data, drawn as a disc so they can be seen and clicked. */
+  enlarge: z.array(
+    z.strictObject({
+      id: z.string().regex(idPattern),
+      /** Where the disc is drawn: [longitude, latitude]. */
+      center: lonLat,
+      /** The real area, written to the data (the disc is only how it is drawn). */
+      areaKm2: z.number().positive(),
+    }),
+  ),
+  /** Provinces too small for the map data that are not part of the game. */
+  leaveOut: z.array(z.string().regex(idPattern)),
+});
+export type TinyProvincesConfig = z.infer<typeof tinyProvincesSchema>;
+
 export interface MapConfig {
   readonly settings: MapSettings;
   readonly countries: CountriesConfig;
@@ -154,6 +174,7 @@ export interface MapConfig {
   readonly seaZones: SeaZonesConfig;
   readonly provinceGroups: ProvinceGroupsConfig;
   readonly provinceNames: ProvinceNamesConfig;
+  readonly tinyProvinces: TinyProvincesConfig;
 }
 
 function readConfigFile<T>(dir: string, file: string, schema: z.ZodType<T>): T {
@@ -182,5 +203,6 @@ export function loadMapConfig(dir: string = MAP_CONFIG_DIR): MapConfig {
     seaZones: readConfigFile(dir, 'sea-zones.json', seaZonesConfigSchema),
     provinceGroups: readConfigFile(dir, 'province-groups.json', provinceGroupsSchema),
     provinceNames: readConfigFile(dir, 'province-names.json', provinceNamesSchema),
+    tinyProvinces: readConfigFile(dir, 'tiny-provinces.json', tinyProvincesSchema),
   };
 }

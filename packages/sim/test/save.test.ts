@@ -77,8 +77,47 @@ describe('save and load', () => {
       { ...good, rng: [0, 0, 0, 0] },
       { ...good, seed: undefined },
       { ...good, unexpected: true },
+      { ...good, provinceOwners: [0, 0] },
+      { ...good, provinceOwners: [0, 0, 7] },
+      { ...good, provinceOwners: [0, 0, -1] },
+      { ...good, map: undefined },
     ]) {
       expect(errorKey(() => deserializeGameState(damaged, options))).toBe('SAVE_ERROR_CORRUPT');
+    }
+  });
+
+  it('keeps who owns each province', () => {
+    const data = testData();
+    const original = new GameState({ data, seed: 3 });
+    const { world } = original;
+    original.setProvinceOwner(
+      world.provinceIndex.get('alpha_east')!,
+      world.countryIndex.get('BBB')!,
+    );
+    const save = JSON.parse(JSON.stringify(serializeGameState(original))) as Record<
+      string,
+      unknown
+    >;
+    expect(save.map).toEqual({
+      provinces: ['alpha_east', 'alpha_west', 'beta_main'],
+      countries: ['AAA', 'BBB'],
+    });
+    expect(save.provinceOwners).toEqual([1, 0, 1]);
+
+    const loaded = deserializeGameState(save, { data });
+    expect([...loaded.provinceOwner]).toEqual([1, 0, 1]);
+    expect(hashGameState(loaded)).toBe(hashGameState(original));
+    // Ownership is part of the state's fingerprint.
+    expect(hashGameState(original)).not.toBe(hashGameState(new GameState({ data, seed: 3 })));
+  });
+
+  it('rejects a save made on a different map', () => {
+    const data = testData();
+    const good = serializeGameState(new GameState({ data, seed: 5 }));
+    const otherProvinces = { ...good, map: { ...good.map, provinces: ['a', 'b', 'c'] } };
+    const fewerCountries = { ...good, map: { ...good.map, countries: ['AAA'] } };
+    for (const save of [otherProvinces, fewerCountries]) {
+      expect(errorKey(() => deserializeGameState(save, { data }))).toBe('SAVE_ERROR_DIFFERENT_MAP');
     }
   });
 
@@ -118,7 +157,7 @@ describe('save migrations', () => {
       },
       2: (save: Record<string, unknown>) => ({ ...save, treasury: 0 }),
     };
-    expect(migrateSave(old, migrations, 3)).toEqual({
+    expect(migrateSave(old, testData(), migrations, 3)).toEqual({
       format: SAVE_FORMAT,
       saveVersion: 3,
       day: 10,
@@ -129,6 +168,26 @@ describe('save migrations', () => {
 
   it('rejects a save too old to migrate', () => {
     const old = { format: SAVE_FORMAT, saveVersion: 1 };
-    expect(errorKey(() => migrateSave(old, { 2: (save) => save }, 3))).toBe('SAVE_ERROR_TOO_OLD');
+    expect(errorKey(() => migrateSave(old, testData(), { 2: (save) => save }, 3))).toBe(
+      'SAVE_ERROR_TOO_OLD',
+    );
+  });
+
+  it('loads a version 1 save (from before ownership): every province has its starting owner', () => {
+    const data = testData();
+    const reference = new GameState({ data, seed: 77, systems });
+    for (let i = 0; i < 40; i++) reference.advanceDay();
+    const [s0, s1, s2, s3] = reference.rng.getState();
+    const versionOne = {
+      format: SAVE_FORMAT,
+      saveVersion: 1,
+      seed: 77,
+      day: 40,
+      rng: [s0, s1, s2, s3],
+    };
+    const loaded = deserializeGameState(versionOne, { data, systems });
+    expect(loaded.day).toBe(40);
+    expect([...loaded.provinceOwner]).toEqual([0, 0, 1]);
+    expect(hashGameState(loaded)).toBe(hashGameState(reference));
   });
 });

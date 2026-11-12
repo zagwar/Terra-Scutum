@@ -5,6 +5,7 @@ import { loadMapConfig } from '../src/map-import/config';
 import {
   type Polygons,
   areaKm2,
+  innerLabelPoint,
   labelPoint,
   normalizeWinding,
   polygonsContain,
@@ -20,6 +21,12 @@ import {
   traceLabels,
 } from '../src/map-import/raster';
 import { cleanName, slugify, uniqueIds } from '../src/map-import/text';
+import {
+  addTouchingPoints,
+  applyTinyProvinces,
+  cutOut,
+  discRing,
+} from '../src/map-import/tiny-provinces';
 import { buildCountryLookup } from '../src/map-import/units';
 
 const square = (x0: number, y0: number, size: number): Polygons => [
@@ -80,6 +87,126 @@ describe('geometry', () => {
     expect(polygonsContain(donut, 5, 5)).toBe(false);
     const [x, y] = labelPoint(donut);
     expect(polygonsContain(donut, x, y)).toBe(true);
+  });
+
+  it('puts the name of a province where it has the most room', () => {
+    // A square: the middle.
+    const [sx, sy] = innerLabelPoint(square(0, 0, 10));
+    expect(sx).toBeCloseTo(5, 1);
+    expect(sy).toBeCloseTo(5, 1);
+    // An L: the corner block, not the centroid (which lies near the inner corner).
+    const l: Polygons = [
+      [
+        [
+          [0, 0],
+          [10, 0],
+          [10, 2],
+          [4, 2],
+          [4, 10],
+          [0, 10],
+          [0, 0],
+        ],
+      ],
+    ];
+    const [lx, ly] = innerLabelPoint(l);
+    expect(polygonsContain(l, lx, ly)).toBe(true);
+    expect(lx).toBeGreaterThan(1.5);
+    expect(lx).toBeLessThan(2.5);
+    // A ring: in one of its corners, where there is most room between the hole and the outside.
+    const donut: Polygons = [[square(0, 0, 10)[0][0], square(3, 3, 4)[0][0]]];
+    const [dx, dy] = innerLabelPoint(donut);
+    expect(polygonsContain(donut, dx, dy)).toBe(true);
+    expect(Math.min(dx, 10 - dx)).toBeCloseTo(1.75, 1);
+    expect(Math.min(dy, 10 - dy)).toBeCloseTo(1.75, 1);
+    // The biggest piece wins.
+    const [bx] = innerLabelPoint([...square(0, 0, 1), ...square(20, 0, 6)]);
+    expect(bx).toBeCloseTo(23, 1);
+  });
+});
+
+describe('tiny provinces', () => {
+  const draft = (id: string, polygons: Polygons) => ({
+    id,
+    name: id,
+    nameSource: 'unit' as const,
+    country: 'AAA',
+    polygons,
+    areaKm2: 100,
+    center: [0, 0] as [number, number],
+    cities: [],
+    population: 0,
+    units: [],
+    sourceUnits: [],
+  });
+  const config = (extra: object) => ({
+    radiusKm: 10,
+    discPoints: 16,
+    enlarge: [],
+    leaveOut: [],
+    ...extra,
+  });
+
+  it('draws a disc of the right size on the ground', () => {
+    const ring = discRing([10, 60], 10, 32);
+    expect(ring).toHaveLength(33);
+    expect(ring[0]).toEqual(ring[32]);
+    expect(ringSignedArea(ring)).toBeGreaterThan(0); // counter-clockwise
+    expect(areaKm2([[ring]])).toBeCloseTo(Math.PI * 100, -1.5);
+    // At 60° north a degree of longitude is half as long, so the disc is twice as wide in degrees.
+    const xs = ring.map((p) => p[0]);
+    const ys = ring.map((p) => p[1]);
+    const width = Math.max(...xs) - Math.min(...xs);
+    const height = Math.max(...ys) - Math.min(...ys);
+    expect(width / height).toBeCloseTo(2, 1);
+  });
+
+  it('cuts an enlarged province out of the one around it (an enclave)', () => {
+    const warnings: string[] = [];
+    const { provinces, report } = applyTinyProvinces(
+      [draft('big', square(-1, -1, 2)), draft('tiny', []), draft('far', square(5, 5, 1))],
+      config({ enlarge: [{ id: 'tiny', center: [0, 0], areaKm2: 0.5 }] }),
+      (w) => warnings.push(w),
+    );
+    expect(warnings).toEqual([]);
+    expect(report.enlarged).toEqual(['tiny']);
+    const [big, tiny, far] = provinces;
+    expect(tiny.areaKm2).toBe(0.5); // the real area, not the disc's
+    expect(tiny.center).toEqual([0, 0]);
+    expect(polygonsContain(tiny.polygons, 0, 0)).toBe(true);
+    expect(polygonsContain(big.polygons, 0, 0)).toBe(false); // a hole where the disc is
+    expect(polygonsContain(big.polygons, 0.5, 0.5)).toBe(true);
+    expect(big.polygons[0]).toHaveLength(2);
+    // The hole runs through exactly the disc's corners: the border is shared.
+    const corners = new Set(tiny.polygons[0][0].map((p) => p.join(',')));
+    expect(big.polygons[0][1].every((p) => corners.has(p.join(',')))).toBe(true);
+    expect(far.polygons).toEqual(square(5, 5, 1));
+  });
+
+  it('shares the border with a province the disc only partly covers (a coast)', () => {
+    const disc = discRing([0, 0], 10, 16);
+    const land = cutOut(square(0.01, -1, 2), disc); // land to the east only
+    const joined = addTouchingPoints(disc, [land]);
+    expect(joined.length).toBe(disc.length + 2); // the two points where the coast meets the disc
+    const corners = new Set(joined.map((p) => p.join(',')));
+    const onDisc = land[0][0].filter((p) => corners.has(p.join(',')));
+    expect(onDisc.length).toBeGreaterThanOrEqual(9); // half the disc's corners plus the two new points
+    expect(polygonsContain(land, 0.05, 0)).toBe(false);
+    expect(polygonsContain(land, 0.5, 0)).toBe(true);
+  });
+
+  it('leaves provinces out, and warns about ids that do not exist', () => {
+    const warnings: string[] = [];
+    const { provinces, report } = applyTinyProvinces(
+      [draft('keep', square(0, 0, 1)), draft('atoll', [])],
+      config({
+        leaveOut: ['atoll', 'nowhere'],
+        enlarge: [{ id: 'missing', center: [0, 0], areaKm2: 1 }],
+      }),
+      (w) => warnings.push(w),
+    );
+    expect(provinces.map((p) => p.id)).toEqual(['keep']);
+    expect(report.leftOut).toEqual(['atoll']);
+    expect(warnings).toHaveLength(2);
   });
 });
 

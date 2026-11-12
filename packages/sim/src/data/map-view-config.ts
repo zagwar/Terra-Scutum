@@ -70,6 +70,11 @@ export const mapViewSchema = z.strictObject({
     seaDeep: hexColor,
     seaShallow: hexColor,
     seaVariation: fraction,
+    /**
+     * The "political" map mode colors provinces by their owner's map color
+     * (`data/countries.json`); each province is shaded slightly differently.
+     */
+    politicalVariation: fraction,
     /** Colors for the "regions" map mode; neighboring regions get different ones. */
     regionPalette: z.array(hexColor).min(4),
     regionVariation: fraction,

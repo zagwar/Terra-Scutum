@@ -17,7 +17,7 @@ import type { SystemRegistry } from './systems';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 1;
+export const SAVE_FORMAT_VERSION = 2;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -27,18 +27,55 @@ const saveFileSchema = z.strictObject({
   seed: uint32,
   day: z.number().int().min(0),
   rng: z.tuple([uint32, uint32, uint32, uint32]),
+  /**
+   * The map the save was made on: the ids of its provinces and countries, in
+   * the order the arrays below use. A save only loads on the same map.
+   */
+  map: z.strictObject({
+    provinces: z.array(z.string()),
+    countries: z.array(z.string()),
+  }),
+  /** Owner of each province: an index into `map.countries`, in the order of `map.provinces`. */
+  provinceOwners: z.array(z.number().int().min(0)),
 });
 
 export type SaveFile = z.infer<typeof saveFileSchema>;
 
 type UnknownRecord = Record<string, unknown>;
 
-/** Upgrades a save by exactly one version: the entry at key N turns a version-N save into version N+1. */
-export type SaveMigration = (save: UnknownRecord) => UnknownRecord;
+/**
+ * Upgrades a save by exactly one version: the entry at key N turns a version-N
+ * save into version N+1. It gets the game data too, for values an old save
+ * never stored (their starting values).
+ */
+export type SaveMigration = (save: UnknownRecord, data: GameData) => UnknownRecord;
 export type SaveMigrations = Readonly<Record<number, SaveMigration>>;
 
-/** Migrations for every older save version that can still be loaded. (None yet: version 1 is the first.) */
-export const SAVE_MIGRATIONS: SaveMigrations = {};
+const byId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** The ids of the data's provinces and countries in index order (sorted by id, as in `WorldMap`). */
+function mapIdsOf(data: GameData): { provinces: string[]; countries: string[] } {
+  return {
+    provinces: data.provinces.provinces.map((p) => p.id).sort(byId),
+    countries: data.countries.countries.map((c) => c.id).sort(byId),
+  };
+}
+
+/** Migrations for every older save version that can still be loaded. */
+export const SAVE_MIGRATIONS: SaveMigrations = {
+  // Version 2 (F02) added province ownership. Version 1 saves are from before
+  // anything could change owner: every province has its starting owner.
+  1: (save, data) => {
+    const map = mapIdsOf(data);
+    const countryIndex = new Map(map.countries.map((id, i) => [id, i]));
+    const startingOwner = new Map(data.provinces.provinces.map((p) => [p.id, p.country]));
+    return {
+      ...save,
+      map,
+      provinceOwners: map.provinces.map((id) => countryIndex.get(startingOwner.get(id)!)),
+    };
+  },
+};
 
 /** Writes the state as a plain JSON-compatible object. */
 export function serializeGameState(state: GameState): SaveFile {
@@ -49,6 +86,8 @@ export function serializeGameState(state: GameState): SaveFile {
     seed: state.seed,
     day: state.day,
     rng: [s0, s1, s2, s3],
+    map: { provinces: [...state.world.provinceIds], countries: [...state.world.countryIds] },
+    provinceOwners: Array.from(state.provinceOwner),
   };
 }
 
@@ -62,6 +101,7 @@ function isRecord(value: unknown): value is UnknownRecord {
  */
 export function migrateSave(
   raw: unknown,
+  data: GameData,
   migrations: SaveMigrations = SAVE_MIGRATIONS,
   targetVersion: number = SAVE_FORMAT_VERSION,
 ): UnknownRecord {
@@ -88,7 +128,7 @@ export function migrateSave(
         gameVersion: targetVersion,
       });
     }
-    save = { ...migrate(save), saveVersion: version + 1 };
+    save = { ...migrate(save, data), saveVersion: version + 1 };
   }
   return save;
 }
@@ -104,7 +144,7 @@ export interface LoadOptions {
  * can't be loaded.
  */
 export function deserializeGameState(raw: unknown, options: LoadOptions): GameState {
-  const parsed = saveFileSchema.safeParse(migrateSave(raw));
+  const parsed = saveFileSchema.safeParse(migrateSave(raw, options.data));
   if (!parsed.success) {
     const detail = parsed.error.issues
       .map((issue) => `${issue.path.join('.') || '(save)'}: ${issue.message}`)
@@ -115,11 +155,28 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   if ((save.rng[0] | save.rng[1] | save.rng[2] | save.rng[3]) === 0) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'rng state is all zeros');
   }
+  // The arrays in a save are in the order of its own map: it must be this game's map.
+  const map = mapIdsOf(options.data);
+  const sameIds = (saved: readonly string[], current: readonly string[]) =>
+    saved.length === current.length && saved.every((id, i) => id === current[i]);
+  if (!sameIds(save.map.provinces, map.provinces) || !sameIds(save.map.countries, map.countries)) {
+    throw new SimError('SAVE_ERROR_DIFFERENT_MAP');
+  }
+  if (
+    save.provinceOwners.length !== map.provinces.length ||
+    save.provinceOwners.some((owner) => owner >= map.countries.length)
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'provinceOwners does not match the map');
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
     systems: options.systems,
-    restore: { day: save.day, rngState: save.rng },
+    restore: {
+      day: save.day,
+      rngState: save.rng,
+      provinceOwner: Uint16Array.from(save.provinceOwners),
+    },
   });
 }
 

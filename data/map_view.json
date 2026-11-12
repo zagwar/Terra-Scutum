@@ -20,6 +20,7 @@
     "background": "#05080d",
     "land": "#737a5e",
     "landVariation": 0.1,
+    "politicalVariation": 0.07,
     "seaDeep": "#15283c",
     "seaShallow": "#1d3a54",
     "seaVariation": 0.05,

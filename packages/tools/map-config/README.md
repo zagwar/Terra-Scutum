@@ -41,6 +41,12 @@ and always gives the same result for the same inputs.
   grid (for example the Bosporus).
 - **`province-names.json`**: better display names for generated provinces, by province id. Ids never
   change when a name does.
+- **`tiny-provinces.json`**: provinces that are too small for the map data's precision (their
+  shape would have no area, so they could not be seen or clicked). `enlarge` lists the ones drawn as
+  a small disc (`radiusKm` [DEFAULT], with `discPoints` corners) around `center`, as Paradox games do
+  with microstates; the disc is cut out of whatever province lies under it, and `areaKm2` (the real
+  area) is what goes into the data. `leaveOut` lists the ones that are not part of the game. The
+  import warns if any other province comes out without a visible shape.
 - **`settings.json`**: the [DEFAULT] numbers:
   - `areaPerProvinceKm2` and `populationUnit`: each country aims for about
     `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
@@ -65,5 +71,7 @@ Provinces always follow **real borders**: states and provinces are only ever com
    (a tiny piece was added), "A and B" for two members, or a direction in the country ("Northern
    Algeria"). The report lists every combined province and how it got its name; better names go in
    `province-groups.json` or `province-names.json`.
-5. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
+5. The tiny provinces in `tiny-provinces.json` are enlarged or left out, and every province gets its
+   label point (`center`): the point of its shape farthest from its outline.
+6. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
    (`raster.degreesPerPixel`). The world wraps east–west: sea zones grow across the date line.

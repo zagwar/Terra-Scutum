@@ -21,7 +21,13 @@ describe('sim host (the logic inside the sim worker)', () => {
     expect(posted).toHaveLength(1);
     const ready = posted[0];
     if (ready.type !== 'ready') throw new Error(`expected "ready", got "${ready.type}"`);
-    expect(ready.snapshot).toEqual({ day: 0, date: { year: 2025, month: 1, day: 1 } });
+    expect(ready.snapshot).toMatchObject({
+      day: 0,
+      date: { year: 2025, month: 1, day: 1 },
+      ownershipVersion: 0,
+    });
+    // The first snapshot carries who owns every province: at the start, the starting owners.
+    expect(ready.snapshot.provinceOwner).toEqual(ready.world.provinceCountry);
     expect(ready.saveFormatVersion).toBe(SAVE_FORMAT_VERSION);
     // The map's fixed facts and drawing settings travel with the first message.
     expect(ready.world.provinceIds.length).toBeGreaterThan(1000);
@@ -49,9 +55,42 @@ describe('sim host (the logic inside the sim worker)', () => {
     expect(posted[1]).toEqual({
       type: 'update',
       requestId: 5,
-      snapshot: { day: 31, date: { year: 2025, month: 2, day: 1 } },
+      snapshot: { day: 31, date: { year: 2025, month: 2, day: 1 }, ownershipVersion: 0 },
       events: [],
     });
+  });
+
+  it('sends the province owners again only when they changed', () => {
+    const { host, posted } = hostWith();
+    host.handle({ type: 'init', seed: 42 });
+    const snapshotOf = (message: FromSimWorker) => {
+      if (message.type !== 'update') throw new Error(`expected "update", got "${message.type}"`);
+      return message.snapshot;
+    };
+    host.handle({ type: 'step', requestId: 1, days: 1 });
+    expect(snapshotOf(posted[1]).provinceOwner).toBeUndefined();
+
+    host.handle({
+      type: 'command',
+      requestId: 2,
+      command: { type: 'debugSetProvinceOwner', province: 'fra_bretagne', country: 'DEU' },
+    });
+    expect(posted[2]).toMatchObject({
+      commandResult: { ok: true },
+      events: [{ type: 'provinceOwnerChanged', province: 'fra_bretagne', from: 'FRA', to: 'DEU' }],
+    });
+    const changed = snapshotOf(posted[2]);
+    const ready = posted[0];
+    if (ready.type !== 'ready') throw new Error('expected "ready"');
+    const { world } = ready;
+    expect(changed.ownershipVersion).toBe(1);
+    expect(changed.provinceOwner![world.provinceIndex.get('fra_bretagne')!]).toBe(
+      world.countryIndex.get('DEU'),
+    );
+
+    host.handle({ type: 'step', requestId: 3, days: 1 });
+    expect(snapshotOf(posted[3]).ownershipVersion).toBe(1);
+    expect(snapshotOf(posted[3]).provinceOwner).toBeUndefined();
   });
 
   it('applies commands and returns their result and events', () => {
