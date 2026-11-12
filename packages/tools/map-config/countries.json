@@ -16,6 +16,11 @@
       "source": "ALB"
     },
     {
+      "id": "AND",
+      "name": "Andorra",
+      "source": "AND"
+    },
+    {
       "id": "ARE",
       "name": "United Arab Emirates",
       "source": "ARE"
@@ -54,8 +59,7 @@
     {
       "id": "BEL",
       "name": "Belgium",
-      "source": "BEL",
-      "includes": ["LUX"]
+      "source": "BEL"
     },
     {
       "id": "BEN",
@@ -85,13 +89,17 @@
     {
       "id": "BIH",
       "name": "Bosnia and Herzegovina",
-      "source": "BIH",
-      "includes": ["MNE"]
+      "source": "BIH"
     },
     {
       "id": "BLR",
       "name": "Belarus",
       "source": "BLR"
+    },
+    {
+      "id": "BLZ",
+      "name": "Belize",
+      "source": "BLZ"
     },
     {
       "id": "BOL",
@@ -103,6 +111,16 @@
       "name": "Brazil",
       "source": "BRA",
       "includes": ["BRI"]
+    },
+    {
+      "id": "BRN",
+      "name": "Brunei",
+      "source": "BRN"
+    },
+    {
+      "id": "BTN",
+      "name": "Bhutan",
+      "source": "BTN"
     },
     {
       "id": "BWA",
@@ -122,8 +140,7 @@
     {
       "id": "CHE",
       "name": "Switzerland",
-      "source": "CHE",
-      "includes": ["LIE"]
+      "source": "CHE"
     },
     {
       "id": "CHL",
@@ -190,6 +207,11 @@
       "source": "DEU"
     },
     {
+      "id": "DJI",
+      "name": "Djibouti",
+      "source": "DJI"
+    },
+    {
       "id": "DNK",
       "name": "Denmark",
       "source": "DNK",
@@ -223,8 +245,7 @@
     {
       "id": "ESP",
       "name": "Spain",
-      "source": "ESP",
-      "includes": ["AND"]
+      "source": "ESP"
     },
     {
       "id": "EST",
@@ -234,8 +255,7 @@
     {
       "id": "ETH",
       "name": "Ethiopia",
-      "source": "ETH",
-      "includes": ["DJI"]
+      "source": "ETH"
     },
     {
       "id": "FIN",
@@ -247,7 +267,7 @@
       "id": "FRA",
       "name": "France",
       "source": "FRA",
-      "includes": ["ATF", "BLM", "CLP", "MAF", "MCO", "NCL", "PYF", "SPM", "WLF"]
+      "includes": ["ATF", "BLM", "CLP", "MAF", "NCL", "PYF", "SPM", "WLF"]
     },
     {
       "id": "GAB",
@@ -316,8 +336,7 @@
     {
       "id": "GTM",
       "name": "Guatemala",
-      "source": "GTM",
-      "includes": ["BLZ"]
+      "source": "GTM"
     },
     {
       "id": "GUY",
@@ -353,7 +372,7 @@
       "id": "IND",
       "name": "India",
       "source": "IND",
-      "includes": ["BTN", "KAS"]
+      "includes": ["KAS"]
     },
     {
       "id": "IRL",
@@ -383,8 +402,7 @@
     {
       "id": "ITA",
       "name": "Italy",
-      "source": "ITA",
-      "includes": ["SMR", "VAT"]
+      "source": "ITA"
     },
     {
       "id": "JAM",
@@ -458,6 +476,11 @@
       "source": "LBY"
     },
     {
+      "id": "LIE",
+      "name": "Liechtenstein",
+      "source": "LIE"
+    },
+    {
       "id": "LKA",
       "name": "Sri Lanka",
       "source": "LKA"
@@ -473,6 +496,11 @@
       "source": "LTU"
     },
     {
+      "id": "LUX",
+      "name": "Luxembourg",
+      "source": "LUX"
+    },
+    {
       "id": "LVA",
       "name": "Latvia",
       "source": "LVA"
@@ -482,6 +510,11 @@
       "name": "Morocco",
       "source": "MAR",
       "includes": ["SAH"]
+    },
+    {
+      "id": "MCO",
+      "name": "Monaco",
+      "source": "MCO"
     },
     {
       "id": "MDA",
@@ -514,6 +547,11 @@
       "source": "MMR"
     },
     {
+      "id": "MNE",
+      "name": "Montenegro",
+      "source": "MNE"
+    },
+    {
       "id": "MNG",
       "name": "Mongolia",
       "source": "MNG"
@@ -541,8 +579,7 @@
     {
       "id": "MYS",
       "name": "Malaysia",
-      "source": "MYS",
-      "includes": ["BRN"]
+      "source": "MYS"
     },
     {
       "id": "NAM",
@@ -673,11 +710,6 @@
       "includes": ["BRT"]
     },
     {
-      "id": "SSD",
-      "name": "South Sudan",
-      "source": "SDS"
-    },
-    {
       "id": "SEN",
       "name": "Senegal",
       "source": "SEN"
@@ -698,6 +730,11 @@
       "source": "SLV"
     },
     {
+      "id": "SMR",
+      "name": "San Marino",
+      "source": "SMR"
+    },
+    {
       "id": "SOM",
       "name": "Somalia",
       "source": "SOM",
@@ -707,6 +744,11 @@
       "id": "SRB",
       "name": "Serbia",
       "source": "SRB"
+    },
+    {
+      "id": "SSD",
+      "name": "South Sudan",
+      "source": "SDS"
     },
     {
       "id": "SUR",
@@ -818,6 +860,11 @@
       "id": "UZB",
       "name": "Uzbekistan",
       "source": "UZB"
+    },
+    {
+      "id": "VAT",
+      "name": "Vatican City",
+      "source": "VAT"
     },
     {
       "id": "VEN",

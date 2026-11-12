@@ -85,8 +85,17 @@ export async function runMapImport(
 
   log('Building units and clusters…');
   const unitSet = buildUnits(sources, config.countries, settings);
-  log('Merging and splitting provinces…');
-  const { provinces, report } = buildProvinces(unitSet, settings, config.provinceNames.provinces);
+  log('Combining states into provinces…');
+  const countryNames = new Map(config.countries.countries.map((c) => [c.id, c.name]));
+  const { provinces, report } = buildProvinces(
+    unitSet,
+    settings,
+    config.provinceGroups,
+    config.provinceNames.provinces,
+    countryNames,
+  );
+  for (const code of report.unknownGroupCodes)
+    warn(`province-groups.json lists ${code}, which matches no state/province`);
   for (const id of Object.keys(config.provinceNames.provinces)) {
     if (!provinces.some((p) => p.id === id))
       warn(`province-names.json renames "${id}", but no province has that id`);
@@ -212,35 +221,74 @@ export async function runMapImport(
   );
 
   // ── Regions ───────────────────────────────────────────────────────────────
+  // Each source unit joins a region by its ISO code, else by its territory, else by the nearest
+  // seed (reported, so the lists can be completed). A province joins the region holding most of it.
   log('Assigning regions…');
   const regionConfigs = config.regions.regions;
-  const regionOfCountry = new Map<string, string>();
+  const regionByCode = new Map<string, string>();
+  const regionByTerritory = new Map<string, string>();
   for (const region of regionConfigs) {
-    for (const country of region.countries ?? []) {
-      if (regionOfCountry.has(country))
-        throw new Error(`regions.json: country ${country} is listed in two regions`);
-      regionOfCountry.set(country, region.id);
+    for (const code of region.units ?? []) {
+      if (regionByCode.has(code)) throw new Error(`regions.json: ${code} is listed in two regions`);
+      regionByCode.set(code, region.id);
+    }
+    for (const territory of region.countries ?? []) {
+      if (regionByTerritory.has(territory))
+        throw new Error(`regions.json: ${territory} is listed in two regions`);
+      regionByTerritory.set(territory, region.id);
     }
   }
-  const provinceRegion = provinces.map((p) => {
-    const fixed = regionOfCountry.get(p.country);
-    if (fixed) return fixed;
+  const knownCodes = new Set(unitSet.units.map((u) => u.iso));
+  const knownTerritories = new Set(unitSet.units.map((u) => u.sourceCode));
+  for (const code of regionByCode.keys())
+    if (!knownCodes.has(code)) warn(`regions.json lists ${code}, which matches no state/province`);
+  for (const t of regionByTerritory.keys()) {
+    if (!knownTerritories.has(t) && !config.countries.leftOut.includes(t))
+      warn(`regions.json lists ${t}, which is not a territory in the game`);
+  }
+  const fallbackUnits: string[] = [];
+  const regionOfUnit = (index: number): string => {
+    const unit = unitSet.units[index];
+    const byCode = unit.iso ? regionByCode.get(unit.iso) : undefined;
+    if (byCode) return byCode;
+    const byTerritory = regionByTerritory.get(unit.sourceCode);
+    if (byTerritory) return byTerritory;
     let best = regionConfigs[0].id;
     let bestDistance = Infinity;
     for (const region of regionConfigs) {
       for (const seed of region.seeds) {
-        const d = distanceKm(p.center, seed);
+        const d = distanceKm(unit.center, seed);
         if (d < bestDistance) {
           bestDistance = d;
           best = region.id;
         }
       }
     }
+    fallbackUnits.push(`${unit.name} (${unit.iso ?? unit.sourceCode}) → ${best}`);
     return best;
+  };
+  const provinceRegion = provinces.map((p) => {
+    const area = new Map<string, number>();
+    for (const i of p.units) {
+      const r = regionOfUnit(i);
+      area.set(r, (area.get(r) ?? 0) + unitSet.units[i].areaKm2);
+    }
+    return [...area].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
   });
+  if (fallbackUnits.length > 0) {
+    warn(
+      `${fallbackUnits.length} states/provinces are not listed in regions.json and joined the nearest seed: ${fallbackUnits.join('; ')}`,
+    );
+  }
   for (const region of regionConfigs) {
     if (!provinceRegion.includes(region.id)) warn(`region ${region.id} got no provinces`);
   }
+  const regionCenter = (id: string): readonly [number, number] => {
+    const own = provinces
+      .filter((_, i) => provinceRegion[i] === id)
+      .sort((a, b) => b.areaKm2 - a.areaKm2);
+    return own[0]?.center ?? regionConfigs.find((r) => r.id === id)!.seeds[0];
+  };
 
   // ── Countries ─────────────────────────────────────────────────────────────
   const countryIds = [...new Set(provinces.map((p) => p.country))].sort();
@@ -298,7 +346,7 @@ export async function runMapImport(
     regionConfigs.map((region) => ({
       id: region.id,
       climate: region.climate,
-      center: center(region.seeds[0]),
+      center: center(regionCenter(region.id)),
     })),
   );
   writeRows(
@@ -313,8 +361,7 @@ export async function runMapImport(
   );
 
   const names: Record<string, string> = {};
-  const countryName = new Map(config.countries.countries.map((c) => [c.id, c.name]));
-  for (const id of countryIds) names[key('COUNTRY', id)] = countryName.get(id) ?? id;
+  for (const id of countryIds) names[key('COUNTRY', id)] = countryNames.get(id) ?? id;
   for (const region of regionConfigs) names[key('REGION', region.id)] = region.name;
   for (const zone of zones) names[key('SEA_ZONE', zone.id)] = zone.name;
   for (const p of provinces) names[key('PROVINCE', p.id)] = p.name;
@@ -393,7 +440,7 @@ function buildReport(
   provinces: readonly ProvinceDraft[],
   provinceRegion: readonly string[],
   dropped: readonly { country: string; names: string[] }[],
-  report: { merges: number; splits: number },
+  report: { merges: number },
   seaZoneCount: number,
   warnings: readonly string[],
 ): string {
@@ -409,7 +456,7 @@ function buildReport(
   );
   lines.push(`- **Countries:** ${perCountry.size}`);
   lines.push(
-    `- **Provinces:** ${provinces.length} (${report.merges} merges and ${report.splits} splits of the ${config.settings.naturalEarth.version} Natural Earth states and provinces)`,
+    `- **Provinces:** ${provinces.length} (made by ${report.merges} merges of the ${config.settings.naturalEarth.version} Natural Earth states and provinces; provinces are never cut)`,
   );
   lines.push(`- **Regions:** ${config.regions.regions.length}`);
   lines.push(`- **Sea zones:** ${seaZoneCount}`, '');
@@ -437,14 +484,14 @@ function buildReport(
     lines.push(`| ${r.name} | ${r.climate} | ${perRegion.get(r.id) ?? 0} |`);
   lines.push(
     '',
-    '## Merged provinces',
+    '## Combined provinces',
     '',
-    'Provinces made from several source states/provinces (merged from → name):',
+    'Provinces made from several source states/provinces (name ← members). The name comes from `province-groups.json` (group), the source data (grouping, territory), the main member when a tiny piece was added (absorbed), the two members (pair), or a direction in the country (direction). Better names go in `province-groups.json` or `province-names.json`.',
     '',
   );
   for (const p of provinces) {
-    if (!p.split && p.sourceUnits.length > 1)
-      lines.push(`- ${p.country} **${p.name}** ← ${p.sourceUnits.join(', ')}`);
+    if (p.sourceUnits.length > 1)
+      lines.push(`- ${p.country} **${p.name}** _(${p.nameSource})_ ← ${p.sourceUnits.join(', ')}`);
   }
   lines.push('', '## Provinces by country', '');
   const byCountry = new Map<string, string[]>();

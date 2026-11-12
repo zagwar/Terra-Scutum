@@ -34,6 +34,8 @@ export interface City {
 export interface Unit {
   readonly index: number;
   readonly name: string;
+  /** ISO 3166-2 code from the source (e.g. "US-TX"), or null. */
+  readonly iso: string | null;
   /** Game country id. */
   readonly country: string;
   /** Natural Earth territory code the unit came from. */
@@ -109,7 +111,7 @@ export function buildUnits(
   // 1. Collect source features: admin-1 units, plus whole territories that have no admin-1 data.
   const raw: Feature<
     Polygon | MultiPolygon,
-    { name: string; code: string; grouping: string | null }
+    { name: string; code: string; grouping: string | null; iso: string | null }
   >[] = [];
   const withAdmin1 = new Set<string>();
   for (const f of sources.provinces.features) {
@@ -129,6 +131,7 @@ export function buildUnits(
         name: cleanName((str(p.name_en) ?? str(p.name) ?? code).replace(/ Prefecture$/, '')),
         code,
         grouping: str(p.region),
+        iso: str(p.iso_3166_2),
       },
     });
   }
@@ -145,7 +148,7 @@ export function buildUnits(
     raw.push({
       type: 'Feature',
       geometry: f.geometry,
-      properties: { name: cleanName(str(p.NAME) ?? code), code, grouping: null },
+      properties: { name: cleanName(str(p.NAME) ?? code), code, grouping: null, iso: null },
     });
   }
 
@@ -194,6 +197,7 @@ export function buildUnits(
     return {
       index,
       name: source.properties.name,
+      iso: source.properties.iso,
       country: lookup.get(source.properties.code) as string,
       sourceCode: source.properties.code,
       grouping: source.properties.grouping,
@@ -374,7 +378,9 @@ function buildClusters(
   const dropped: { country: string; names: string[] }[] = [];
   for (const [root, members] of [...clusters]) {
     const population = members.reduce((sum, i) => sum + units[i].population, 0);
-    if (population < settings.provinces.minClusterPopulation) {
+    // A country's only land is never dropped (the Vatican has fewer than 1,000 people).
+    const wholeCountry = members.length === (byCountry.get(units[root].country)?.length ?? 0);
+    if (population < settings.provinces.minClusterPopulation && !wholeCountry) {
       clusters.delete(root);
       dropped.push({ country: units[root].country, names: members.map((i) => units[i].name) });
       continue;

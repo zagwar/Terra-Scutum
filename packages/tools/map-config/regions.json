@@ -4,567 +4,746 @@
       "id": "north_american_arctic",
       "name": "North American Arctic",
       "climate": "polar",
+      "units": ["US-AK", "CA-YT", "CA-NT", "CA-NU"],
       "seeds": [
         [-150, 65],
-        [-125, 66],
-        [-100, 70],
-        [-80, 68]
+        [-100, 70]
       ]
     },
     {
-      "id": "canadian_shield",
-      "name": "Canadian Shield",
+      "id": "eastern_canada",
+      "name": "Eastern Canada",
       "climate": "continental",
-      "seeds": [
-        [-95, 54],
-        [-75, 51],
-        [-62, 52]
-      ]
+      "countries": ["SPM"],
+      "units": ["CA-ON", "CA-QC", "CA-NL", "CA-NB", "CA-NS", "CA-PE"],
+      "seeds": [[-75, 50]]
     },
     {
       "id": "pacific_northwest",
       "name": "Pacific Northwest",
       "climate": "temperate",
-      "seeds": [
-        [-122, 47],
-        [-126, 54]
-      ]
+      "units": ["US-WA", "US-OR", "US-ID", "CA-BC"],
+      "seeds": [[-122, 47]]
     },
     {
-      "id": "great_plains",
-      "name": "Great Plains",
-      "climate": "continental",
-      "seeds": [
-        [-100, 42],
-        [-106, 51],
-        [-97, 35]
-      ]
-    },
-    {
-      "id": "american_northeast",
-      "name": "American Northeast",
-      "climate": "temperate",
-      "seeds": [
-        [-85, 42],
-        [-75, 41],
-        [-70, 45]
-      ]
-    },
-    {
-      "id": "american_southeast",
-      "name": "American Southeast",
-      "climate": "temperate",
-      "seeds": [
-        [-85, 33],
-        [-81, 28]
-      ]
+      "id": "mountain_west",
+      "name": "Mountain West",
+      "climate": "highland",
+      "units": ["US-MT", "US-WY", "US-CO", "US-UT", "US-NV"],
+      "seeds": [[-108, 41]]
     },
     {
       "id": "american_southwest",
       "name": "American Southwest",
       "climate": "arid",
-      "seeds": [
-        [-113, 36],
-        [-119, 38]
-      ]
+      "units": ["US-CA", "US-AZ", "US-NM", "US-TX"],
+      "seeds": [[-112, 34]]
+    },
+    {
+      "id": "great_plains",
+      "name": "Great Plains",
+      "climate": "continental",
+      "units": ["US-ND", "US-SD", "US-NE", "US-KS", "US-OK", "CA-AB", "CA-SK", "CA-MB"],
+      "seeds": [[-100, 44]]
+    },
+    {
+      "id": "american_midwest",
+      "name": "American Midwest",
+      "climate": "continental",
+      "units": ["US-MN", "US-WI", "US-IA", "US-IL", "US-IN", "US-MI", "US-OH", "US-MO"],
+      "seeds": [[-88, 42]]
+    },
+    {
+      "id": "american_northeast",
+      "name": "American Northeast",
+      "climate": "temperate",
+      "countries": ["BMU"],
+      "units": [
+        "US-NY",
+        "US-PA",
+        "US-NJ",
+        "US-CT",
+        "US-RI",
+        "US-MA",
+        "US-VT",
+        "US-NH",
+        "US-ME",
+        "US-MD",
+        "US-DE",
+        "US-DC"
+      ],
+      "seeds": [[-75, 42]]
+    },
+    {
+      "id": "american_south",
+      "name": "American South",
+      "climate": "temperate",
+      "units": [
+        "US-AR",
+        "US-LA",
+        "US-MS",
+        "US-AL",
+        "US-TN",
+        "US-KY",
+        "US-WV",
+        "US-VA",
+        "US-NC",
+        "US-SC",
+        "US-GA",
+        "US-FL"
+      ],
+      "seeds": [[-86, 33]]
     },
     {
       "id": "mexico",
       "name": "Mexico",
       "climate": "arid",
-      "seeds": [
-        [-103, 25],
-        [-98, 19]
-      ]
+      "countries": ["MEX"],
+      "seeds": [[-102, 23]]
     },
     {
       "id": "central_america_caribbean",
       "name": "Central America and the Caribbean",
       "climate": "tropical",
+      "countries": [
+        "GTM",
+        "BLZ",
+        "HND",
+        "SLV",
+        "NIC",
+        "CRI",
+        "PAN",
+        "CUB",
+        "USG",
+        "JAM",
+        "HTI",
+        "DOM",
+        "TTO",
+        "PRI",
+        "VIR",
+        "CYM",
+        "TCA",
+        "VGB",
+        "AIA",
+        "MSR",
+        "ABW",
+        "CUW",
+        "SXM",
+        "MAF",
+        "BLM",
+        "BJN",
+        "SER"
+      ],
+      "units": ["FR-MQ", "FR-GP", "NL-BQ1", "NL-BQ2", "NL-BQ3"],
       "seeds": [
-        [-87, 14],
-        [-77, 20],
-        [-66, 18]
+        [-86, 14],
+        [-75, 20]
       ]
     },
     {
       "id": "northern_andes",
       "name": "Northern Andes",
       "climate": "highland",
-      "seeds": [
-        [-74, 5],
-        [-78, -1],
-        [-66, 8]
-      ]
+      "countries": ["COL", "VEN", "ECU"],
+      "seeds": [[-74, 4]]
     },
     {
       "id": "amazon_basin",
       "name": "Amazon Basin",
       "climate": "tropical",
-      "seeds": [
-        [-63, -4],
-        [-54, -6],
-        [-56, 4]
-      ]
+      "countries": ["GUY", "SUR"],
+      "units": ["BR-AM", "BR-PA", "BR-AC", "BR-RO", "BR-RR", "BR-AP", "FR-GF"],
+      "seeds": [[-62, -4]]
     },
     {
       "id": "brazilian_highlands",
       "name": "Brazilian Highlands",
       "climate": "tropical",
-      "seeds": [
-        [-47, -15],
-        [-40, -9],
-        [-44, -21]
-      ]
+      "units": [
+        "BR-MT",
+        "BR-TO",
+        "BR-GO",
+        "BR-DF",
+        "BR-MS",
+        "BR-MG",
+        "BR-BA",
+        "BR-MA",
+        "BR-PI",
+        "BR-CE",
+        "BR-RN",
+        "BR-PB",
+        "BR-PE",
+        "BR-AL",
+        "BR-SE",
+        "BR-ES",
+        "BR-RJ",
+        "BR-SP"
+      ],
+      "seeds": [[-46, -14]]
     },
     {
       "id": "central_andes",
       "name": "Central Andes",
       "climate": "highland",
-      "seeds": [
-        [-68, -18],
-        [-75, -11]
-      ]
+      "countries": ["PER", "BOL"],
+      "seeds": [[-70, -14]]
     },
     {
       "id": "southern_cone",
       "name": "Southern Cone",
       "climate": "temperate",
-      "seeds": [
-        [-58, -32],
-        [-63, -37],
-        [-70, -33],
-        [-69, -46]
-      ]
+      "countries": ["ARG", "URY", "PRY", "CHL", "SPI", "BRI", "FLK"],
+      "units": ["BR-PR", "BR-SC", "BR-RS"],
+      "seeds": [[-62, -35]]
     },
     {
       "id": "british_isles",
       "name": "British Isles",
       "climate": "temperate",
-      "seeds": [
-        [-3, 54],
-        [-8, 53]
-      ],
-      "countries": ["GBR", "IRL"]
+      "countries": ["GBR", "IRL", "IMN", "JEY", "GGY"],
+      "seeds": [[-3, 54]]
     },
     {
       "id": "western_europe",
       "name": "Western Europe",
       "climate": "temperate",
-      "seeds": [
-        [2, 47],
-        [4, 50.5]
-      ]
+      "countries": ["FRA", "BEL", "NLD", "LUX", "MCO"],
+      "seeds": [[3, 47]]
     },
     {
       "id": "iberian_peninsula",
       "name": "Iberian Peninsula",
       "climate": "temperate",
+      "countries": ["ESP", "PRT", "AND", "GIB"],
       "seeds": [[-4, 40]]
     },
     {
       "id": "central_europe",
       "name": "Central Europe",
       "climate": "temperate",
-      "seeds": [
-        [10, 50],
-        [15, 48]
-      ]
+      "countries": ["DEU", "POL", "CZE", "SVK", "AUT", "CHE", "LIE", "HUN", "SVN"],
+      "seeds": [[14, 50]]
     },
     {
       "id": "italian_peninsula",
       "name": "Italian Peninsula",
       "climate": "temperate",
-      "seeds": [
-        [12, 43],
-        [15, 39]
-      ]
+      "countries": ["ITA", "SMR", "VAT"],
+      "seeds": [[12, 43]]
     },
     {
       "id": "balkans",
       "name": "Balkans",
       "climate": "temperate",
-      "seeds": [
-        [20, 43],
-        [24, 40]
-      ]
+      "countries": ["HRV", "BIH", "SRB", "MNE", "KOS", "MKD", "ALB", "GRC", "BGR"],
+      "seeds": [[21, 43]]
     },
     {
       "id": "scandinavia",
       "name": "Scandinavia",
       "climate": "continental",
-      "seeds": [
-        [15, 62],
-        [25, 64],
-        [9, 60]
-      ]
+      "countries": ["NOR", "SWE", "FIN", "DNK", "ALD"],
+      "seeds": [[15, 62]]
     },
     {
       "id": "eastern_europe",
       "name": "Eastern Europe",
       "climate": "continental",
-      "seeds": [
-        [22, 52],
-        [31, 49],
-        [28, 54]
-      ]
+      "countries": ["EST", "LVA", "LTU", "BLR", "UKR", "MDA", "ROU"],
+      "units": ["RU-KGD", "UA-43", "UA-40"],
+      "seeds": [[27, 52]]
     },
     {
       "id": "european_russia",
       "name": "European Russia",
       "climate": "continental",
-      "seeds": [
-        [40, 56],
-        [45, 51],
-        [45, 64],
-        [55, 65]
-      ]
+      "units": [
+        "RU-ARK",
+        "RU-AST",
+        "RU-BEL",
+        "RU-BRY",
+        "RU-CU",
+        "RU-IVA",
+        "RU-KIR",
+        "RU-KL",
+        "RU-KLU",
+        "RU-KO",
+        "RU-KOS",
+        "RU-KR",
+        "RU-KRS",
+        "RU-LEN",
+        "RU-LIP",
+        "RU-ME",
+        "RU-MO",
+        "RU-MOS",
+        "RU-MOW",
+        "RU-MUR",
+        "RU-NEN",
+        "RU-NGR",
+        "RU-NIZ",
+        "RU-ORL",
+        "RU-PNZ",
+        "RU-PSK",
+        "RU-ROS",
+        "RU-RYA",
+        "RU-SAM",
+        "RU-SAR",
+        "RU-SMO",
+        "RU-SPE",
+        "RU-TA",
+        "RU-TAM",
+        "RU-TUL",
+        "RU-TVE",
+        "RU-UD",
+        "RU-ULY",
+        "RU-VGG",
+        "RU-VLA",
+        "RU-VLG",
+        "RU-VOR",
+        "RU-YAR",
+        "RU-PER",
+        "RU-BA",
+        "RU-ORE"
+      ],
+      "seeds": [[40, 56]]
     },
     {
       "id": "caucasus",
       "name": "Caucasus",
       "climate": "highland",
+      "countries": ["GEO", "ARM", "AZE"],
+      "units": ["RU-KDA", "RU-AD", "RU-STA", "RU-KC", "RU-KB", "RU-SE", "RU-IN", "RU-CE", "RU-DA"],
       "seeds": [[44, 42]]
     },
     {
-      "id": "western_siberia",
-      "name": "Western Siberia",
+      "id": "urals_western_siberia",
+      "name": "Urals and Western Siberia",
       "climate": "continental",
-      "seeds": [
-        [72, 60],
-        [65, 56],
-        [75, 66]
-      ]
+      "units": [
+        "RU-SVE",
+        "RU-CHE",
+        "RU-KGN",
+        "RU-TYU",
+        "RU-KHM",
+        "RU-YAN",
+        "RU-OMS",
+        "RU-TOM",
+        "RU-NVS",
+        "RU-KEM",
+        "RU-ALT",
+        "RU-AL",
+        "RU-X01~"
+      ],
+      "seeds": [[70, 59]]
     },
     {
       "id": "central_siberia",
       "name": "Central Siberia",
       "climate": "continental",
-      "seeds": [
-        [98, 62],
-        [95, 54],
-        [100, 70]
-      ]
+      "units": ["RU-KYA", "RU-KK", "RU-TY", "RU-IRK", "RU-BU", "RU-ZAB"],
+      "seeds": [[100, 60]]
     },
     {
       "id": "eastern_siberia",
       "name": "Eastern Siberia",
       "climate": "polar",
-      "seeds": [
-        [128, 64],
-        [150, 66],
-        [170, 66]
-      ]
+      "units": ["RU-SA", "RU-MAG", "RU-CHU"],
+      "seeds": [[135, 65]]
     },
     {
       "id": "russian_far_east",
       "name": "Russian Far East",
       "climate": "continental",
-      "seeds": [
-        [135, 48],
-        [158, 56],
-        [143, 50]
-      ]
+      "units": ["RU-AMU", "RU-YEV", "RU-KHA", "RU-PRI", "RU-SAK", "RU-KAM"],
+      "seeds": [[137, 50]]
     },
     {
       "id": "anatolia",
       "name": "Anatolia",
       "climate": "temperate",
+      "countries": ["TUR"],
       "seeds": [[33, 39]]
     },
     {
       "id": "levant_mesopotamia",
       "name": "Levant and Mesopotamia",
       "climate": "arid",
-      "seeds": [
-        [37, 33],
-        [44, 33]
-      ]
+      "countries": ["SYR", "LBN", "ISR", "PSX", "JOR", "IRQ", "CYP", "CYN", "CNM", "ESB", "WSB"],
+      "seeds": [[40, 33]]
     },
     {
       "id": "arabian_peninsula",
       "name": "Arabian Peninsula",
       "climate": "arid",
-      "seeds": [
-        [45, 23],
-        [54, 20]
-      ]
+      "countries": ["SAU", "YEM", "OMN", "ARE", "QAT", "BHR", "KWT"],
+      "seeds": [[46, 22]]
     },
     {
       "id": "iranian_plateau",
       "name": "Iranian Plateau",
       "climate": "arid",
-      "seeds": [
-        [54, 32],
-        [66, 33]
-      ]
+      "countries": ["IRN", "AFG"],
+      "seeds": [[58, 32]]
     },
     {
       "id": "central_asia",
       "name": "Central Asia",
       "climate": "arid",
-      "seeds": [
-        [67, 47],
-        [63, 40],
-        [84, 42]
-      ]
+      "countries": ["KAZ", "KAB", "UZB", "TKM", "KGZ", "TJK"],
+      "units": ["CN-XJ"],
+      "seeds": [[66, 44]]
     },
     {
       "id": "mongolian_plateau",
       "name": "Mongolian Plateau",
       "climate": "arid",
-      "seeds": [
-        [103, 46],
-        [112, 43]
-      ]
+      "countries": ["MNG"],
+      "units": ["CN-NM"],
+      "seeds": [[105, 45]]
     },
     {
-      "id": "tibetan_plateau",
-      "name": "Tibetan Plateau",
+      "id": "tibet_himalayas",
+      "name": "Tibet and the Himalayas",
       "climate": "highland",
-      "seeds": [
-        [88, 32],
-        [96, 34]
-      ]
+      "countries": ["NPL", "BTN"],
+      "units": ["CN-XZ", "CN-QH", "IN-LA"],
+      "seeds": [[90, 31]]
     },
     {
       "id": "indus_valley",
       "name": "Indus Valley",
       "climate": "arid",
+      "countries": ["PAK", "KAS"],
+      "units": ["IN-JK", "IN-PB", "IN-CH", "IN-HP", "IN-RJ", "IN-GJ"],
       "seeds": [[70, 28]]
     },
     {
       "id": "ganges_plain",
       "name": "Ganges Plain",
       "climate": "tropical",
-      "seeds": [
-        [81, 26],
-        [89, 24]
-      ]
+      "countries": ["BGD"],
+      "units": [
+        "IN-DL",
+        "IN-HR",
+        "IN-UP",
+        "IN-UT",
+        "IN-BR",
+        "IN-JH",
+        "IN-WB",
+        "IN-SK",
+        "IN-AS",
+        "IN-AR",
+        "IN-ML",
+        "IN-MN",
+        "IN-MZ",
+        "IN-NL",
+        "IN-TR"
+      ],
+      "seeds": [[83, 25]]
     },
     {
       "id": "deccan",
       "name": "Deccan",
       "climate": "tropical",
-      "seeds": [
-        [77, 17],
-        [79, 12],
-        [81, 7.5]
-      ]
+      "countries": ["LKA", "IOT"],
+      "units": [
+        "IN-MH",
+        "IN-MP",
+        "IN-CT",
+        "IN-OR",
+        "IN-TG",
+        "IN-AP",
+        "IN-KA",
+        "IN-KL",
+        "IN-TN",
+        "IN-GA",
+        "IN-PY",
+        "IN-DH",
+        "IN-LD",
+        "IN-AN"
+      ],
+      "seeds": [[78, 16]]
     },
     {
-      "id": "north_china_plain",
-      "name": "North China Plain",
+      "id": "north_china",
+      "name": "North China",
       "climate": "temperate",
-      "seeds": [
-        [116, 36],
-        [110, 36]
-      ]
+      "units": ["CN-BJ", "CN-TJ", "CN-HE", "CN-SD", "CN-HA", "CN-SX", "CN-SN", "CN-NX", "CN-GS"],
+      "seeds": [[113, 37]]
     },
     {
       "id": "manchuria",
       "name": "Manchuria",
       "climate": "continental",
+      "units": ["CN-HL", "CN-JL", "CN-LN"],
       "seeds": [[126, 45]]
     },
     {
       "id": "south_china",
       "name": "South China",
       "climate": "tropical",
-      "seeds": [
-        [113, 25],
-        [105, 29],
-        [119, 27]
+      "countries": ["TWN", "HKG", "MAC"],
+      "units": [
+        "CN-JS",
+        "CN-SH",
+        "CN-ZJ",
+        "CN-AH",
+        "CN-JX",
+        "CN-FJ",
+        "CN-HB",
+        "CN-HN",
+        "CN-GD",
+        "CN-GX",
+        "CN-HI",
+        "CN-GZ",
+        "CN-YN",
+        "CN-SC",
+        "CN-CQ"
       ],
-      "countries": ["TWN"]
+      "seeds": [[113, 26]]
     },
     {
       "id": "korean_peninsula",
       "name": "Korean Peninsula",
       "climate": "temperate",
-      "seeds": [[127, 37.5]],
-      "countries": ["KOR", "PRK"]
+      "countries": ["KOR", "PRK"],
+      "seeds": [[127.5, 37.5]]
     },
     {
       "id": "japanese_archipelago",
       "name": "Japanese Archipelago",
       "climate": "temperate",
-      "seeds": [
-        [138, 36],
-        [142, 43],
-        [131, 32]
-      ],
-      "countries": ["JPN"]
+      "countries": ["JPN"],
+      "seeds": [[138, 36]]
     },
     {
       "id": "indochina",
       "name": "Indochina",
       "climate": "tropical",
-      "seeds": [
-        [102, 16],
-        [106, 12],
-        [97, 21]
-      ]
+      "countries": ["MMR", "THA", "LAO", "KHM", "VNM"],
+      "seeds": [[102, 16]]
     },
     {
       "id": "malay_archipelago",
       "name": "Malay Archipelago",
       "climate": "tropical",
-      "seeds": [
-        [102, 1],
-        [113, -2],
-        [121, -4],
-        [110, -7]
-      ]
+      "countries": ["MYS", "SGP", "BRN", "IDN", "TLS", "IOA"],
+      "seeds": [[110, -2]]
     },
     {
       "id": "philippines",
       "name": "Philippines",
       "climate": "tropical",
-      "seeds": [[122, 12]],
-      "countries": ["PHL"]
+      "countries": ["PHL", "SCR", "PGA"],
+      "seeds": [[122, 12]]
     },
     {
       "id": "new_guinea",
       "name": "New Guinea",
       "climate": "tropical",
-      "seeds": [
-        [143, -5],
-        [138, -4]
-      ]
+      "countries": ["PNG"],
+      "units": ["ID-PA", "ID-PB"],
+      "seeds": [[143, -6]]
     },
     {
       "id": "australian_outback",
       "name": "Australian Outback",
       "climate": "arid",
-      "seeds": [
-        [133, -24],
-        [122, -25]
-      ]
+      "units": ["AU-WA", "AU-NT", "AU-SA"],
+      "seeds": [[128, -24]]
     },
     {
       "id": "eastern_australia",
       "name": "Eastern Australia",
       "climate": "temperate",
-      "seeds": [
-        [148, -30],
-        [145, -37],
-        [146, -20]
-      ]
+      "countries": ["NFK", "CSI", "ATC"],
+      "units": ["AU-QLD", "AU-NSW", "AU-VIC", "AU-TAS", "AU-ACT", "AU-X02~"],
+      "seeds": [[147, -30]]
     },
     {
       "id": "new_zealand_pacific",
       "name": "New Zealand and the Pacific",
       "climate": "temperate",
+      "countries": ["NZL", "COK", "NIU", "PYF", "NCL", "WLF", "GUM", "MNP", "ASM", "UMI", "PCN"],
+      "units": ["US-HI"],
       "seeds": [
         [172, -41],
-        [-155, 20],
-        [-150, -17],
-        [166, -21],
-        [145, 14]
-      ],
-      "countries": ["NZL"]
+        [-155, 20]
+      ]
     },
     {
       "id": "maghreb",
       "name": "Maghreb",
       "climate": "arid",
-      "seeds": [
-        [3, 34],
-        [-6, 32],
-        [10, 35]
-      ]
+      "countries": ["MAR", "TUN"],
+      "units": [
+        "DZ-02",
+        "DZ-03",
+        "DZ-04",
+        "DZ-05",
+        "DZ-06",
+        "DZ-07",
+        "DZ-09",
+        "DZ-10",
+        "DZ-12",
+        "DZ-13",
+        "DZ-14",
+        "DZ-15",
+        "DZ-16",
+        "DZ-17",
+        "DZ-18",
+        "DZ-19",
+        "DZ-20",
+        "DZ-21",
+        "DZ-22",
+        "DZ-23",
+        "DZ-24",
+        "DZ-25",
+        "DZ-26",
+        "DZ-27",
+        "DZ-28",
+        "DZ-29",
+        "DZ-31",
+        "DZ-32",
+        "DZ-34",
+        "DZ-35",
+        "DZ-36",
+        "DZ-38",
+        "DZ-40",
+        "DZ-41",
+        "DZ-42",
+        "DZ-43",
+        "DZ-44",
+        "DZ-45",
+        "DZ-46",
+        "DZ-48",
+        "LY-TN",
+        "LY-JI",
+        "LY-ZA",
+        "LY-NQ",
+        "LY-MB",
+        "LY-MI",
+        "LY-BA",
+        "LY-JA",
+        "LY-MJ",
+        "LY-QB",
+        "LY-BU",
+        "LY-SR",
+        "LY-MZ",
+        "ES-CE",
+        "ES-ML"
+      ],
+      "seeds": [[3, 34]]
     },
     {
       "id": "sahara",
       "name": "Sahara",
       "climate": "arid",
-      "seeds": [
-        [8, 24],
-        [22, 25],
-        [-5, 21]
-      ]
+      "countries": ["MRT", "SAH"],
+      "units": [
+        "DZ-01",
+        "DZ-08",
+        "DZ-11",
+        "DZ-30",
+        "DZ-33",
+        "DZ-37",
+        "DZ-39",
+        "DZ-47",
+        "LY-GD",
+        "LY-GT",
+        "LY-JU",
+        "LY-KF",
+        "LY-MQ",
+        "LY-SB",
+        "LY-WD",
+        "LY-WS",
+        "LY-AJ"
+      ],
+      "seeds": [[10, 24]]
     },
     {
       "id": "nile_valley",
       "name": "Nile Valley",
       "climate": "arid",
-      "seeds": [
-        [31, 27],
-        [32, 16]
-      ]
+      "countries": ["EGY", "BRT"],
+      "units": [
+        "SD-NO",
+        "SD-NR",
+        "SD-KH",
+        "SD-GZ",
+        "SD-NW",
+        "SD-SI",
+        "SD-NB",
+        "SD-GD",
+        "SD-KA",
+        "SD-RS"
+      ],
+      "seeds": [[31, 24]]
     },
     {
       "id": "sahel",
       "name": "Sahel",
       "climate": "arid",
-      "seeds": [
-        [0, 14],
-        [14, 13],
-        [25, 12]
-      ]
+      "countries": ["MLI", "NER", "TCD", "BFA"],
+      "units": ["SD-DE", "SD-DN", "SD-DS", "SD-DW", "SD-KN", "SD-KS"],
+      "seeds": [[10, 14]]
     },
     {
       "id": "west_african_coast",
       "name": "West African Coast",
       "climate": "tropical",
-      "seeds": [
-        [-9, 8],
-        [3, 8],
-        [-14, 12]
-      ]
+      "countries": [
+        "SEN",
+        "GMB",
+        "GNB",
+        "GIN",
+        "SLE",
+        "LBR",
+        "CIV",
+        "GHA",
+        "TGO",
+        "BEN",
+        "NGA",
+        "SHN"
+      ],
+      "seeds": [[-5, 8]]
     },
     {
       "id": "east_africa",
       "name": "East Africa",
       "climate": "highland",
-      "seeds": [
-        [40, 9],
-        [46, 5],
-        [36, -2],
-        [33, -5]
-      ]
+      "countries": ["ETH", "ERI", "DJI", "SOM", "SOL", "KEN", "UGA", "TZA", "RWA", "BDI", "SDS"],
+      "seeds": [[38, 3]]
     },
     {
       "id": "congo_basin",
       "name": "Congo Basin",
       "climate": "tropical",
-      "seeds": [
-        [21, 0],
-        [13, -2],
-        [24, -5]
-      ]
+      "countries": ["CMR", "CAF", "GNQ", "GAB", "COG", "COD", "AGO", "STP"],
+      "seeds": [[20, -2]]
     },
     {
       "id": "southeast_africa",
       "name": "Southeast Africa",
       "climate": "tropical",
-      "seeds": [
-        [29, -14],
-        [36, -17],
-        [46, -19]
-      ],
-      "countries": ["MDG"]
+      "countries": ["MOZ", "MWI", "ZMB", "ZWE", "MDG", "MUS", "ATF"],
+      "units": ["FR-RE", "FR-YT"],
+      "seeds": [[33, -16]]
     },
     {
       "id": "southern_africa",
       "name": "Southern Africa",
       "climate": "arid",
-      "seeds": [
-        [24, -27],
-        [18, -21],
-        [29, -30]
-      ]
+      "countries": ["ZAF", "NAM", "BWA", "LSO", "SWZ"],
+      "seeds": [[23, -27]]
     },
     {
       "id": "north_atlantic_islands",
       "name": "North Atlantic Islands",
       "climate": "polar",
-      "seeds": [
-        [-42, 72],
-        [-18, 65]
-      ],
-      "countries": ["ISL"]
+      "countries": ["ISL", "GRL", "FRO"],
+      "units": ["NO-21"],
+      "seeds": [[-42, 72]]
     }
   ]
 }

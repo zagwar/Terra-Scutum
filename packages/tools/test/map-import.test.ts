@@ -11,6 +11,7 @@ import {
   ringSignedArea,
 } from '../src/map-import/geometry';
 import { encodePng } from '../src/map-import/png';
+import { compassAdjective } from '../src/map-import/provinces';
 import {
   type Grid,
   fillPolygons,
@@ -18,7 +19,6 @@ import {
   touchingPairs,
   traceLabels,
 } from '../src/map-import/raster';
-import { splitInTwo } from '../src/map-import/split';
 import { cleanName, slugify, uniqueIds } from '../src/map-import/text';
 import { buildCountryLookup } from '../src/map-import/units';
 
@@ -136,33 +136,12 @@ describe('world grid', () => {
   });
 });
 
-describe('splitting a province', () => {
-  it('cuts a plain shape into two halves of equal area', () => {
-    const halves = splitInTwo({ polygons: square(0, 0, 4), areaWeight: 1, points: [] });
-    expect(halves).not.toBeNull();
-    const [a, b] = halves!.map((h) => areaKm2(h));
-    expect(a / (a + b)).toBeCloseTo(0.5, 1);
-  });
-
-  it('moves the cut toward a big city so the halves carry similar weight', () => {
-    const wide: Polygons = [
-      [
-        [
-          [0, 0],
-          [8, 0],
-          [8, 2],
-          [0, 2],
-          [0, 0],
-        ],
-      ],
-    ];
-    const halves = splitInTwo({
-      polygons: wide,
-      areaWeight: 1,
-      points: [{ lon: 1, lat: 1, weight: 3 }],
-    });
-    const areas = halves!.map((h) => areaKm2(h)).sort((x, y) => x - y);
-    expect(areas[0] / (areas[0] + areas[1])).toBeLessThan(0.3);
+describe('province names', () => {
+  it('turns a direction-only source name into a readable area name', () => {
+    expect(compassAdjective('North West')).toBe('Northwestern');
+    expect(compassAdjective('Centre')).toBe('Central');
+    expect(compassAdjective('Eastern')).toBe('Eastern');
+    expect(compassAdjective('East Wales')).toBeNull();
   });
 });
 
@@ -202,6 +181,7 @@ describe('countries', () => {
     expect(config.countries.countries.length).toBeGreaterThan(100);
     expect(config.regions.regions.length).toBeGreaterThan(40);
     expect(config.seaZones.seaZones.length).toBeGreaterThan(100);
+    expect(config.provinceGroups.groups.length).toBeGreaterThan(50);
   });
 });
 

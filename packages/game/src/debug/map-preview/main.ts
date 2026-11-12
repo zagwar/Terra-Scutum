@@ -241,8 +241,15 @@ async function start(root: HTMLElement): Promise<void> {
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
   };
+  /** The map loops east–west: world x is wrapped into [0, 360). */
+  const wrapX = (x: number) => ((x % 360) + 360) % 360;
   const toWorld = (sx: number, sy: number) =>
-    [(sx - view.x) / view.scale, (sy - view.y) / view.scale] as const;
+    [wrapX((sx - view.x) / view.scale), (sy - view.y) / view.scale] as const;
+  /** Keeps the horizontal offset within one world width, so panning never runs out of map. */
+  const normalizeView = () => {
+    const span = 360 * view.scale;
+    view.x = (((view.x % span) + span) % span) - span;
+  };
 
   // ── Drawing ─────────────────────────────────────────────────────────────
   // CPU drawing: thousands of detailed paths draw faster on the CPU than through an emulated or
@@ -281,18 +288,27 @@ async function start(root: HTMLElement): Promise<void> {
   };
 
   function draw(): void {
+    normalizeView();
     const ratio = dpr();
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.fillStyle = '#0b1622';
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.setTransform(
-      view.scale * ratio,
-      0,
-      0,
-      view.scale * ratio,
-      view.x * ratio,
-      view.y * ratio,
-    );
+    // Draw as many copies of the world, side by side, as the screen needs.
+    const span = 360 * view.scale;
+    for (let copyX = view.x; copyX < width; copyX += span) {
+      context.setTransform(
+        view.scale * ratio,
+        0,
+        0,
+        view.scale * ratio,
+        copyX * ratio,
+        view.y * ratio,
+      );
+      drawWorld();
+    }
+  }
+
+  function drawWorld(): void {
     const line = (px: number) => px / view.scale;
     const lit = highlighted();
 
@@ -481,7 +497,8 @@ async function start(root: HTMLElement): Promise<void> {
       event.preventDefault();
       const factor = Math.exp(-event.deltaY * 0.0015);
       const next = Math.min(400, Math.max(1, view.scale * factor));
-      const [wx, wy] = toWorld(event.offsetX, event.offsetY);
+      const wx = (event.offsetX - view.x) / view.scale;
+      const wy = (event.offsetY - view.y) / view.scale;
       view.scale = next;
       view.x = event.offsetX - wx * next;
       view.y = event.offsetY - wy * next;
@@ -501,7 +518,7 @@ async function start(root: HTMLElement): Promise<void> {
   window.__mapPreview = {
     ready: true,
     counts,
-    pick: (lon, lat) => pickWorld(lon + 180, 90 - lat),
+    pick: (lon, lat) => pickWorld(wrapX(lon + 180), 90 - lat),
     select,
     setMode,
   };

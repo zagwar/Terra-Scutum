@@ -20,16 +20,12 @@ export const settingsSchema = z.strictObject({
     version: z.string().min(1),
   }),
   provinces: z.strictObject({
-    /** Each country gets one province per this much area… */
+    /** Each country aims for one province per this much area… */
     areaPerProvinceKm2: z.number().positive(),
-    /** …plus √(population ÷ this many people) provinces. */
+    /** …plus √(population ÷ this many people) provinces. Provinces are only ever merged, never cut. */
     populationUnit: z.number().positive(),
-    /** Provinces heavier than this (in average-province units) are split. */
-    maxLoad: z.number().min(1),
-    /** Only provinces lighter than this (in average-province units) are ever merged into a neighbor. */
+    /** Only provinces lighter than this (in "average province" units) are merged into a neighbor. */
     mergeBelowLoad: z.number().positive(),
-    /** Provinces lighter than this are merged into a neighbor even if it means splitting a heavy one elsewhere. */
-    minMergeLoad: z.number().positive(),
     /** A province with no land neighbor of its country (an island) only merges across the sea if lighter than this. */
     seaMergeBelowLoad: z.number().min(0),
     /**
@@ -39,14 +35,14 @@ export const settingsSchema = z.strictObject({
     wholeGroupingBelowLoad: z.number().min(0),
     /** Penalty for merging provinces from different source groupings (keeps merges inside historical regions). */
     groupingMergePenalty: z.number().min(1),
+    /** A merged province keeps the name of a member holding at least this share of it (a tiny piece was absorbed). */
+    dominantShare: z.number().min(0.5).max(1),
     /** Pieces of the same country closer than this form one cluster (merges happen inside clusters only). */
     clusterDistanceKm: z.number().positive(),
     /** Clusters with fewer people than this (uninhabited islands) are left out of the game. */
     minClusterPopulation: z.number().min(0),
     /** Islets smaller than this are dropped from a province (its largest piece is always kept). */
     minIsletAreaKm2: z.number().min(0),
-    /** A province made by splitting is named after its biggest city if the city has at least this many people. */
-    cityNameMinPopulation: z.number().min(0),
   }),
   raster: z.strictObject({
     /** Size of one pixel of the grid used to find sea zones and coastlines. */
@@ -95,10 +91,15 @@ export const regionsConfigSchema = z.strictObject({
       id: z.string().regex(idPattern),
       name: z.string().min(1),
       climate: z.enum(CLIMATES),
-      /** Points the region grows from: each province joins the region with the nearest seed. */
-      seeds: z.array(lonLat).min(1),
-      /** Countries whose provinces all belong to this region, whatever the distances. */
+      /**
+       * Natural Earth territories (ADM0_A3 codes) in this region. "GBR" is Great Britain itself;
+       * overseas territories have their own codes (BMU, FLK…).
+       */
       countries: z.array(z.string().regex(countryIdPattern)).optional(),
+      /** States/provinces in this region, by ISO 3166-2 code (e.g. "US-TX"); these win over `countries`. */
+      units: z.array(z.string().min(2)).optional(),
+      /** Fallback: anything not listed anywhere joins the region with the nearest seed (the import warns). */
+      seeds: z.array(lonLat).min(1),
     }),
   ),
 });
@@ -119,6 +120,27 @@ export const seaZonesConfigSchema = z.strictObject({
 });
 export type SeaZonesConfig = z.infer<typeof seaZonesConfigSchema>;
 
+export const provinceGroupsSchema = z.strictObject({
+  /** Countries whose states/provinces are never combined automatically (only by the groups below). */
+  keepSeparate: z.array(z.string().regex(countryIdPattern)),
+  /** States/provinces always combined into one province with the given name. */
+  groups: z.array(
+    z.strictObject({
+      country: z.string().regex(countryIdPattern),
+      name: z.string().min(1),
+      /** ISO 3166-2 codes of the source states/provinces (e.g. "US-CT"). */
+      units: z.array(z.string().min(2)).optional(),
+      /** Source groupings (Natural Earth "region" names, e.g. "East Wales") whose states/provinces all join. */
+      groupings: z.array(z.string().min(1)).optional(),
+      /** Source states/provinces by name (as in the report), for those without an ISO code. */
+      names: z.array(z.string().min(1)).optional(),
+      /** Whole Natural Earth territories (e.g. "HKG" for Hong Kong). */
+      territories: z.array(z.string().regex(countryIdPattern)).optional(),
+    }),
+  ),
+});
+export type ProvinceGroupsConfig = z.infer<typeof provinceGroupsSchema>;
+
 export const provinceNamesSchema = z.strictObject({
   /** Display names that replace the generated ones, by province id. Ids never change. */
   provinces: z.record(z.string().regex(idPattern), z.string().min(1)),
@@ -130,6 +152,7 @@ export interface MapConfig {
   readonly countries: CountriesConfig;
   readonly regions: RegionsConfig;
   readonly seaZones: SeaZonesConfig;
+  readonly provinceGroups: ProvinceGroupsConfig;
   readonly provinceNames: ProvinceNamesConfig;
 }
 
@@ -157,6 +180,7 @@ export function loadMapConfig(dir: string = MAP_CONFIG_DIR): MapConfig {
     countries: readConfigFile(dir, 'countries.json', countriesConfigSchema),
     regions: readConfigFile(dir, 'regions.json', regionsConfigSchema),
     seaZones: readConfigFile(dir, 'sea-zones.json', seaZonesConfigSchema),
+    provinceGroups: readConfigFile(dir, 'province-groups.json', provinceGroupsSchema),
     provinceNames: readConfigFile(dir, 'province-names.json', provinceNamesSchema),
   };
 }

@@ -24,36 +24,46 @@ and always gives the same result for the same inputs.
 
 - **`countries.json`**: the curated country list. Every Natural Earth territory (by its code) must
   appear exactly once: as a country's `source`, in a country's `includes` (merged into that
-  country), or in `leftOut` (not part of the game world). The first draft was made by these
-  [DEFAULT] rules: dependencies join their sovereign state; countries with fewer than 1 million
-  people **and** smaller than 50,000 km² merge into the neighbor they share the longest border with,
-  or are left out if they are islands; disputed areas follow the choices in the decision log.
-- **`regions.json`**: the ~50 regions. Each has a name, a climate and one or more seed points
-  `[longitude, latitude]`; every province joins the region with the nearest seed. `countries`
-  puts a whole country in a region.
+  country), or in `leftOut` (not part of the game world). Dependencies join their sovereign state;
+  tiny island countries are left out; disputed areas follow the decision log.
+- **`province-groups.json`**: states/provinces that are always combined into one province with a
+  real name ("New England", "Transylvania", "Tōhoku"). A group lists its members by ISO 3166-2 code
+  (`units`, e.g. `"US-CT"`), by source grouping (`groupings`, e.g. `"East Wales"`), by name
+  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). `keepSeparate` lists countries whose
+  states are never combined automatically (only by their groups).
+- **`regions.json`**: the ~60 regions, as real geographic areas. A region lists its territories
+  (`countries`, Natural Earth codes: `"GBR"` is Great Britain itself, overseas territories have
+  their own codes) and, for big countries split between regions, their states (`units`, ISO codes,
+  which win over `countries`). Anything not listed joins the region with the nearest `seeds` point,
+  and the import warns about it.
 - **`sea-zones.json`**: the sea zones. Each grows through the water from its seed points (which
   must be in open water). `connections` adds links through straits too narrow for the import's
   grid (for example the Bosporus).
 - **`province-names.json`**: better display names for generated provinces, by province id. Ids never
   change when a name does.
-- **`settings.json`**: the [DEFAULT] numbers that shape the provinces:
-  - `areaPerProvinceKm2` and `populationUnit`: each country gets about
-    `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces (so big and populous
-    countries get more, but not proportionally more).
-  - `maxLoad`: provinces heavier than this (in "average province" units) are split in two.
-  - `mergeBelowLoad`, `minMergeLoad`, `seaMergeBelowLoad`, `wholeGroupingBelowLoad`,
-    `groupingMergePenalty`: when small source provinces are merged.
+- **`settings.json`**: the [DEFAULT] numbers:
+  - `areaPerProvinceKm2` and `populationUnit`: each country aims for about
+    `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
+  - `mergeBelowLoad`, `seaMergeBelowLoad`, `wholeGroupingBelowLoad`, `groupingMergePenalty`:
+    which small states are combined, and how.
+  - `dominantShare`: a combined province keeps its main member's name when the other members are
+    tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
-  - `cityNameMinPopulation`: split provinces are named after a city at least this big
-    ("Texas (Houston)"), otherwise after a direction ("Sakha Republic (North)").
 
 ## How provinces are made
 
+Provinces always follow **real borders**: states and provinces are only ever combined, never cut.
+
 1. Natural Earth's ~4,600 states and provinces are assigned to countries (`countries.json`).
 2. Each country's land is grouped into clusters (land that hangs together, or islands within
-   `clusterDistanceKm`). Uninhabited clusters are left out.
-3. Small source groupings (for example Greater London's boroughs) become single provinces; then
-   small provinces merge with neighbors and heavy ones (large or populous) are split by a straight
-   cut, until each cluster has about its target number of provinces.
-4. Borders between provinces come from the shared shapes; coasts and sea zones come from a world
-   grid (`raster.degreesPerPixel`).
+   `clusterDistanceKm`). Uninhabited clusters are left out, but never a country's only land.
+3. In each cluster: the named groups are combined first; then small source groupings that are still
+   complete become single provinces with their real name ("Greater London", "Bretagne"); then, unless
+   the country is in `keepSeparate`, the lightest provinces merge with a neighbor until the cluster
+   reaches its target.
+4. Combined provinces are named: the group's name, the source grouping's name, the main member's name
+   (a tiny piece was added), "A and B" for two members, or a direction in the country ("Northern
+   Algeria"). The report lists every combined province and how it got its name; better names go in
+   `province-groups.json` or `province-names.json`.
+5. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
+   (`raster.degreesPerPixel`). The world wraps east–west: sea zones grow across the date line.

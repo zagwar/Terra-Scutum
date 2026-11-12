@@ -34,6 +34,18 @@ test('the map data preview shows the generated world and its details', async ({ 
   expect(paris?.id).toMatch(/^fra_/);
   const atlantic = await page.evaluate(() => window.__mapPreview!.pick(-35, 48));
   expect(atlantic).toEqual({ kind: 'seaZone', id: 'north_atlantic' });
+  // The map loops east–west: one full turn around the world lands on Paris again.
+  expect(await page.evaluate(() => window.__mapPreview!.pick(2.35 + 360, 48.86))).toEqual(paris);
+
+  // Dragging far to the east keeps showing the map (no edge).
+  const canvas = page.locator('canvas.map-preview-canvas');
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.6);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.6, { steps: 8 });
+  await page.mouse.up();
+  await page.screenshot({ path: join(SCREENSHOT_DIR, 'map-preview-wrapped.png') });
+  await page.getByRole('button', { name: 'Reset view' }).click();
 
   // Selecting shows the details panel with neighbors.
   await page.evaluate((id) => window.__mapPreview!.select({ kind: 'province', id }), paris!.id);
