@@ -1,0 +1,27 @@
+{
+  "naturalEarth": {
+    "version": "v5.1.2"
+  },
+  "provinces": {
+    "areaPerProvinceKm2": 500000,
+    "populationUnit": 1000000,
+    "maxLoad": 2.2,
+    "mergeBelowLoad": 0.4,
+    "minMergeLoad": 0.35,
+    "seaMergeBelowLoad": 0.2,
+    "wholeGroupingBelowLoad": 2.2,
+    "groupingMergePenalty": 3,
+    "clusterDistanceKm": 300,
+    "minClusterPopulation": 1000,
+    "minIsletAreaKm2": 25,
+    "cityNameMinPopulation": 250000
+  },
+  "raster": {
+    "degreesPerPixel": 0.05
+  },
+  "geometry": {
+    "quantization": 100000,
+    "provinceMinWeight": 0.0005,
+    "seaZoneMinWeight": 0.03
+  }
+}

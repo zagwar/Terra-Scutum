@@ -1,4 +1,15 @@
 import type { z } from 'zod';
+import {
+  type CountriesFile,
+  type ProvincesFile,
+  type RegionsFile,
+  type SeaZonesFile,
+  countriesFileSchema,
+  provincesFileSchema,
+  regionsFileSchema,
+  seaZonesFileSchema,
+} from '../world/world-data';
+import { checkWorldData } from '../world/world-checks';
 import { type GameConfig, gameConfigSchema } from './game-config';
 
 /**
@@ -12,6 +23,10 @@ import { type GameConfig, gameConfigSchema } from './game-config';
  */
 export const DATA_FILES = {
   gameConfig: { file: 'game_config.json', schema: gameConfigSchema },
+  countries: { file: 'countries.json', schema: countriesFileSchema },
+  provinces: { file: 'provinces.json', schema: provincesFileSchema },
+  regions: { file: 'regions.json', schema: regionsFileSchema },
+  seaZones: { file: 'sea_zones.json', schema: seaZonesFileSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -22,6 +37,10 @@ export type RawGameData = Readonly<Record<DataFileKey, unknown>>;
 /** All game data, validated. Read-only: the sim never changes it. */
 export interface GameData {
   readonly gameConfig: GameConfig;
+  readonly countries: CountriesFile;
+  readonly provinces: ProvincesFile;
+  readonly regions: RegionsFile;
+  readonly seaZones: SeaZonesFile;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */
@@ -57,7 +76,7 @@ export class DataValidationError extends Error {
 export type DataCrossCheck = (data: GameData, report: (issue: DataIssue) => void) => void;
 
 /** Cross-file checks. Features add theirs as their data files arrive. */
-const CROSS_CHECKS: readonly DataCrossCheck[] = [];
+const CROSS_CHECKS: readonly DataCrossCheck[] = [checkWorldData];
 
 /**
  * Validates the raw content of all data files and returns typed game data.

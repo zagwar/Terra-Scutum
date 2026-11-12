@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DataValidationError, formatDataIssue } from '@terra-scutum/sim';
 import { afterEach, describe, expect, it } from 'vitest';
-import { checkLocale, loadGameDataFromDisk } from '../src';
+import { DATA_DIR, checkLocale, loadGameDataFromDisk } from '../src';
 
 describe('loading game data from disk', () => {
   const tempDirs: string[] = [];
@@ -31,19 +31,25 @@ describe('loading game data from disk', () => {
   });
 
   it('reports missing files, broken JSON and files the game does not know', () => {
-    expect(issuesOf(tempDataDir({}))).toEqual(['data/game_config.json: file is missing']);
-    expect(issuesOf(tempDataDir({ 'game_config.json': '{ "startDate": ' }))[0]).toContain(
+    expect(issuesOf(tempDataDir({}))).toEqual([
+      'data/game_config.json: file is missing',
+      'data/countries.json: file is missing',
+      'data/provinces.json: file is missing',
+      'data/regions.json: file is missing',
+      'data/sea_zones.json: file is missing',
+    ]);
+    const realCopy = (extra: Record<string, string>) => {
+      const dir = tempDataDir(extra);
+      for (const file of readdirSync(DATA_DIR)) {
+        if (file.endsWith('.json') && !(file in extra))
+          copyFileSync(join(DATA_DIR, file), join(dir, file));
+      }
+      return dir;
+    };
+    expect(issuesOf(realCopy({ 'game_config.json': '{ "startDate": ' }))[0]).toContain(
       'data/game_config.json: not valid JSON',
     );
-    const stray = issuesOf(
-      tempDataDir({
-        'game_config.json': JSON.stringify({
-          startDate: '2025-01-01',
-          performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
-        }),
-        'provinces_old.json': '[]',
-      }),
-    );
+    const stray = issuesOf(realCopy({ 'provinces_old.json': '[]' }));
     expect(stray).toHaveLength(1);
     expect(stray[0]).toContain('data/provinces_old.json');
   });

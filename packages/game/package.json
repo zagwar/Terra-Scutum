@@ -13,7 +13,8 @@
     "@babylonjs/core": "^9.35.0",
     "@terra-scutum/sim": "*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

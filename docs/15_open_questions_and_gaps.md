@@ -47,8 +47,8 @@ All system design decisions have been made (2026-11-11). Resolved items are kept
 - [x] **Scope:** no multiplayer, modding or extra languages for now (section 14).
 
 ### 17.2 Content to write (data and lists)
-- [ ] **Curated country list**, with each country's starting data: population, economy, provinces, government, interest groups, ideology mix, opinion split, nuclear status, AI personality.
-- [ ] **About 1,000 provinces**, generated from map data, plus **about 50 named regions** with climate.
+- [ ] **Curated country list**, with each country's starting data: population, economy, provinces, government, interest groups, ideology mix, opinion split, nuclear status, AI personality. *(F64: the country list itself is drafted in `packages/tools/map-config/countries.json`: 161 countries, waiting for the designer's approval. Starting data comes with F71.)*
+- [x] **About 1,000 provinces**, generated from map data, plus **about 50 named regions** with climate. *(F64: 1,354 provinces, 60 regions, 126 sea zones, all [DEFAULT] and adjustable in `packages/tools/map-config/`.)*
 - [ ] **Building catalog stats** (section 8.3) with costs, workers, inputs, outputs and slots.
 - [ ] **Goods list** (about 30) and the **pop groups**, final.
 - [ ] **Recipes** for every building (inputs, outputs, workers, electricity, production methods).
@@ -72,7 +72,7 @@ All system design decisions have been made (2026-11-11). Resolved items are kept
 - [ ] **Balance numbers** for everything marked **[DEFAULT]**, tuned with the campaign runner.
 
 ### 17.3 Technical prep
-- [ ] **Data file schemas:** the exact fields for each JSON data file (regions, countries, provinces, sea zones, buildings, goods, techs, units, bugs, events). Define each schema when its system is first built; regions, countries, provinces and sea zones in M1. *(F132 built the framework: each data file has a zod schema listed in `packages/sim/src/data/game-data.ts`; the first file is `data/game_config.json`.)*
+- [ ] **Data file schemas:** the exact fields for each JSON data file (regions, countries, provinces, sea zones, buildings, goods, techs, units, bugs, events). Define each schema when its system is first built; regions, countries, provinces and sea zones in M1. *(F64: regions, countries, provinces and sea zones done, in `packages/sim/src/world/world-data.ts`.)* *(F132 built the framework: each data file has a zod schema listed in `packages/sim/src/data/game-data.ts`; the first file is `data/game_config.json`.)*
 - [x] **Glossary:** a starter glossary is in `GAME_DESIGN.md`. Add terms as new systems are built.
 - [ ] **Performance budget:** **[DEFAULT target, to verify in M1]** daily tick ≤ 30 ms on average and weekly calculations ≤ 150 ms on a mid-range PC, with ~1,000 provinces and every country simulated, so the top game speed can run several days per second. The campaign runner reports tick times. *(F132: the targets live in `data/game_config.json`; the runner reports daily and weekly tick times against them and CI fails if they're exceeded. Still to verify with real data at the end of M1.)*
 - [x] **Save format versioning**, so saves survive game updates. *(F132: save format version 1 with a migration chain in `packages/sim/src/core/save.ts`; storing, compressing and export/import are F40.)*

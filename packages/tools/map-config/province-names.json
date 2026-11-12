@@ -1,0 +1,10 @@
+{
+  "provinces": {
+    "gbr_devon": "South West England",
+    "gbr_manchester": "North West England",
+    "gbr_norfolk": "East of England",
+    "gbr_oxfordshire": "South East England",
+    "gbr_perth_and_kinross": "Eastern Scotland",
+    "gbr_powys": "Wales"
+  }
+}

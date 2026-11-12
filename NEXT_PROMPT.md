@@ -1,15 +1,13 @@
 # Next prompt
 
-Paste this into a **new** Claude Code session on `terra-scutum` / `main`, after merging the F132 pull request. Your usual model is fine for this one (F64 is not a ⚑ Fable task).
+Paste this into a **new** Claude Code session on `terra-scutum` / `main`, after merging the F64 pull request. Your usual model is fine (F01 is not a ⚑ Fable task).
 
 ```
-Build F64 (map import tool, M1 — step 2 of the M1 build order). Read CLAUDE.md, GAME_DESIGN.md, docs/02_world_and_characters.md, docs/12_feature_tracker.md, docs/13_technical.md (including "What F132 built") and docs/15_open_questions_and_gaps.md.
+Build F01 (3D world map: province meshes, adjacency graph, click a province for its info panel; M1, step 3 of the M1 build order). Read CLAUDE.md, GAME_DESIGN.md, docs/02_world_and_characters.md, docs/11_ui_art_audio.md (only the map and map-mode parts), docs/12_feature_tracker.md and docs/13_technical.md (including "What F132 built" and "What F64 built").
 
-Where we are: F132 (core architecture) is done and merged: the monorepo (packages/sim, game, runner, tools), the sim worker, the Babylon scene, the React UI, data validation with zod, the daily tick, seeded RNG, save versioning, tests and CI all exist. Cloudflare Pages should be connected so pull requests get preview links; if no preview link appears on this feature's pull request, help me fix that step by step.
+Where we are: F132 (core architecture) and F64 (map import) are merged. The map data exists: data/countries.json, data/provinces.json, data/regions.json, data/sea_zones.json, and the shapes in data/geometry/*.topo.json (TopoJSON), with names in locales/en.map.json. The sim has GameState.world (fast lookups and neighbor lists). The page map-preview.html is a temporary 2D viewer of this data; the 3D map should replace it as the way to look at the world (keep or remove the preview page, and say which).
 
-What F64 should do, per the M1 build order: an import tool in packages/tools that turns public map data (for example Natural Earth) into the game's JSON data: provinces (about 1,000), countries, regions (about 50) and sea zones, with adjacency, plus compact geometry files, each with a zod schema registered in the sim's data list. Draft the curated country list (tiny countries merged into a neighbor) and show it to me to approve before finalizing. The map itself is drawn in the next features (F01, F02, F70), so for this one show me a simple way to see the result (for example counts and a small picture of the generated provinces).
-
-If the cloud machine can't download the map data because of the network allowlist, tell me exactly which setting to change, step by step. Start by running npm install if node_modules is missing.
+What F01 should do: draw the provinces on the flat 3D map in the Babylon scene (replacing the placeholder sphere and grid), with sea zones underneath, so the whole world is visible from the fixed camera; pick a province with the mouse (section 14 suggests picking against a province ID map) and show a simple info panel with its name, country, region and neighbors. Keep it simple and fast: the strategy camera is F03, terrain is F125 and the political overlay is F02. Check the performance with all 1,354 provinces and take screenshots.
 
 I'm a beginner, so walk me through anything I need to do myself step by step.
 When the feature is done, push it, open the pull request, tell me how to test it on the preview link, then give me the next prompt.

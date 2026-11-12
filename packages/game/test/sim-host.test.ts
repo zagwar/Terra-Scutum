@@ -52,7 +52,7 @@ describe('sim host (the logic inside the sim worker)', () => {
   });
 
   it('reports invalid data as a data error with the details', () => {
-    const { host, posted } = hostWith({ gameConfig: { startDate: 'soon' } });
+    const { host, posted } = hostWith({ ...RAW_GAME_DATA, gameConfig: { startDate: 'soon' } });
     host.handle({ type: 'init', seed: 42 });
     expect(posted).toHaveLength(1);
     expect(posted[0]).toMatchObject({ type: 'error', key: 'ERROR_SIM_DATA_INVALID' });

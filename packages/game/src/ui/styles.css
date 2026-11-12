@@ -200,3 +200,11 @@ body {
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--color-panel-border);
 }
+
+.foundation-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-accent);
+}
