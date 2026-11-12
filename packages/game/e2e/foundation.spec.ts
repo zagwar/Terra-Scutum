@@ -6,7 +6,7 @@ import { type Page, expect, test } from '@playwright/test';
 const SCREENSHOT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'screenshots');
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
-/** Opens the game in the `foundation` debug scenario and waits until the renderer and sim are running. */
+/** Opens the game in the `foundation` debug scenario and waits until the renderer, the sim and the map are running. */
 async function openGame(page: Page, extraQuery = ''): Promise<string[]> {
   const problems: string[] = [];
   page.on('pageerror', (error) => problems.push(`page error: ${error.message}`));
@@ -14,7 +14,10 @@ async function openGame(page: Page, extraQuery = ''): Promise<string[]> {
     if (message.type() === 'error') problems.push(`console error: ${message.text()}`);
   });
   await page.goto(`/?debug=foundation${extraQuery}`);
-  await page.waitForFunction(() => window.__terraScutum?.isReady() === true);
+  // The map is drawn in software in headless Chromium, which can take a while to start.
+  await page.waitForFunction(() => window.__terraScutum?.isReady() === true, null, {
+    timeout: 50_000,
+  });
   return problems;
 }
 
@@ -48,6 +51,7 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   await expect(page.getByRole('heading', { name: 'Terra Scutum' })).toBeVisible();
   await expect(page.getByTestId('renderer-status')).toHaveText(expectedRenderer);
   await expect(page.getByTestId('sim-status')).toHaveText('Running');
+  await expect(page.getByTestId('map-status')).toHaveText(/^[\d,]+ provinces$/);
   await expect(page.getByTestId('sim-date')).toHaveText('1 January 2025');
   await expect(page.getByTestId('sim-day')).toHaveText('0');
   await expect(page.getByTestId('save-format')).toHaveText('Version 1');
@@ -128,6 +132,7 @@ test('the normal game (no debug scenario) starts without errors', async ({ page 
   await page.goto('/');
   await expect(page.getByTestId('sim-status')).toHaveText('Running');
   await expect(page.getByTestId('renderer-status')).toHaveText(/WebGPU|WebGL 2/);
+  await expect(page.getByTestId('map-status')).toHaveText(/provinces$/, { timeout: 50_000 });
   await expect(page.getByTestId('sim-date')).toHaveText('1 January 2025');
   // The debug hooks exist only in debug scenarios.
   expect(await page.evaluate(() => window.__terraScutum)).toBeUndefined();

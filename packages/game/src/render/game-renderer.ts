@@ -1,17 +1,24 @@
+import { Color4 } from '@babylonjs/core/Maths/math.color';
+import { Scene } from '@babylonjs/core/scene';
+import type { MapViewConfig, WorldMap } from '@terra-scutum/sim';
 import { type RendererPreference, type RendererType, createEngine } from './create-engine';
-import { createPlaceholderScene } from './placeholder-scene';
+import { type MapView, type MapViewEvents, createMapView } from './map/map-view';
 
 export interface GameRendererOptions {
   readonly preference: RendererPreference;
-  /** False in debug scenarios, so screenshots always show the same picture. */
-  readonly animate: boolean;
 }
 
 /** The 3D view: owns the Babylon engine, its canvas and the scene being shown. */
 export interface GameRenderer {
   readonly type: RendererType;
+  /** The world map, once `showMap` has finished. */
+  readonly map: MapView | null;
+  /** Loads the map's shapes and puts the world map in the scene. */
+  showMap(world: WorldMap, config: MapViewConfig, events: MapViewEvents): Promise<MapView>;
   /** How many frames have been drawn (used by tests to know the scene is really rendering). */
   getFrameCount(): number;
+  /** Frames per second, averaged over the last second or so. */
+  getFps(): number;
   dispose(): void;
 }
 
@@ -20,10 +27,14 @@ export async function createGameRenderer(
   options: GameRendererOptions,
 ): Promise<GameRenderer> {
   const { engine, type } = await createEngine(container, options.preference);
-  const scene = createPlaceholderScene(engine, options.animate);
+  const scene = new Scene(engine);
+  scene.clearColor = new Color4(0.02, 0.03, 0.05, 1);
+  let map: MapView | null = null;
 
   let frameCount = 0;
   engine.runRenderLoop(() => {
+    // Nothing to draw until the map (and its camera) exists.
+    if (!scene.activeCamera) return;
     scene.render();
     frameCount += 1;
   });
@@ -33,10 +44,21 @@ export async function createGameRenderer(
 
   return {
     type,
+    get map() {
+      return map;
+    },
+    async showMap(world, config, events) {
+      map?.dispose();
+      map = null;
+      map = await createMapView(scene, world, config, events);
+      return map;
+    },
     getFrameCount: () => frameCount,
+    getFps: () => engine.getFps(),
     dispose() {
       resizeObserver.disconnect();
       engine.stopRenderLoop();
+      map?.dispose();
       scene.dispose();
       engine.dispose();
     },

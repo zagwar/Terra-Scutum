@@ -1,7 +1,7 @@
 /**
  * Debug scenarios: fixed setups the Playwright tests (and anyone debugging)
  * load with `?debug=<name>` in the address. A scenario makes the game
- * repeatable: fixed seed, no free-running animation.
+ * repeatable: fixed seed.
  * Features add scenarios here as they need them (a test map, a battle…).
  */
 export interface DebugScenario {
@@ -10,7 +10,7 @@ export interface DebugScenario {
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
-  /** The bare foundations: empty scene, new campaign. */
+  /** The basics: the world map and a new campaign. */
   foundation: { seed: 42 },
 };
 

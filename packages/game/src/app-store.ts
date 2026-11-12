@@ -1,14 +1,23 @@
-import type { SimSnapshot } from '@terra-scutum/sim';
+import type { SimSnapshot, WorldMap } from '@terra-scutum/sim';
 import type { RendererType } from './render/create-engine';
+import type { MapMode } from './render/map/map-colors';
 import type { TranslationKey } from './ui/i18n';
 
 /** What the UI shows. Changed only through `AppStore.update`; React re-renders when it changes. */
 export interface AppState {
   readonly renderer: 'starting' | RendererType | 'failed';
   readonly sim: 'starting' | 'running' | 'failed';
+  /** The world map in the 3D view: its shapes are downloaded after the page has loaded. */
+  readonly map: 'loading' | 'ready' | 'failed';
   /** The latest snapshot from the sim worker; null until the sim is ready. */
   readonly snapshot: SimSnapshot | null;
+  /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
+  readonly world: WorldMap | null;
   readonly saveFormatVersion: number | null;
+  readonly mapMode: MapMode;
+  /** Province indices (see `WorldMap`), or null for none. */
+  readonly selectedProvince: number | null;
+  readonly hoveredProvince: number | null;
   /** A problem to show the player: a translation key plus technical detail for bug reports. */
   readonly error: { readonly key: TranslationKey; readonly detail: string } | null;
 }
@@ -23,8 +32,13 @@ export function createAppStore(): AppStore {
   let state: AppState = {
     renderer: 'starting',
     sim: 'starting',
+    map: 'loading',
     snapshot: null,
+    world: null,
     saveFormatVersion: null,
+    mapMode: 'provinces',
+    selectedProvince: null,
+    hoveredProvince: null,
     error: null,
   };
   const listeners = new Set<() => void>();

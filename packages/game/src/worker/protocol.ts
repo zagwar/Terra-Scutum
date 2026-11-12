@@ -1,4 +1,11 @@
-import type { CommandResult, SimCommand, SimEvent, SimSnapshot } from '@terra-scutum/sim';
+import type {
+  CommandResult,
+  MapViewConfig,
+  SimCommand,
+  SimEvent,
+  SimSnapshot,
+  WorldMap,
+} from '@terra-scutum/sim';
 
 /**
  * Messages between the game (main thread) and the sim worker.
@@ -15,7 +22,15 @@ export type ToSimWorker =
   | { readonly type: 'step'; readonly requestId: number; readonly days: number };
 
 export type FromSimWorker =
-  | { readonly type: 'ready'; readonly snapshot: SimSnapshot; readonly saveFormatVersion: number }
+  | {
+      readonly type: 'ready';
+      readonly snapshot: SimSnapshot;
+      readonly saveFormatVersion: number;
+      /** The map's fixed facts (ids, who borders whom); sent once, it never changes during a campaign. */
+      readonly world: WorldMap;
+      /** How the map is drawn (validated `data/map_view.json`). */
+      readonly mapView: MapViewConfig;
+    }
   | {
       readonly type: 'update';
       /** The request this update answers, if any (ticks driven by game speed have none). */

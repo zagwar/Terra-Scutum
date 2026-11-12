@@ -8,6 +8,12 @@ const RENDERER_TEXT: Record<AppState['renderer'], TranslationKey> = {
   failed: 'FOUNDATION_FAILED',
 };
 
+const MAP_STATUS: Record<AppState['map'], 'good' | 'pending' | 'bad'> = {
+  loading: 'pending',
+  ready: 'good',
+  failed: 'bad',
+};
+
 const SIM_TEXT: Record<AppState['sim'], TranslationKey> = {
   starting: 'FOUNDATION_SIM_STARTING',
   running: 'FOUNDATION_SIM_RUNNING',
@@ -21,8 +27,8 @@ export interface FoundationPanelProps {
 
 /**
  * A temporary panel that shows the game's foundations are alive: the 3D
- * renderer, the sim worker, and the round trip between them. The real UI
- * shell (top bar, outliner, lenses) replaces it in F122.
+ * renderer, the sim worker, the round trip between them, and the world map.
+ * The real UI shell (top bar, outliner, lenses) replaces it in F122.
  */
 export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
   const { snapshot } = state;
@@ -40,6 +46,14 @@ export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
         <dt>{t('FOUNDATION_SIM')}</dt>
         <dd data-testid="sim-status" data-status={status(state.sim)}>
           {t(SIM_TEXT[state.sim])}
+        </dd>
+        <dt>{t('FOUNDATION_MAP')}</dt>
+        <dd data-testid="map-status" data-status={MAP_STATUS[state.map]}>
+          {state.map === 'ready' && state.world
+            ? t('FOUNDATION_MAP_READY', {
+                provinces: state.world.provinceIds.length.toLocaleString('en'),
+              })
+            : t(state.map === 'failed' ? 'FOUNDATION_FAILED' : 'FOUNDATION_MAP_LOADING')}
         </dd>
         <dt>{t('FOUNDATION_DATE')}</dt>
         <dd data-testid="sim-date">{snapshot ? formatDate(snapshot.date) : '—'}</dd>
@@ -63,9 +77,6 @@ export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
       >
         {t('FOUNDATION_ADVANCE_DAY')}
       </button>
-      <a className="foundation-link" href="map-preview.html" data-testid="map-preview-link">
-        {t('FOUNDATION_MAP_PREVIEW')}
-      </a>
     </section>
   );
 }

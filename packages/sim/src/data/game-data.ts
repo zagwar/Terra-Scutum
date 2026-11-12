@@ -11,6 +11,7 @@ import {
 } from '../world/world-data';
 import { checkWorldData } from '../world/world-checks';
 import { type GameConfig, gameConfigSchema } from './game-config';
+import { type MapViewConfig, mapViewSchema } from './map-view-config';
 
 /**
  * The list of JSON data files in `data/`, each with the zod schema that
@@ -27,6 +28,7 @@ export const DATA_FILES = {
   provinces: { file: 'provinces.json', schema: provincesFileSchema },
   regions: { file: 'regions.json', schema: regionsFileSchema },
   seaZones: { file: 'sea_zones.json', schema: seaZonesFileSchema },
+  mapView: { file: 'map_view.json', schema: mapViewSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -41,6 +43,8 @@ export interface GameData {
   readonly provinces: ProvincesFile;
   readonly regions: RegionsFile;
   readonly seaZones: SeaZonesFile;
+  /** How the map is drawn; used by the game, not by the sim's systems. */
+  readonly mapView: MapViewConfig;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */

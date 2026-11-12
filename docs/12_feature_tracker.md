@@ -11,7 +11,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | ID | Feature | Milestone | Status | Notes |
 |---|---|---|---|---|
 | F132 | Core architecture: npm-workspaces monorepo (sim, game, runner, tools), sim in a Web Worker, React UI shell, Babylon scene, data loading with zod schemas, daily tick, seeded RNG, performance budget, save versioning, Vitest + Playwright + CI, Cloudflare Pages previews | M1 | Done | Section 17.3; build first; **⚑ Fable: foundations**. Implementation notes: section 14 "What F132 built". The page shows a temporary "Foundation check" panel until F122 |
-| F01 | 3D world map: province meshes, adjacency graph, click a province for its info panel | M1 | Planned | Provinces loaded from a data file |
+| F01 | 3D world map: province meshes, adjacency graph, click a province for its info panel | M1 | Done | Provinces loaded from a data file. Built as the flat 3D map in the Babylon scene: sea zones underneath, all 1,423 provinces, border lines, hover tooltip, click → province info panel (name, country, region, area, bordering provinces and sea zones), map modes Provinces and Regions, east–west wrap (← / → keys scroll until F03). Implementation notes: section 14 "What F01 built". The 2D map data preview page was removed |
 | F02 | Countries layer: ownership of provinces, political overlay, country panel | M1 | Planned | |
 | F70 | Sea zones: ocean layer, adjacency to coastal provinces, sea zone overlay | M1 | Planned | Section 4.5 |
 | F71 | 2025 starting data: real-world economies, militaries, governments, space programs (approximate) | M1 | Planned | Starts in M1, refined each milestone |
@@ -27,7 +27,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F135 | Unit generators from designs: mechs, tanks, aircraft, ships, spacecraft, stations; infantry figures | M8c | Planned | Section 12.6; the mech generator comes earlier, with F51 in M8b |
 | F136 | Bug and hive generators from body plans; procedural bug animation | M7 | Planned | Section 12.6 |
 | F137 | Generated effects (smoke, fire, lasers, disruption haze, weather), icons and portraits | M8c | Planned | Section 12.6 |
-| F64 | Regions layer: province groupings, region overlay, region panel; map import script in `tools/` | M1 | Done | Section 4. Built as the map import (`npm run import:map`, `packages/tools/map-config/`): 172 countries, 1,423 provinces (real borders only), 62 real-geography regions, 126 sea zones with adjacency, plus a temporary 2D map data preview page that loops east–west. The region overlay and region panel on the 3D map come with F01/F122 |
+| F64 | Regions layer: province groupings, region overlay, region panel; map import script in `tools/` | M1 | Done | Section 4. Built as the map import (`npm run import:map`, `packages/tools/map-config/`): 172 countries, 1,423 provinces (real borders only), 62 real-geography regions, 126 sea zones with adjacency, plus a temporary 2D map data preview page (removed in F01, which replaced it with the 3D map). The region overlay came with F01 (map mode Regions); the region panel comes with F122 |
 | F03 | Camera: pan, zoom, rotate; top-down/angled | M1 | Planned | |
 | F04 | Time system: day ticks, pause, 5 speeds, date display | M1 | Planned | |
 | F05 | Country selection screen | M1 | Planned | |
