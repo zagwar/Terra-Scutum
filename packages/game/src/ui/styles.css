@@ -102,7 +102,166 @@ body {
 }
 
 .foundation-panel {
+  /* Bottom-left, over the empty South Pacific, until the UI shell (F122). */
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
   width: 290px;
+}
+
+.foundation-panel .facts {
+  margin-bottom: 12px;
+}
+
+/* ── Province info panel ───────────────────────────────────────────────── */
+.province-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  /* Leaves room for the map mode buttons underneath. */
+  max-height: calc(100% - 190px);
+  overflow-y: auto;
+}
+
+.province-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.province-panel-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+.icon-button {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-dim);
+  background: transparent;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.icon-button:focus-visible,
+.link-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.list-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.link-button {
+  padding: 2px 7px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  text-align: left;
+  background: rgba(200, 168, 90, 0.1);
+  border: 1px solid rgba(200, 168, 90, 0.35);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  background: rgba(200, 168, 90, 0.25);
+  border-color: var(--color-accent);
+}
+
+.list-text,
+.list-empty {
+  margin: 0;
+  font-size: 13px;
+}
+
+.list-empty {
+  margin-bottom: 14px;
+  color: var(--color-text-dim);
+}
+
+.list-empty:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Map mode buttons ──────────────────────────────────────────────────── */
+.map-mode-bar {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 300px;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+
+.button.is-active {
+  color: #10151c;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.button.is-active:hover:not(:disabled) {
+  background: #d9bb70;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+/* ── Tooltip that follows the mouse over the map ───────────────────────── */
+.map-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Hidden until it knows where the mouse is. */
+  visibility: hidden;
+  max-width: 320px;
+  padding: 5px 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: rgba(8, 12, 18, 0.94);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .facts {
@@ -199,12 +358,4 @@ body {
   color: var(--color-text-dim);
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--color-panel-border);
-}
-
-.foundation-link {
-  display: block;
-  margin-top: 10px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-accent);
 }

@@ -13,5 +13,6 @@ export * from './core/snapshot';
 export * from './core/systems';
 export * from './data/game-config';
 export * from './data/game-data';
+export * from './data/map-view-config';
 export * from './world/world-data';
 export * from './world/world-map';

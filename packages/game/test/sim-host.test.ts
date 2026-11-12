@@ -18,13 +18,28 @@ describe('sim host (the logic inside the sim worker)', () => {
   it('starts a campaign and reports the first snapshot', () => {
     const { host, posted } = hostWith();
     host.handle({ type: 'init', seed: 42 });
-    expect(posted).toEqual([
-      {
-        type: 'ready',
-        snapshot: { day: 0, date: { year: 2025, month: 1, day: 1 } },
-        saveFormatVersion: SAVE_FORMAT_VERSION,
-      },
-    ]);
+    expect(posted).toHaveLength(1);
+    const ready = posted[0];
+    if (ready.type !== 'ready') throw new Error(`expected "ready", got "${ready.type}"`);
+    expect(ready.snapshot).toEqual({ day: 0, date: { year: 2025, month: 1, day: 1 } });
+    expect(ready.saveFormatVersion).toBe(SAVE_FORMAT_VERSION);
+    // The map's fixed facts and drawing settings travel with the first message.
+    expect(ready.world.provinceIds.length).toBeGreaterThan(1000);
+    expect(ready.world.provinceNeighbors.offsets.length).toBe(ready.world.provinceIds.length + 1);
+    expect(ready.mapView.projection.type).toBe('miller');
+  });
+
+  it('sends a world map that survives the trip to the main thread', () => {
+    const { host, posted } = hostWith();
+    host.handle({ type: 'init', seed: 42 });
+    const ready = posted[0];
+    if (ready.type !== 'ready') throw new Error(`expected "ready", got "${ready.type}"`);
+    // Messages from a worker are copied with the structured clone algorithm.
+    const copy = structuredClone(ready.world);
+    expect(copy.provinceIndex.get('fra_ile_de_france')).toBe(
+      ready.world.provinceIndex.get('fra_ile_de_france'),
+    );
+    expect(copy.provinceCountry).toEqual(ready.world.provinceCountry);
   });
 
   it('steps days and answers with the request id', () => {

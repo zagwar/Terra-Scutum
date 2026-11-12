@@ -3,7 +3,7 @@ import type { FromSimWorker, SimWorkerErrorKey, ToSimWorker } from './protocol';
 
 export interface SimClientHandlers {
   /** The campaign has started. */
-  onReady(snapshot: SimSnapshot, saveFormatVersion: number): void;
+  onReady(ready: ReadyMessage): void;
   /** The sim state changed (after ticks and commands). */
   onUpdate(snapshot: SimSnapshot, events: readonly SimEvent[]): void;
   /** The sim could not start or crashed. */
@@ -22,6 +22,7 @@ export interface SimClient {
 }
 
 type UpdateMessage = Extract<FromSimWorker, { type: 'update' }>;
+export type ReadyMessage = Extract<FromSimWorker, { type: 'ready' }>;
 
 export function createSimClient(handlers: SimClientHandlers): SimClient {
   const worker = new Worker(new URL('./sim-worker.ts', import.meta.url), {
@@ -45,7 +46,7 @@ export function createSimClient(handlers: SimClientHandlers): SimClient {
     const message = event.data;
     switch (message.type) {
       case 'ready':
-        handlers.onReady(message.snapshot, message.saveFormatVersion);
+        handlers.onReady(message);
         break;
       case 'update': {
         handlers.onUpdate(message.snapshot, message.events);

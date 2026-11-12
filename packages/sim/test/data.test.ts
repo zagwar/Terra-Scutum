@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { DATA_FILES, DataValidationError, formatDataIssue, parseGameData } from '../src';
-import { testWorld } from './helpers';
+import { testMapView, testWorld } from './helpers';
 
 const validConfig = {
   startDate: '2025-01-01',
   performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
 };
 
-const world = testWorld();
+const world = { ...testWorld(), mapView: testMapView() };
 
 function issuesOf(raw: unknown): string[] {
   try {
@@ -55,6 +55,7 @@ describe('game data validation', () => {
       'data/provinces.json: file is missing',
       'data/regions.json: file is missing',
       'data/sea_zones.json: file is missing',
+      'data/map_view.json: file is missing',
     ]);
   });
 

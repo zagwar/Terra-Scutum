@@ -37,6 +37,8 @@ export function createSimHost(
           type: 'ready',
           snapshot: createSnapshot(state),
           saveFormatVersion: SAVE_FORMAT_VERSION,
+          world: state.world,
+          mapView: data.mapView,
         });
         return;
       }

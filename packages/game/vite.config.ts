@@ -36,12 +36,6 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    rolldownOptions: {
-      input: {
-        main: resolve(gameRoot, 'index.html'),
-        mapPreview: resolve(gameRoot, 'map-preview.html'),
-      },
-    },
     // Babylon.js is large; the engine chunk is expected to be over Vite's default warning size.
     chunkSizeWarningLimit: 2500,
   },

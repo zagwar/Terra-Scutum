@@ -3,7 +3,8 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
-    "types": ["node"]
+    // vite/client: the tests use the types of the debug hooks, which reach into the game's source.
+    "types": ["node", "vite/client"]
   },
   "include": ["."]
 }

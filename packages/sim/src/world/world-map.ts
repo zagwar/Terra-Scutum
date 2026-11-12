@@ -25,6 +25,8 @@ export interface WorldMap {
   readonly provinceCountry: Uint16Array;
   readonly provinceRegion: Uint16Array;
   readonly provinceAreaKm2: Float32Array;
+  /** 1 for a deep sea zone, 0 for a shallow one. */
+  readonly seaZoneDeep: Uint8Array;
   readonly provinceNeighbors: Adjacency;
   readonly provinceSeaZones: Adjacency;
   readonly seaZoneNeighbors: Adjacency;
@@ -106,6 +108,7 @@ export function buildWorldMap(data: GameData): WorldMap {
     provinceCountry,
     provinceRegion,
     provinceAreaKm2,
+    seaZoneDeep: Uint8Array.from(seaZones, (s) => (s.depth === 'deep' ? 1 : 0)),
     provinceNeighbors: buildAdjacency(
       provinces.map((p) => p.adjacentProvinces.map((n) => lookup(provinceIndex, n, 'province'))),
     ),
