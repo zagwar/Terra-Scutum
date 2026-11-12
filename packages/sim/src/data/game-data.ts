@@ -1,0 +1,92 @@
+import type { z } from 'zod';
+import { type GameConfig, gameConfigSchema } from './game-config';
+
+/**
+ * The list of JSON data files in `data/`, each with the zod schema that
+ * checks it. To add a data file: write its schema, add it here, add its type
+ * to `GameData`, and (if it refers to ids in other files) add a cross-check.
+ *
+ * The sim never reads files itself. Its hosts do (the sim worker bundles the
+ * JSON; the campaign runner and tools read it from disk) and pass the raw
+ * content to `parseGameData`.
+ */
+export const DATA_FILES = {
+  gameConfig: { file: 'game_config.json', schema: gameConfigSchema },
+} as const satisfies Record<string, { file: string; schema: z.ZodType }>;
+
+export type DataFileKey = keyof typeof DATA_FILES;
+
+/** The unvalidated content of every data file, as parsed from JSON. */
+export type RawGameData = Readonly<Record<DataFileKey, unknown>>;
+
+/** All game data, validated. Read-only: the sim never changes it. */
+export interface GameData {
+  readonly gameConfig: GameConfig;
+}
+
+/** One problem found in the data: which file, where in it, and what's wrong. */
+export interface DataIssue {
+  readonly file: string;
+  /** Path inside the file, for example `performanceBudget.dailyTickAverageMs`. Empty for the whole file. */
+  readonly path: string;
+  readonly message: string;
+}
+
+export function formatDataIssue(issue: DataIssue): string {
+  return `data/${issue.file}${issue.path ? ` → ${issue.path}` : ''}: ${issue.message}`;
+}
+
+/** Thrown when the data is invalid. Lists every problem found, not just the first. */
+export class DataValidationError extends Error {
+  readonly issues: readonly DataIssue[];
+
+  constructor(issues: readonly DataIssue[]) {
+    super(
+      `Game data is invalid (${issues.length} problem${issues.length === 1 ? '' : 's'}):\n` +
+        issues.map((issue) => `  - ${formatDataIssue(issue)}`).join('\n'),
+    );
+    this.name = 'DataValidationError';
+    this.issues = issues;
+  }
+}
+
+/**
+ * A check that looks across files (unknown ids, bad references, duplicates).
+ * It runs only when every file passed its own schema.
+ */
+export type DataCrossCheck = (data: GameData, report: (issue: DataIssue) => void) => void;
+
+/** Cross-file checks. Features add theirs as their data files arrive. */
+const CROSS_CHECKS: readonly DataCrossCheck[] = [];
+
+/**
+ * Validates the raw content of all data files and returns typed game data.
+ * Throws a `DataValidationError` listing every problem.
+ */
+export function parseGameData(raw: RawGameData): GameData {
+  const issues: DataIssue[] = [];
+  const parsed: Partial<Record<DataFileKey, unknown>> = {};
+
+  for (const key of Object.keys(DATA_FILES) as DataFileKey[]) {
+    const { file, schema } = DATA_FILES[key];
+    if (raw[key] === undefined) {
+      issues.push({ file, path: '', message: 'file is missing' });
+      continue;
+    }
+    const result = schema.safeParse(raw[key]);
+    if (result.success) {
+      parsed[key] = result.data;
+    } else {
+      for (const issue of result.error.issues) {
+        issues.push({ file, path: issue.path.join('.'), message: issue.message });
+      }
+    }
+  }
+  if (issues.length > 0) throw new DataValidationError(issues);
+
+  const data = parsed as GameData;
+  for (const check of CROSS_CHECKS) check(data, (issue) => issues.push(issue));
+  if (issues.length > 0) throw new DataValidationError(issues);
+
+  return data;
+}

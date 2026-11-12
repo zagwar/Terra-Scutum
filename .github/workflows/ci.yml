@@ -1,0 +1,69 @@
+# Checks that run automatically on every pull request (the green ✓ or red ✗ on the PR page):
+# typecheck, lint, data validation, unit tests, a short headless campaign, and browser tests.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same pull request cancels the older run (saves Actions minutes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck, lint and data validation
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Headless campaign (two years, performance budget enforced)
+        run: npm run runner -- --days 730 --seed 42 --strict
+
+      - name: Cache the Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install the Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Install the browser's system libraries
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Build the game and run the browser tests
+        run: npm run test:e2e
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: |
+            packages/game/e2e/screenshots
+            packages/game/test-results
+          if-no-files-found: ignore
+          retention-days: 7

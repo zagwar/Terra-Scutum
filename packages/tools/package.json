@@ -1,0 +1,13 @@
+{
+  "name": "@terra-scutum/tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Node CLIs: data validation now; map import, terrain processing and data generation later",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@terra-scutum/sim": "*"
+  }
+}

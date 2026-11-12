@@ -1,0 +1,48 @@
+{
+  "GAME_TITLE": "Terra Scutum",
+  "GAME_SUBTITLE": "The Last Line of Earth",
+
+  "DATE_FORMAT": "{day} {month} {year}",
+  "MONTH_1": "January",
+  "MONTH_2": "February",
+  "MONTH_3": "March",
+  "MONTH_4": "April",
+  "MONTH_5": "May",
+  "MONTH_6": "June",
+  "MONTH_7": "July",
+  "MONTH_8": "August",
+  "MONTH_9": "September",
+  "MONTH_10": "October",
+  "MONTH_11": "November",
+  "MONTH_12": "December",
+
+  "FOUNDATION_PANEL_TITLE": "Foundation check",
+  "FOUNDATION_RENDERER": "3D renderer",
+  "FOUNDATION_RENDERER_STARTING": "Starting…",
+  "FOUNDATION_RENDERER_WEBGPU": "WebGPU",
+  "FOUNDATION_RENDERER_WEBGL2": "WebGL 2",
+  "FOUNDATION_SIM": "Simulation",
+  "FOUNDATION_SIM_STARTING": "Starting…",
+  "FOUNDATION_SIM_RUNNING": "Running",
+  "FOUNDATION_FAILED": "Failed",
+  "FOUNDATION_DATE": "Date",
+  "FOUNDATION_DAYS_SIMULATED": "Days simulated",
+  "FOUNDATION_SAVE_FORMAT": "Save format",
+  "FOUNDATION_SAVE_FORMAT_VALUE": "Version {version}",
+  "FOUNDATION_BUILD": "Build",
+  "FOUNDATION_ADVANCE_DAY": "Advance one day",
+
+  "ERROR_TITLE": "Something went wrong",
+  "ERROR_SIM_DATA_INVALID": "The game's data files contain a mistake, so the simulation could not start.",
+  "ERROR_SIM_CRASHED": "The simulation stopped because of an unexpected error.",
+  "ERROR_DEBUG_SCENARIO_UNKNOWN": "There is no debug scenario with that name.",
+  "ERROR_RENDERER_FAILED": "The 3D view could not start. Your browser or graphics driver may not support WebGL 2.",
+
+  "COMMAND_UNKNOWN": "The simulation does not know the command \"{type}\".",
+  "COMMAND_INVALID": "That command is not valid.",
+
+  "SAVE_ERROR_NOT_A_SAVE": "This file is not a Terra Scutum save.",
+  "SAVE_ERROR_CORRUPT": "This save is damaged and cannot be loaded.",
+  "SAVE_ERROR_NEWER_VERSION": "This save was made with a newer version of the game (save format {saveVersion}; this game reads up to {gameVersion}).",
+  "SAVE_ERROR_TOO_OLD": "This save is too old to load (save format {saveVersion}; this game uses {gameVersion})."
+}

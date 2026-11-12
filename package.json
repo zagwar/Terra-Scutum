@@ -1,0 +1,40 @@
+{
+  "name": "terra-scutum",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Terra Scutum: The Last Line of Earth",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @terra-scutum/game",
+    "build": "npm run build -w @terra-scutum/game",
+    "preview": "npm run preview -w @terra-scutum/game",
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test -c packages/game/playwright.config.ts",
+    "runner": "tsx packages/runner/src/cli.ts",
+    "check": "npm run typecheck && npm run lint && npm run check:data",
+    "check:data": "tsx packages/tools/src/check-data.ts",
+    "typecheck": "tsc -p packages/sim/tsconfig.src.json && tsc -p packages/sim && tsc -p packages/game && tsc -p packages/game/tsconfig.node.json && tsc -p packages/game/e2e && tsc -p packages/runner && tsc -p packages/tools",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.19.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}

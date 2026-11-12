@@ -1,0 +1,10 @@
+{
+  // The sim source is checked with NO DOM and NO Node types on purpose: if sim
+  // code touches `window`, `document`, `process`, `fs`… it fails to compile.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src"]
+}
