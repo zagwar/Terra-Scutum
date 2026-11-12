@@ -1,5 +1,9 @@
 import type { RawGameData } from '@terra-scutum/sim';
+import countries from '../../../../data/countries.json';
 import gameConfig from '../../../../data/game_config.json';
+import provinces from '../../../../data/provinces.json';
+import regions from '../../../../data/regions.json';
+import seaZones from '../../../../data/sea_zones.json';
 
 /**
  * The game's data files, bundled into the sim worker at build time. The sim
@@ -8,4 +12,8 @@ import gameConfig from '../../../../data/game_config.json';
  */
 export const RAW_GAME_DATA: RawGameData = {
   gameConfig,
+  countries,
+  provinces,
+  regions,
+  seaZones,
 };

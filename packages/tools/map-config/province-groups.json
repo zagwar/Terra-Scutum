@@ -1,0 +1,581 @@
+{
+  "keepSeparate": ["USA", "DEU", "ESP", "POL", "UKR", "JPN", "RUS"],
+  "groups": [
+    {
+      "country": "GBR",
+      "name": "Scotland",
+      "groupings": ["Eastern", "Highlands and Islands", "North Eastern", "South Western"]
+    },
+    {
+      "country": "GBR",
+      "name": "Wales",
+      "groupings": ["East Wales", "West Wales and the Valleys"]
+    },
+    {
+      "country": "GBR",
+      "name": "North West England",
+      "groupings": ["North West"]
+    },
+    {
+      "country": "GBR",
+      "name": "North East England",
+      "groupings": ["North East"]
+    },
+    {
+      "country": "GBR",
+      "name": "South West England",
+      "groupings": ["South West"]
+    },
+    {
+      "country": "GBR",
+      "name": "South East England",
+      "groupings": ["South East"]
+    },
+    {
+      "country": "GBR",
+      "name": "East of England",
+      "groupings": ["East"]
+    },
+    {
+      "country": "USA",
+      "name": "New England",
+      "units": ["US-CT", "US-ME", "US-MA", "US-NH", "US-RI", "US-VT"]
+    },
+    {
+      "country": "USA",
+      "name": "Chesapeake",
+      "units": ["US-DE", "US-MD", "US-DC"]
+    },
+    {
+      "country": "TUR",
+      "name": "Istanbul",
+      "units": ["TR-34"]
+    },
+    {
+      "country": "TUR",
+      "name": "Western Marmara",
+      "units": ["TR-59", "TR-22", "TR-39", "TR-10", "TR-17"]
+    },
+    {
+      "country": "TUR",
+      "name": "Aegean",
+      "units": ["TR-35", "TR-09", "TR-20", "TR-48", "TR-45", "TR-03", "TR-43", "TR-64"]
+    },
+    {
+      "country": "TUR",
+      "name": "Eastern Marmara",
+      "units": ["TR-16", "TR-26", "TR-11", "TR-41", "TR-54", "TR-81", "TR-14", "TR-77"]
+    },
+    {
+      "country": "TUR",
+      "name": "Western Anatolia",
+      "units": ["TR-06", "TR-42", "TR-70"]
+    },
+    {
+      "country": "TUR",
+      "name": "Mediterranean Turkey",
+      "units": ["TR-07", "TR-32", "TR-15", "TR-01", "TR-33", "TR-31", "TR-46", "TR-80"]
+    },
+    {
+      "country": "TUR",
+      "name": "Central Anatolia",
+      "units": ["TR-71", "TR-68", "TR-51", "TR-50", "TR-40", "TR-38", "TR-58", "TR-66"]
+    },
+    {
+      "country": "TUR",
+      "name": "Western Black Sea",
+      "units": [
+        "TR-67",
+        "TR-78",
+        "TR-74",
+        "TR-37",
+        "TR-18",
+        "TR-57",
+        "TR-55",
+        "TR-60",
+        "TR-19",
+        "TR-05"
+      ]
+    },
+    {
+      "country": "TUR",
+      "name": "Eastern Black Sea",
+      "units": ["TR-61", "TR-52", "TR-28", "TR-53", "TR-08", "TR-29"]
+    },
+    {
+      "country": "TUR",
+      "name": "Northeastern Anatolia",
+      "units": ["TR-25", "TR-24", "TR-69", "TR-04", "TR-36", "TR-76", "TR-75"]
+    },
+    {
+      "country": "TUR",
+      "name": "Central Eastern Anatolia",
+      "units": ["TR-44", "TR-23", "TR-12", "TR-62", "TR-65", "TR-49", "TR-13", "TR-30"]
+    },
+    {
+      "country": "TUR",
+      "name": "Southeastern Anatolia",
+      "units": ["TR-27", "TR-02", "TR-79", "TR-63", "TR-21", "TR-47", "TR-72", "TR-73", "TR-56"]
+    },
+    {
+      "country": "ROU",
+      "name": "Bucharest",
+      "units": ["RO-B", "RO-IF"]
+    },
+    {
+      "country": "ROU",
+      "name": "Muntenia",
+      "units": ["RO-AG", "RO-BZ", "RO-CL", "RO-DB", "RO-GR", "RO-IL", "RO-PH", "RO-TR", "RO-BR"]
+    },
+    {
+      "country": "ROU",
+      "name": "Oltenia",
+      "units": ["RO-DJ", "RO-GJ", "RO-MH", "RO-OT", "RO-VL"]
+    },
+    {
+      "country": "ROU",
+      "name": "Dobruja",
+      "units": ["RO-CT", "RO-TL"]
+    },
+    {
+      "country": "ROU",
+      "name": "Moldavia",
+      "units": ["RO-BC", "RO-BT", "RO-GL", "RO-IS", "RO-NT", "RO-SV", "RO-VN", "RO-VS"]
+    },
+    {
+      "country": "ROU",
+      "name": "Transylvania",
+      "units": [
+        "RO-AB",
+        "RO-BN",
+        "RO-BV",
+        "RO-CJ",
+        "RO-CV",
+        "RO-HD",
+        "RO-HR",
+        "RO-MS",
+        "RO-SB",
+        "RO-SJ"
+      ]
+    },
+    {
+      "country": "ROU",
+      "name": "Banat",
+      "units": ["RO-TM", "RO-CS"]
+    },
+    {
+      "country": "ROU",
+      "name": "Crișana and Maramureș",
+      "units": ["RO-AR", "RO-BH", "RO-SM", "RO-MM"]
+    },
+    {
+      "country": "CHE",
+      "name": "Lake Geneva Region",
+      "units": ["CH-GE", "CH-VD", "CH-VS"]
+    },
+    {
+      "country": "CHE",
+      "name": "Espace Mittelland",
+      "units": ["CH-BE", "CH-FR", "CH-JU", "CH-NE", "CH-SO"]
+    },
+    {
+      "country": "CHE",
+      "name": "Northwestern Switzerland",
+      "units": ["CH-AG", "CH-BL", "CH-BS"]
+    },
+    {
+      "country": "CHE",
+      "name": "Zürich",
+      "units": ["CH-ZH"]
+    },
+    {
+      "country": "CHE",
+      "name": "Eastern Switzerland",
+      "units": ["CH-AI", "CH-AR", "CH-GL", "CH-GR", "CH-SG", "CH-SH", "CH-TG"]
+    },
+    {
+      "country": "CHE",
+      "name": "Central Switzerland",
+      "units": ["CH-LU", "CH-NW", "CH-OW", "CH-SZ", "CH-UR", "CH-ZG"]
+    },
+    {
+      "country": "CHE",
+      "name": "Ticino",
+      "units": ["CH-TI"]
+    },
+    {
+      "country": "PRT",
+      "name": "Norte",
+      "units": ["PT-03", "PT-04", "PT-13", "PT-16", "PT-17"]
+    },
+    {
+      "country": "PRT",
+      "name": "Centro",
+      "units": ["PT-01", "PT-05", "PT-06", "PT-09", "PT-10", "PT-18"]
+    },
+    {
+      "country": "PRT",
+      "name": "Lisbon",
+      "units": ["PT-11", "PT-15"]
+    },
+    {
+      "country": "PRT",
+      "name": "Alentejo",
+      "units": ["PT-02", "PT-07", "PT-12", "PT-14"]
+    },
+    {
+      "country": "PRT",
+      "name": "Algarve",
+      "units": ["PT-08"]
+    },
+    {
+      "country": "FIN",
+      "name": "Southern Finland",
+      "units": ["FI-18", "FI-09", "FI-02", "FI-16", "FI-06"]
+    },
+    {
+      "country": "FIN",
+      "name": "Western Finland",
+      "units": ["FI-19", "FI-17", "FI-11", "FI-08", "FI-03", "FI-12", "FI-07"]
+    },
+    {
+      "country": "FIN",
+      "name": "Eastern Finland",
+      "units": ["FI-04", "FI-15", "FI-13"]
+    },
+    {
+      "country": "FIN",
+      "name": "Oulu",
+      "units": ["FI-14", "FI-05"]
+    },
+    {
+      "country": "FIN",
+      "name": "Lapland",
+      "units": ["FI-10"]
+    },
+    {
+      "country": "EGY",
+      "name": "Greater Cairo",
+      "units": ["EG-C", "EG-GZ", "EG-KB"]
+    },
+    {
+      "country": "EGY",
+      "name": "Alexandria",
+      "units": ["EG-ALX"]
+    },
+    {
+      "country": "EGY",
+      "name": "Nile Delta",
+      "units": ["EG-BH", "EG-DK", "EG-DT", "EG-GH", "EG-KFS", "EG-MNF", "EG-SHR"]
+    },
+    {
+      "country": "EGY",
+      "name": "Suez Canal",
+      "units": ["EG-IS", "EG-PTS", "EG-SUZ"]
+    },
+    {
+      "country": "EGY",
+      "name": "Sinai",
+      "units": ["EG-SIN", "EG-JS"]
+    },
+    {
+      "country": "EGY",
+      "name": "Middle Egypt",
+      "units": ["EG-FYM", "EG-BNS", "EG-MN", "EG-AST"]
+    },
+    {
+      "country": "EGY",
+      "name": "Upper Egypt",
+      "units": ["EG-SHG", "EG-KN", "EG-LX", "EG-ASN"]
+    },
+    {
+      "country": "EGY",
+      "name": "Western Desert",
+      "units": ["EG-WAD", "EG-MT"]
+    },
+    {
+      "country": "EGY",
+      "name": "Red Sea Coast",
+      "units": ["EG-BA"]
+    },
+    {
+      "country": "MDA",
+      "name": "Chișinău",
+      "units": ["MD-CU"]
+    },
+    {
+      "country": "MDA",
+      "name": "Northern Moldova",
+      "units": [
+        "MD-BA",
+        "MD-BR",
+        "MD-DO",
+        "MD-DR",
+        "MD-ED",
+        "MD-FA",
+        "MD-FL",
+        "MD-GL",
+        "MD-OC",
+        "MD-RI",
+        "MD-SI",
+        "MD-SO"
+      ]
+    },
+    {
+      "country": "MDA",
+      "name": "Central Moldova",
+      "units": [
+        "MD-AN",
+        "MD-CL",
+        "MD-CR",
+        "MD-HI",
+        "MD-IA",
+        "MD-NI",
+        "MD-OR",
+        "MD-RE",
+        "MD-SD",
+        "MD-ST",
+        "MD-TE",
+        "MD-UN"
+      ]
+    },
+    {
+      "country": "MDA",
+      "name": "Southern Moldova",
+      "units": ["MD-BS", "MD-CA", "MD-CM", "MD-CS", "MD-CT", "MD-LE", "MD-SV", "MD-TA"]
+    },
+    {
+      "country": "MDA",
+      "name": "Gagauzia",
+      "units": ["MD-GA"]
+    },
+    {
+      "country": "MDA",
+      "name": "Transnistria",
+      "units": ["MD-SN", "MD-BD", "MD-CAM", "MD-GRI"]
+    },
+    {
+      "country": "BGR",
+      "name": "Northwestern Bulgaria",
+      "units": ["BG-05", "BG-06", "BG-12", "BG-11", "BG-15"]
+    },
+    {
+      "country": "BGR",
+      "name": "North Central Bulgaria",
+      "units": ["BG-04", "BG-07", "BG-17", "BG-18", "BG-19"]
+    },
+    {
+      "country": "BGR",
+      "name": "Northeastern Bulgaria",
+      "units": ["BG-03", "BG-08", "BG-25", "BG-27"]
+    },
+    {
+      "country": "BGR",
+      "name": "Southwestern Bulgaria",
+      "units": ["BG-22", "BG-23", "BG-14", "BG-10", "BG-01"]
+    },
+    {
+      "country": "BGR",
+      "name": "Upper Thrace",
+      "units": ["BG-16", "BG-13", "BG-21", "BG-09", "BG-26"]
+    },
+    {
+      "country": "BGR",
+      "name": "Southeastern Bulgaria",
+      "units": ["BG-02", "BG-20", "BG-28", "BG-24"]
+    },
+    {
+      "country": "USA",
+      "name": "Puerto Rico and the Virgin Islands",
+      "territories": ["PRI", "VIR"]
+    },
+    {
+      "country": "USA",
+      "name": "Mariana Islands",
+      "territories": ["GUM", "MNP"]
+    },
+    {
+      "country": "ESP",
+      "name": "Ceuta and Melilla",
+      "units": ["ES-CE", "ES-ML"]
+    },
+    {
+      "country": "JPN",
+      "name": "Tōhoku",
+      "units": ["JP-02", "JP-03", "JP-04", "JP-05", "JP-06", "JP-07"]
+    },
+    {
+      "country": "JPN",
+      "name": "Northern Kantō",
+      "units": ["JP-08", "JP-09", "JP-10"]
+    },
+    {
+      "country": "JPN",
+      "name": "Hokuriku",
+      "units": ["JP-15", "JP-16", "JP-17", "JP-18"]
+    },
+    {
+      "country": "JPN",
+      "name": "Kōshin",
+      "units": ["JP-19", "JP-20"]
+    },
+    {
+      "country": "JPN",
+      "name": "Tōkai",
+      "units": ["JP-21", "JP-22", "JP-23", "JP-24"]
+    },
+    {
+      "country": "JPN",
+      "name": "Kansai",
+      "units": ["JP-25", "JP-26", "JP-27", "JP-28", "JP-29", "JP-30"]
+    },
+    {
+      "country": "JPN",
+      "name": "Chūgoku",
+      "units": ["JP-31", "JP-32", "JP-33", "JP-34", "JP-35"]
+    },
+    {
+      "country": "JPN",
+      "name": "Shikoku",
+      "units": ["JP-36", "JP-37", "JP-38", "JP-39"]
+    },
+    {
+      "country": "JPN",
+      "name": "Northern Kyūshū",
+      "units": ["JP-40", "JP-41", "JP-42"]
+    },
+    {
+      "country": "JPN",
+      "name": "Southern Kyūshū",
+      "units": ["JP-43", "JP-44", "JP-45", "JP-46"]
+    },
+    {
+      "country": "RUS",
+      "name": "Moscow",
+      "units": ["RU-MOW", "RU-MOS"]
+    },
+    {
+      "country": "RUS",
+      "name": "Northwestern Russia",
+      "units": ["RU-LEN", "RU-NGR", "RU-PSK"]
+    },
+    {
+      "country": "RUS",
+      "name": "Karelia and Kola",
+      "units": ["RU-KR", "RU-MUR"]
+    },
+    {
+      "country": "RUS",
+      "name": "Upper Volga",
+      "units": ["RU-YAR", "RU-KOS", "RU-IVA", "RU-VLA"]
+    },
+    {
+      "country": "RUS",
+      "name": "Central Black Earth",
+      "units": ["RU-BEL", "RU-KRS", "RU-LIP", "RU-ORL", "RU-VOR", "RU-TAM"]
+    },
+    {
+      "country": "RUS",
+      "name": "Volga-Vyatka",
+      "units": ["RU-NIZ", "RU-KIR", "RU-ME", "RU-CU", "RU-MO"]
+    },
+    {
+      "country": "RUS",
+      "name": "Middle Volga",
+      "units": ["RU-SAM", "RU-ULY", "RU-PNZ", "RU-SAR"]
+    },
+    {
+      "country": "RUS",
+      "name": "Lower Volga",
+      "units": ["RU-VGG", "RU-AST", "RU-KL"]
+    },
+    {
+      "country": "RUS",
+      "name": "Kuban",
+      "units": ["RU-KDA", "RU-AD"]
+    },
+    {
+      "country": "RUS",
+      "name": "North Caucasus",
+      "units": ["RU-CE", "RU-IN", "RU-SE", "RU-KB", "RU-KC", "RU-DA"]
+    },
+    {
+      "country": "RUS",
+      "name": "Crimea",
+      "units": ["UA-43", "UA-40"]
+    },
+    {
+      "country": "RUS",
+      "name": "Altai-Sayan",
+      "units": ["RU-AL", "RU-KK", "RU-TY"]
+    },
+    {
+      "country": "RUS",
+      "name": "Amur",
+      "units": ["RU-AMU", "RU-YEV"]
+    },
+    {
+      "country": "RUS",
+      "name": "Yamalo-Nenets Autonomous Okrug",
+      "units": ["RU-YAN", "RU-X01~"]
+    },
+    {
+      "country": "CHN",
+      "name": "Hong Kong",
+      "territories": ["HKG"]
+    },
+    {
+      "country": "FRA",
+      "name": "French Antilles",
+      "units": ["FR-GP", "FR-MQ"],
+      "territories": ["MAF", "BLM"]
+    },
+    {
+      "country": "GBR",
+      "name": "Crown Dependencies",
+      "territories": ["JEY", "GGY", "IMN"]
+    },
+    {
+      "country": "GBR",
+      "name": "British Leeward Islands",
+      "territories": ["AIA", "VGB", "MSR"]
+    },
+    {
+      "country": "NLD",
+      "name": "ABC Islands",
+      "units": ["NL-BQ1"],
+      "territories": ["ABW", "CUW"]
+    },
+    {
+      "country": "NLD",
+      "name": "Dutch Windward Islands",
+      "units": ["NL-BQ2", "NL-BQ3"],
+      "territories": ["SXM"]
+    },
+    {
+      "country": "MEX",
+      "name": "Baja California Peninsula",
+      "units": ["MX-BCN", "MX-BCS"]
+    },
+    {
+      "country": "MEX",
+      "name": "Yucatán Peninsula",
+      "units": ["MX-YUC", "MX-ROO", "MX-CAM", "MX-X01~"]
+    },
+    {
+      "country": "KAZ",
+      "name": "Almaty",
+      "units": ["KZ-ALA"]
+    },
+    {
+      "country": "UKR",
+      "name": "Kyiv",
+      "units": ["UA-30", "UA-32"]
+    },
+    {
+      "country": "ARG",
+      "name": "Buenos Aires",
+      "units": ["AR-B", "AR-C"]
+    }
+  ]
+}

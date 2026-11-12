@@ -1,0 +1,69 @@
+# Map configuration (F64)
+
+These files are the **source of the game map**. The map import turns them, together with
+[Natural Earth](https://www.naturalearthdata.com/)'s public-domain map data (version in
+`settings.json`), into the game's map data:
+
+| Output | What it holds |
+|---|---|
+| `data/countries.json`, `data/provinces.json`, `data/regions.json`, `data/sea_zones.json` | The map facts the simulation uses: owners, regions, borders (adjacency), coasts, areas |
+| `data/geometry/*.topo.json` | The shapes (TopoJSON), drawn by the game |
+| `locales/en.map.json` | The English names of every country, province, region and sea zone |
+| `report/` | `map-report.md` (lists, counts, warnings) and preview pictures |
+
+**Never edit the outputs by hand**: change the files here and run the import again:
+
+```
+npm run import:map
+```
+
+It downloads the Natural Earth files once (into `.cache/`, not committed), takes about a minute,
+and always gives the same result for the same inputs.
+
+## The files
+
+- **`countries.json`**: the curated country list. Every Natural Earth territory (by its code) must
+  appear exactly once: as a country's `source`, in a country's `includes` (merged into that
+  country), or in `leftOut` (not part of the game world). Dependencies join their sovereign state;
+  tiny island countries are left out; disputed areas follow the decision log.
+- **`province-groups.json`**: states/provinces that are always combined into one province with a
+  real name ("New England", "Transylvania", "Tōhoku"). A group lists its members by ISO 3166-2 code
+  (`units`, e.g. `"US-CT"`), by source grouping (`groupings`, e.g. `"East Wales"`), by name
+  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). `keepSeparate` lists countries whose
+  states are never combined automatically (only by their groups).
+- **`regions.json`**: the ~60 regions, as real geographic areas. A region lists its territories
+  (`countries`, Natural Earth codes: `"GBR"` is Great Britain itself, overseas territories have
+  their own codes) and, for big countries split between regions, their states (`units`, ISO codes,
+  which win over `countries`). Anything not listed joins the region with the nearest `seeds` point,
+  and the import warns about it.
+- **`sea-zones.json`**: the sea zones. Each grows through the water from its seed points (which
+  must be in open water). `connections` adds links through straits too narrow for the import's
+  grid (for example the Bosporus).
+- **`province-names.json`**: better display names for generated provinces, by province id. Ids never
+  change when a name does.
+- **`settings.json`**: the [DEFAULT] numbers:
+  - `areaPerProvinceKm2` and `populationUnit`: each country aims for about
+    `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
+  - `mergeBelowLoad`, `seaMergeBelowLoad`, `wholeGroupingBelowLoad`, `groupingMergePenalty`:
+    which small states are combined, and how.
+  - `dominantShare`: a combined province keeps its main member's name when the other members are
+    tiny (Bremen added to Lower Saxony is still "Lower Saxony").
+  - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
+
+## How provinces are made
+
+Provinces always follow **real borders**: states and provinces are only ever combined, never cut.
+
+1. Natural Earth's ~4,600 states and provinces are assigned to countries (`countries.json`).
+2. Each country's land is grouped into clusters (land that hangs together, or islands within
+   `clusterDistanceKm`). Uninhabited clusters are left out, but never a country's only land.
+3. In each cluster: the named groups are combined first; then small source groupings that are still
+   complete become single provinces with their real name ("Greater London", "Bretagne"); then, unless
+   the country is in `keepSeparate`, the lightest provinces merge with a neighbor until the cluster
+   reaches its target.
+4. Combined provinces are named: the group's name, the source grouping's name, the main member's name
+   (a tiny piece was added), "A and B" for two members, or a direction in the country ("Northern
+   Algeria"). The report lists every combined province and how it got its name; better names go in
+   `province-groups.json` or `province-names.json`.
+5. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
+   (`raster.degreesPerPixel`). The world wraps east–west: sea zones grow across the date line.

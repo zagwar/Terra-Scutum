@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const gameRoot = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(gameRoot, '../..');
 
 /** Short id of the version being built, shown in the game so it's clear which version a link is running. */
 function buildCommit(): string {
@@ -35,6 +36,12 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    rolldownOptions: {
+      input: {
+        main: resolve(gameRoot, 'index.html'),
+        mapPreview: resolve(gameRoot, 'map-preview.html'),
+      },
+    },
     // Babylon.js is large; the engine chunk is expected to be over Vite's default warning size.
     chunkSizeWarningLimit: 2500,
   },

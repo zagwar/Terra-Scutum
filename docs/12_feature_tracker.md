@@ -27,7 +27,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F135 | Unit generators from designs: mechs, tanks, aircraft, ships, spacecraft, stations; infantry figures | M8c | Planned | Section 12.6; the mech generator comes earlier, with F51 in M8b |
 | F136 | Bug and hive generators from body plans; procedural bug animation | M7 | Planned | Section 12.6 |
 | F137 | Generated effects (smoke, fire, lasers, disruption haze, weather), icons and portraits | M8c | Planned | Section 12.6 |
-| F64 | Regions layer: province groupings, region overlay, region panel; map import script in `tools/` | M1 | Planned | Section 4 |
+| F64 | Regions layer: province groupings, region overlay, region panel; map import script in `tools/` | M1 | Done | Section 4. Built as the map import (`npm run import:map`, `packages/tools/map-config/`): 172 countries, 1,423 provinces (real borders only), 62 real-geography regions, 126 sea zones with adjacency, plus a temporary 2D map data preview page that loops east–west. The region overlay and region panel on the 3D map come with F01/F122 |
 | F03 | Camera: pan, zoom, rotate; top-down/angled | M1 | Planned | |
 | F04 | Time system: day ticks, pause, 5 speeds, date display | M1 | Planned | |
 | F05 | Country selection screen | M1 | Planned | |

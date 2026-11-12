@@ -63,6 +63,9 @@ export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
       >
         {t('FOUNDATION_ADVANCE_DAY')}
       </button>
+      <a className="foundation-link" href="map-preview.html" data-testid="map-preview-link">
+        {t('FOUNDATION_MAP_PREVIEW')}
+      </a>
     </section>
   );
 }

@@ -10,6 +10,7 @@ import { type CommandResult, type SimCommand, applyCommand } from './commands';
 import type { SimEvent } from './events';
 import { Rng, type RngState } from './rng';
 import { SYSTEMS, type SimSystem, type SystemId, type SystemRegistry, TICK_ORDER } from './systems';
+import { type WorldMap, buildWorldMap } from '../world/world-map';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -34,6 +35,8 @@ interface PipelineStep {
  */
 export class GameState {
   readonly data: GameData;
+  /** Fast numeric lookups over the map (provinces, countries, regions, sea zones). */
+  readonly world: WorldMap;
   readonly seed: number;
   /** The single source of randomness for the sim. */
   readonly rng: Rng;
@@ -49,6 +52,7 @@ export class GameState {
 
   constructor(options: GameStateOptions) {
     this.data = options.data;
+    this.world = buildWorldMap(options.data);
     this.seed = options.seed >>> 0;
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
 
