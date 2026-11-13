@@ -2,6 +2,7 @@ import type { CommandResult, SimCommand, SimEvent, SimSnapshot } from '@terra-sc
 import type { AppState, AppStore } from '../app-store';
 import type { GameRenderer } from '../render/game-renderer';
 import type { MapStats } from '../render/map/map-view';
+import type { TimeChange, TimeState } from '../worker/protocol';
 import type { SimClient } from '../worker/sim-client';
 
 /**
@@ -17,7 +18,12 @@ export interface DebugApi {
   getFrameCount(): number | null;
   /** Frames per second, averaged over about the last second; null until the renderer has started. */
   getFps(): number | null;
+  /** Simulates exactly this many days now (best with the game paused, as it starts). */
   step(days: number): Promise<SimSnapshot>;
+  /** The game speed as the UI last heard it from the sim worker; null until the sim is ready. */
+  time(): TimeState | null;
+  /** Pauses, unpauses or changes the game speed, like the time controls do. */
+  changeTime(change: TimeChange): void;
   sendCommand(command: SimCommand): Promise<CommandResult>;
   /** Every sim event received since the game started. */
   readonly events: SimEvent[];
@@ -92,6 +98,8 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
     getFrameCount: () => renderer?.getFrameCount() ?? null,
     getFps: () => renderer?.getFps() ?? null,
     step: (days) => sim.step(days),
+    time: () => store.getState().time,
+    changeTime: (change) => sim.changeTime(change),
     sendCommand: (command) => sim.sendCommand(command),
     events,
     map: {

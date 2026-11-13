@@ -1,11 +1,19 @@
 import type { CommandResult, SimCommand, SimEvent, SimSnapshot } from '@terra-scutum/sim';
-import type { FromSimWorker, SimWorkerErrorKey, ToSimWorker } from './protocol';
+import type {
+  FromSimWorker,
+  SimWorkerErrorKey,
+  TimeChange,
+  TimeState,
+  ToSimWorker,
+} from './protocol';
 
 export interface SimClientHandlers {
   /** The campaign has started. */
   onReady(ready: ReadyMessage): void;
   /** The sim state changed (after ticks and commands). */
   onUpdate(snapshot: SimSnapshot, events: readonly SimEvent[]): void;
+  /** The game speed changed (pause, unpause, a new speed). */
+  onTime(time: TimeState): void;
   /** The sim could not start or crashed. */
   onError(key: SimWorkerErrorKey, detail: string): void;
 }
@@ -18,6 +26,8 @@ export interface SimClient {
   sendCommand(command: SimCommand): Promise<CommandResult>;
   /** Simulates the given number of days now; resolves with the new snapshot. */
   step(days: number): Promise<SimSnapshot>;
+  /** Pauses, unpauses or changes the game speed; the worker answers through `onTime`. */
+  changeTime(change: TimeChange): void;
   dispose(): void;
 }
 
@@ -56,6 +66,9 @@ export function createSimClient(handlers: SimClientHandlers): SimClient {
         }
         break;
       }
+      case 'time':
+        handlers.onTime(message.time);
+        break;
       case 'error':
         handlers.onError(message.key, message.detail);
         break;
@@ -75,6 +88,7 @@ export function createSimClient(handlers: SimClientHandlers): SimClient {
       const update = await request((requestId) => ({ type: 'step', requestId, days }));
       return update.snapshot;
     },
+    changeTime: (change) => send({ type: 'time', change }),
     dispose: () => worker.terminate(),
   };
 }

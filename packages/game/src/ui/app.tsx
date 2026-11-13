@@ -8,10 +8,13 @@ import { MapModeBar } from './map-mode-bar';
 import { MapTooltip } from './map-tooltip';
 import { ProvincePanel } from './province-panel';
 import { SeaZonePanel } from './sea-zone-panel';
+import { TimeControl } from './time-control';
+import type { TimeChange } from '../worker/protocol';
 
 export interface AppProps {
   readonly store: AppStore;
-  readonly onAdvanceDay: () => void;
+  /** Pause, unpause or change the game speed. */
+  readonly onChangeTime: (change: TimeChange) => void;
   /** Select a province by its index, or null to clear the selection. */
   readonly onSelectProvince: (province: number | null) => void;
   /** Select a sea zone by its index, or null to clear the selection. */
@@ -26,7 +29,7 @@ export interface AppProps {
 /** The root of the React UI: an HTML layer drawn on top of the 3D view. */
 export function App({
   store,
-  onAdvanceDay,
+  onChangeTime,
   onSelectProvince,
   onSelectSeaZone,
   onSelectCountry,
@@ -43,7 +46,16 @@ export function App({
         <p className="game-subtitle">{t('GAME_SUBTITLE')}</p>
       </header>
 
-      <FoundationPanel state={state} onAdvanceDay={onAdvanceDay} />
+      <FoundationPanel state={state} />
+
+      {state.snapshot && state.time && (
+        <TimeControl
+          date={state.snapshot.date}
+          time={state.time}
+          daysPerSecond={state.daysPerSecond}
+          onChangeTime={onChangeTime}
+        />
+      )}
 
       {world && provinceOwner && state.selectedCountry !== null && (
         <CountryPanel

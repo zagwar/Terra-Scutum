@@ -764,6 +764,8 @@ export async function createMapView(
       target instanceof HTMLSelectElement
     )
       return;
+    // The number pad's + and − choose the game speed (F04, `ui/time-keys.ts`), not the zoom.
+    if (event.code === 'NumpadAdd' || event.code === 'NumpadSubtract') return;
     if (event.key === '+' || event.key === '=' || event.key === '-') {
       const step = settings.wheelZoomStep;
       zoomBy(event.key === '-' ? 1 / step : step, null);

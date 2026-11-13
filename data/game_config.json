@@ -3,5 +3,9 @@
   "performanceBudget": {
     "dailyTickAverageMs": 30,
     "weeklyTickAverageMs": 150
+  },
+  "gameSpeed": {
+    "daysPerSecond": [0.5, 1, 2, 5, 10],
+    "startSpeed": 2
   }
 }

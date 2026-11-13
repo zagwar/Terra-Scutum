@@ -7,6 +7,7 @@ import { type GameRenderer, createGameRenderer } from './render/game-renderer';
 import { App } from './ui/app';
 import { t } from './ui/i18n';
 import './ui/styles.css';
+import type { TimeChange } from './worker/protocol';
 import { type ReadyMessage, createSimClient } from './worker/sim-client';
 
 /**
@@ -84,6 +85,8 @@ const sim = createSimClient({
       provinceOwner: message.snapshot.provinceOwner ?? null,
       world: message.world,
       saveFormatVersion: message.saveFormatVersion,
+      time: message.time,
+      daysPerSecond: message.daysPerSecond,
     });
     showMapWhenPossible();
   },
@@ -94,11 +97,17 @@ const sim = createSimClient({
     );
     debugHooks?.recordEvents(events);
   },
+  onTime(time) {
+    store.update({ time });
+  },
   onError(key, detail) {
     console.error(detail);
     store.update({ sim: 'failed', error: { key, detail } });
   },
 });
+
+/** Pause, unpause and game speed go to the sim worker, which runs the days. */
+const changeTime = (change: TimeChange) => sim.changeTime(change);
 
 if (launch.scenarioName !== null) debugHooks = installDebugHooks(store, sim);
 
@@ -106,7 +115,7 @@ createRoot(requireElement('ui')).render(
   <StrictMode>
     <App
       store={store}
-      onAdvanceDay={() => void sim.step(1)}
+      onChangeTime={changeTime}
       onSelectProvince={(province) => {
         store.update(
           province === null

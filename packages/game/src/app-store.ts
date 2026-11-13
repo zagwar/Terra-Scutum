@@ -2,6 +2,7 @@ import type { SimSnapshot, WorldMap } from '@terra-scutum/sim';
 import type { RendererType } from './render/create-engine';
 import type { MapMode } from './render/map/map-colors';
 import type { TranslationKey } from './ui/i18n';
+import type { TimeState } from './worker/protocol';
 
 /** What the UI shows. Changed only through `AppStore.update`; React re-renders when it changes. */
 export interface AppState {
@@ -20,6 +21,10 @@ export interface AppState {
   /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
   readonly world: WorldMap | null;
   readonly saveFormatVersion: number | null;
+  /** The game speed, as the sim worker last reported it; null until the sim is ready. */
+  readonly time: TimeState | null;
+  /** Days per second at speeds 1–5 (`data/game_config.json`); empty until the sim is ready. */
+  readonly daysPerSecond: readonly number[];
   readonly mapMode: MapMode;
   /**
    * Province indices (see `WorldMap`), or null for none. At most one province
@@ -51,6 +56,8 @@ export function createAppStore(): AppStore {
     provinceOwner: null,
     world: null,
     saveFormatVersion: null,
+    time: null,
+    daysPerSecond: [],
     mapMode: 'political',
     selectedProvince: null,
     hoveredProvince: null,

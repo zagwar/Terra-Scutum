@@ -135,6 +135,7 @@ export function testRawData(
     gameConfig: {
       startDate: overrides.startDate ?? '2025-01-01',
       performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
+      gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
     },
     ...testWorld(),
     mapView: testMapView(),
