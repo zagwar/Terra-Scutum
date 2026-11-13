@@ -50,7 +50,7 @@ test('the world map shows every province; clicking one opens its info panel', as
   const shot = (name: string) =>
     page.screenshot({ path: join(SCREENSHOT_DIR, `map-${name}-${testInfo.project.name}.png`) });
 
-  await expect(page.getByTestId('map-status')).toHaveText('1,294 provinces');
+  await expect(page.getByTestId('loading-note')).toHaveCount(0);
   await waitForFrames(page);
   const stats = await page.evaluate(() => window.__terraScutum!.map.stats()!);
   expect(stats.provinces).toBe(1294);
@@ -151,10 +151,13 @@ test('the map wraps east–west and shows full detail when zoomed in', async ({ 
   await waitForFrames(page);
   await shot('scrolled-past-date-line');
 
-  // The Pacific is in the middle now, and Paris is still where the map says it is.
-  const paris = await screenPosition(page, ...PARIS);
-  await page.mouse.click(paris.x, paris.y);
-  expect(await map.selected()).toBe('fra_ile_de_france');
+  // The Pacific is in the middle now, and Tokyo is still where the map says it is.
+  // (Not Paris: it is at the right edge now, under the outliner.)
+  const tokyoId = await pick(139.7, 35.7);
+  expect(tokyoId).toMatch(/^jpn_/);
+  const tokyo = await screenPosition(page, 139.7, 35.7);
+  await page.mouse.click(tokyo.x, tokyo.y);
+  expect(await map.selected()).toBe(tokyoId);
 
   // One full turn around the world ends where it started.
   await page.evaluate(() => window.__terraScutum!.map.scrollBy(360));

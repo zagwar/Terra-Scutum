@@ -165,6 +165,8 @@ export function createSimHost(
           countryStart: state.countryStart,
           time,
           daysPerSecond,
+          playerCountry: state.world.countryIndex.get(data.gameConfig.playerCountry) ?? 0,
+          notifications: data.notifications,
         });
         return;
       }

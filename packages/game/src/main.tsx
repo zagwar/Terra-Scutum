@@ -3,9 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { createAppStore } from './app-store';
 import { type DebugHooks, installDebugHooks } from './debug/debug-hooks';
 import { parseLaunchOptions } from './debug/scenarios';
+import { DemoControls, startUiDemo } from './debug/ui-demo';
 import { type GameRenderer, createGameRenderer } from './render/game-renderer';
 import { App } from './ui/app';
 import { t } from './ui/i18n';
+import { messageFromEvent } from './ui/shell/messages';
+import { createShellActions } from './ui/shell/shell-actions';
+import { loadUiSettings } from './ui/shell/ui-settings';
 import './ui/styles.css';
 import type { TimeChange } from './worker/protocol';
 import { type ReadyMessage, createSimClient } from './worker/sim-client';
@@ -27,7 +31,7 @@ function randomSeed(): number {
 document.title = t('GAME_TITLE');
 
 const launch = parseLaunchOptions(window.location.search);
-const store = createAppStore();
+const store = createAppStore({ uiSettings: loadUiSettings() });
 let debugHooks: DebugHooks | null = null;
 
 // The map needs two things that start at the same time: the 3D renderer, and
@@ -45,11 +49,7 @@ function showMapWhenPossible(): void {
           hoveredProvince: target?.kind === 'province' ? target.index : null,
           hoveredSeaZone: target?.kind === 'seaZone' ? target.index : null,
         }),
-      onClick: (target) =>
-        store.update({
-          selectedProvince: target?.kind === 'province' ? target.index : null,
-          selectedSeaZone: target?.kind === 'seaZone' ? target.index : null,
-        }),
+      onClick: (target) => actions.mapClick(target),
     })
     .then(
       (map) => {
@@ -65,6 +65,7 @@ function showMapWhenPossible(): void {
         sync();
         if (launch.scenario) map.setEdgeScrolling(launch.scenario.edgeScrolling);
         store.update({ map: 'ready' });
+        if (launch.scenario?.uiDemo) startUiDemo(store, actions);
       },
       (error: unknown) => {
         console.error(error);
@@ -88,6 +89,8 @@ const sim = createSimClient({
       saveFormatVersion: message.saveFormatVersion,
       time: message.time,
       daysPerSecond: message.daysPerSecond,
+      playerCountry: message.playerCountry,
+      notifications: message.notifications,
     });
     showMapWhenPossible();
   },
@@ -97,6 +100,14 @@ const sim = createSimClient({
       snapshot.provinceOwner ? { snapshot, provinceOwner: snapshot.provinceOwner } : { snapshot },
     );
     debugHooks?.recordEvents(events);
+    // Sim events that have a message type become messages (toasts, pop-ups, the log).
+    const { world } = store.getState();
+    if (world) {
+      for (const event of events) {
+        const message = messageFromEvent(event, world, snapshot.date);
+        if (message) actions.deliverMessage(message);
+      }
+    }
   },
   onTime(time) {
     store.update({ time });
@@ -110,34 +121,29 @@ const sim = createSimClient({
 /** Pause, unpause and game speed go to the sim worker, which runs the days. */
 const changeTime = (change: TimeChange) => sim.changeTime(change);
 
+const actions = createShellActions({
+  store,
+  // A province or sea zone picked from a list (not on the map) is brought into view.
+  focusProvince: (province) => renderer?.map?.focusProvince(province),
+  focusSeaZone: (seaZone) => renderer?.map?.focusSeaZone(seaZone),
+  changeTime,
+});
+
 if (launch.scenarioName !== null) debugHooks = installDebugHooks(store, sim);
 
 createRoot(requireElement('ui')).render(
   <StrictMode>
     <App
       store={store}
+      actions={actions}
       onChangeTime={changeTime}
-      onSelectProvince={(province) => {
-        store.update(
-          province === null
-            ? { selectedProvince: null }
-            : { selectedProvince: province, selectedSeaZone: null },
-        );
-        // A province picked from a list (not on the map) is brought into view.
-        if (province !== null) renderer?.map?.focusProvince(province);
-      }}
-      onSelectSeaZone={(seaZone) => {
-        store.update(
-          seaZone === null
-            ? { selectedSeaZone: null }
-            : { selectedSeaZone: seaZone, selectedProvince: null },
-        );
-        // A sea zone picked from a list is brought into view too.
-        if (seaZone !== null) renderer?.map?.focusSeaZone(seaZone);
-      }}
-      onSelectCountry={(country) => store.update({ selectedCountry: country })}
       onSetMapMode={(mapMode) => store.update({ mapMode })}
       onResetView={() => renderer?.map?.resetView()}
+      demoControls={
+        launch.scenario?.uiDemo ? (
+          <DemoControls store={store} actions={actions} sim={sim} />
+        ) : undefined
+      }
     />
   </StrictMode>,
 );

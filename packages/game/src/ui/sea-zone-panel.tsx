@@ -7,24 +7,26 @@ import {
 } from '@terra-scutum/sim';
 import { t, tKey } from './i18n';
 import { LinkList } from './link-list';
+import { PanelHeader, type PanelNav } from './shell/panel-header';
 
 export interface SeaZonePanelProps {
   readonly world: WorldMap;
   /** Index of the sea zone to show. */
   readonly seaZone: number;
-  readonly onSelectSeaZone: (seaZone: number | null) => void;
+  readonly nav: PanelNav;
+  readonly onSelectSeaZone: (seaZone: number) => void;
   readonly onSelectProvince: (province: number) => void;
 }
 
 /**
  * The sea zone panel (F70): name, type (coast zone or open sea), depth, the
- * sea zones it borders and its coastal provinces. It takes the province panel's place: one of the two is
- * shown at a time. Naval units, trade routes and seabed infestation join it
+ * sea zones it borders and its coastal provinces. Shown in the information panel on the left (F122). Naval units, trade routes and seabed infestation join it
  * with their features.
  */
 export function SeaZonePanel({
   world,
   seaZone,
+  nav,
   onSelectSeaZone,
   onSelectProvince,
 }: SeaZonePanelProps) {
@@ -40,22 +42,13 @@ export function SeaZonePanel({
   })).sort(byName);
 
   return (
-    <section className="panel province-panel" data-testid="sea-zone-panel">
-      <div className="province-panel-header">
-        <h2 className="province-panel-name" data-testid="sea-zone-name">
-          {seaZoneName(seaZone)}
-        </h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('PANEL_CLOSE')}
-          title={t('PANEL_CLOSE')}
-          data-testid="sea-zone-close"
-          onClick={() => onSelectSeaZone(null)}
-        >
-          ×
-        </button>
-      </div>
+    <section className="panel info-panel" data-testid="sea-zone-panel">
+      <PanelHeader
+        nav={nav}
+        title={seaZoneName(seaZone)}
+        titleTestId="sea-zone-name"
+        closeTestId="sea-zone-close"
+      />
       <dl className="facts">
         <dt>{t('SEA_ZONE_PANEL_TYPE')}</dt>
         <dd data-testid="sea-zone-type">

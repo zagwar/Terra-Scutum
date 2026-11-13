@@ -21,6 +21,12 @@ async function openGame(page: Page, extraQuery = ''): Promise<string[]> {
   return problems;
 }
 
+/** Opens Settings → About this build, where the renderer, sim and map status are shown (F122). */
+async function openAbout(page: Page): Promise<void> {
+  await page.getByTestId('open-settings').click();
+  await page.getByTestId('settings-tab-about').click();
+}
+
 /** How many clearly different colours the 3D canvas shows (1 would mean a blank canvas). */
 async function countCanvasColours(page: Page): Promise<number> {
   const png = await page.locator('canvas.scene-canvas').screenshot();
@@ -48,7 +54,9 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   const expectedRenderer = testInfo.project.name === 'webgpu' ? 'WebGPU' : 'WebGL 2';
 
   await expect(page).toHaveTitle('Terra Scutum');
-  await expect(page.getByRole('heading', { name: 'Terra Scutum' })).toBeVisible();
+  await expect(page.getByTestId('top-bar')).toBeVisible();
+  await expect(page.getByTestId('loading-note')).toHaveCount(0);
+  await openAbout(page);
   await expect(page.getByTestId('renderer-status')).toHaveText(expectedRenderer);
   await expect(page.getByTestId('sim-status')).toHaveText('Running');
   await expect(page.getByTestId('map-status')).toHaveText(/^[\d,]+ provinces$/);
@@ -57,6 +65,8 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   await expect(page.getByTestId('save-format')).toHaveText('Version 2');
   await expect(page.getByTestId('build-commit')).toHaveText(/^[0-9a-f]{7}$|^dev$/);
   await expect(page.getByTestId('error-overlay')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('shell-window')).toHaveCount(0);
 
   // The scene is really being drawn, and it isn't blank.
   const framesBefore = await page.evaluate(() => window.__terraScutum!.getFrameCount());
@@ -80,7 +90,9 @@ test('the sim worker steps days exactly on request and the date follows', async 
   const first = await page.evaluate(() => window.__terraScutum!.step(1));
   expect(first).toMatchObject({ day: 1, date: { year: 2025, month: 1, day: 2 } });
   await expect(page.getByTestId('time-date')).toHaveText('2 January 2025');
+  await openAbout(page);
   await expect(page.getByTestId('sim-day')).toHaveText('1');
+  await page.keyboard.press('Escape');
 
   // Jump two years ahead through the debug hook: landfall is around January 2027.
   const snapshot = await page.evaluate(() => window.__terraScutum!.step(730));
@@ -120,6 +132,7 @@ test('an unknown debug scenario shows a readable error instead of a blank page',
 
 test('the renderer can be forced to WebGL 2', async ({ page }) => {
   const problems = await openGame(page, '&renderer=webgl2');
+  await openAbout(page);
   await expect(page.getByTestId('renderer-status')).toHaveText('WebGL 2');
   expect(problems).toEqual([]);
 });
@@ -131,9 +144,16 @@ test('the normal game (no debug scenario) starts without errors', async ({ page 
     if (message.type() === 'error') problems.push(`console error: ${message.text()}`);
   });
   await page.goto('/');
+  // The top bar shows the player's country once the sim is running; the loading note goes when the map is ready.
+  await expect(page.getByTestId('top-bar-flag')).toContainText('United States', {
+    timeout: 30_000,
+  });
+  await expect(page.getByTestId('loading-note')).toHaveCount(0, { timeout: 50_000 });
+  await openAbout(page);
   await expect(page.getByTestId('sim-status')).toHaveText('Running');
   await expect(page.getByTestId('renderer-status')).toHaveText(/WebGPU|WebGL 2/);
-  await expect(page.getByTestId('map-status')).toHaveText(/provinces$/, { timeout: 50_000 });
+  await expect(page.getByTestId('map-status')).toHaveText(/provinces$/);
+  await page.keyboard.press('Escape');
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   // The debug hooks exist only in debug scenarios.
   expect(await page.evaluate(() => window.__terraScutum)).toBeUndefined();

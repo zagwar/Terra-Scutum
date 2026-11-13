@@ -8,6 +8,7 @@ import {
 } from '@terra-scutum/sim';
 import { formatArea, t, tKey } from './i18n';
 import { LinkList } from './link-list';
+import { PanelHeader, type PanelNav } from './shell/panel-header';
 
 export interface ProvincePanelProps {
   readonly world: WorldMap;
@@ -15,27 +16,34 @@ export interface ProvincePanelProps {
   readonly provinceOwner: Uint16Array;
   /** Index of the province to show. */
   readonly province: number;
-  readonly onSelectProvince: (province: number | null) => void;
+  readonly nav: PanelNav;
+  readonly onSelectProvince: (province: number) => void;
   /** Selects a sea zone (shows its panel instead of this one). */
   readonly onSelectSeaZone: (seaZone: number) => void;
   /** Opens a country's panel. */
   readonly onSelectCountry: (country: number) => void;
+  /** Opens a region's panel. */
+  readonly onSelectRegion: (region: number) => void;
 }
 
 /**
  * The province info panel (F01): name, country, region and what the province
  * borders. Population, buildings and construction join it with their features.
  * The country is the province's current owner (F02); clicking it opens the country panel.
- * Clicking a bordering sea zone shows that sea zone (F70).
+ * Clicking a bordering sea zone shows that sea zone (F70); the region's name
+ * opens the region panel (F122).
  */
 export function ProvincePanel({
   world,
   provinceOwner,
   province,
+  nav,
   onSelectProvince,
   onSelectSeaZone,
   onSelectCountry,
+  onSelectRegion,
 }: ProvincePanelProps) {
+  const region = world.provinceRegion[province];
   const owner = provinceOwner[province];
   const provinceName = (index: number) => tKey(provinceNameKey(world.provinceIds[index]));
   const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
@@ -49,22 +57,13 @@ export function ProvincePanel({
   })).sort(byName);
 
   return (
-    <section className="panel province-panel" data-testid="province-panel">
-      <div className="province-panel-header">
-        <h2 className="province-panel-name" data-testid="province-name">
-          {provinceName(province)}
-        </h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('PANEL_CLOSE')}
-          title={t('PANEL_CLOSE')}
-          data-testid="province-close"
-          onClick={() => onSelectProvince(null)}
-        >
-          ×
-        </button>
-      </div>
+    <section className="panel info-panel" data-testid="province-panel">
+      <PanelHeader
+        nav={nav}
+        title={provinceName(province)}
+        titleTestId="province-name"
+        closeTestId="province-close"
+      />
       <dl className="facts">
         <dt>{t('PROVINCE_PANEL_COUNTRY')}</dt>
         <dd>
@@ -79,8 +78,16 @@ export function ProvincePanel({
           </button>
         </dd>
         <dt>{t('PROVINCE_PANEL_REGION')}</dt>
-        <dd data-testid="province-region">
-          {tKey(regionNameKey(world.regionIds[world.provinceRegion[province]]))}
+        <dd>
+          <button
+            type="button"
+            className="link-button"
+            title={t('PROVINCE_PANEL_REGION_HINT')}
+            data-testid="province-region"
+            onClick={() => onSelectRegion(region)}
+          >
+            {tKey(regionNameKey(world.regionIds[region]))}
+          </button>
         </dd>
         <dt>{t('PROVINCE_PANEL_AREA')}</dt>
         <dd data-testid="province-area">{formatArea(world.provinceAreaKm2[province])}</dd>

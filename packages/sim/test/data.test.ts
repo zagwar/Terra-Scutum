@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DATA_FILES, DataValidationError, formatDataIssue, parseGameData } from '../src';
-import { testMapView, testWorld } from './helpers';
+import { testMapView, testNotifications, testWorld } from './helpers';
 
 const validConfig = {
   startDate: '2025-01-01',
+  playerCountry: 'AAA',
   performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
   gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
 };
 
-const world = { ...testWorld(), mapView: testMapView() };
+const world = { ...testWorld(), mapView: testMapView(), notifications: testNotifications() };
 
 function issuesOf(raw: unknown): string[] {
   try {
@@ -32,6 +33,7 @@ describe('game data validation', () => {
       ...world,
       gameConfig: {
         startDate: '2025-02-30',
+        playerCountry: 'AAA',
         performanceBudget: { dailyTickAverageMs: 'fast', weeklyTickAverageMs: -1 },
         gameSpeed: validConfig.gameSpeed,
       },
@@ -78,7 +80,41 @@ describe('game data validation', () => {
       'data/government_types.json: file is missing',
       'data/country_start.json: file is missing',
       'data/map_view.json: file is missing',
+      'data/notifications.json: file is missing',
     ]);
+  });
+
+  it('checks the player country and the message and alert types (F122)', () => {
+    const unknownCountry = issuesOf({
+      ...world,
+      gameConfig: { ...validConfig, playerCountry: 'ZZZ' },
+    });
+    expect(unknownCountry).toEqual([
+      'data/game_config.json → playerCountry: "ZZZ" is not a country in countries.json',
+    ]);
+    const notifications = testNotifications();
+    const duplicate = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      notifications: {
+        ...notifications,
+        alertTypes: [...notifications.alertTypes, ...notifications.alertTypes],
+      },
+    });
+    expect(duplicate).toEqual([
+      'data/notifications.json → alertTypes.1.id: duplicate id "blackout" (also at alertTypes.0)',
+    ]);
+    const badDelivery = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      notifications: {
+        ...notifications,
+        messageTypes: [{ id: 'x', defaultDelivery: 'shout', pauses: false }],
+      },
+    });
+    expect(badDelivery.join('\n')).toContain('messageTypes.0.defaultDelivery');
+    const data = parseGameData({ gameConfig: validConfig, ...world });
+    expect(data.notifications.messageTypes[0].defaultDelivery).toBe('toast');
   });
 
   it('uses .json file names in snake_case for every data file', () => {

@@ -7,7 +7,7 @@
 **The UI takes its inspiration from Hearts of Iron IV (military, map, alerts) and Victoria 3 (economy, politics, lenses, tooltips).** The goal: a huge amount of information, but always one click from the map, and every number explainable.
 
 ### 12.1 Layout
-- **Top bar (HOI4/Vic3):** the country flag (opens the country panel), then the key numbers: treasury and weekly balance, political capital, Influence, legitimacy, stability, manpower and pilot pool, research, key stockpiles (food, ammo, fuel, steel), global Swarm control %, and the date with speed controls. During Phase 0 it also shows the **arrival countdown**. Every item has a tooltip and opens its screen when clicked.
+- **Top bar (HOI4/Vic3):** the country flag (opens the country panel), then the key numbers: treasury and weekly balance, political capital, Influence, legitimacy, stability, manpower and pilot pool, research, key stockpiles (food, ammo, fuel, steel), global Swarm control %, and the date with speed controls. During Phase 0 it also shows the **arrival countdown**. Every item has a tooltip and opens its screen when clicked. A number that doesn't exist in the sim yet shows a dim **"—"**, and its tooltip says which feature brings it (designer decision, F122).
 - **Alerts row (HOI4):** small icons under the top bar for problems and opportunities: units out of supply, a blackout, a shortage, a bankrupt corporation, an angry interest group, an idle factory, a law that can be passed, a UN emergency session. Hover to see details, click to jump, right-click to dismiss. Each alert type can be turned off in settings.
 - **Outliner (HOI4, right side):** a collapsible list of armies, fronts, operations, fleets, air wings, construction in progress, research in progress, active journal entries, ongoing espionage operations and pinned provinces. Clicking an entry selects it and moves the camera.
 - **Lens bar (Victoria 3, bottom-left):** the main screens grouped into **lenses**, each with its related actions:
@@ -20,6 +20,7 @@
   - **Space:** the orbit view, launches, stations, the Moon
   - **Swarm:** Swarm intel, hive tracker, bug knowledge
 - **Bottom-right:** the minimap and map mode buttons.
+- **Information panel (left, designer decision in F122):** the province, sea zone, country and region panels open on the left under the alerts row, **one at a time** like Victoria 3: following a link (a province's country, a country's capital, a region's provinces…) replaces the panel, and **◀ Back** returns to the previous one; clicking the map starts afresh. The **region panel** opens from a province panel's region name and, in the Regions map mode, by clicking the map.
 - **Notifications (Vic3/HOI4):** small toasts for minor events, pop-up windows for important events (which pause the game, if set), and a **message settings** screen where each message type can be set to pop-up, toast, log-only or off.
 
 ### 12.2 Map modes

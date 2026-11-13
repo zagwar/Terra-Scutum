@@ -12,11 +12,15 @@ export interface DebugScenario {
    * test scenarios: the tests park the mouse at the edge to keep it off the map.
    */
   readonly edgeScrolling: boolean;
+  /** Fills the UI shell with sample content and shows the demo buttons (F122). */
+  readonly uiDemo?: boolean;
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
   /** The basics: the world map and a new campaign. */
   foundation: { seed: 42, edgeScrolling: false },
+  /** The UI shell with sample alerts, outliner entries and messages, for trying it on the preview link. */
+  'ui-demo': { seed: 42, edgeScrolling: true, uiDemo: true },
 };
 
 export interface LaunchOptions {

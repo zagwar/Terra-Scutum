@@ -104,18 +104,25 @@ test('the political map is the default; a province opens its country panel', asy
   await shot('country-panel');
 
   // A neighbor's name shows that country; its capital's name selects the capital's province.
+  // One panel at a time (F122): the country panel took the province panel's place.
+  await expect(page.getByTestId('province-panel')).toHaveCount(0);
   await neighbors.filter({ hasText: 'Germany' }).click();
   await expect(page.getByTestId('country-name')).toHaveText('Germany');
   await expect(page.getByTestId('country-provinces')).toHaveText('16');
-  await expect(page.getByTestId('province-name')).toHaveText('Île-de-France'); // unchanged
   await page.getByTestId('country-capital').click();
   await expect(page.getByTestId('province-name')).toHaveText('Berlin');
   await expect(page.getByTestId('province-country')).toHaveText('Germany');
 
-  // The panels close separately.
-  await page.getByTestId('country-close').click();
-  await expect(page.getByTestId('country-panel')).toHaveCount(0);
-  await expect(page.getByTestId('province-panel')).toHaveCount(1);
+  // Back walks the way back: Germany, France, then Île-de-France; ✕ closes the panel.
+  await page.getByTestId('panel-back').click();
+  await expect(page.getByTestId('country-name')).toHaveText('Germany');
+  await page.getByTestId('panel-back').click();
+  await expect(page.getByTestId('country-name')).toHaveText('France');
+  await page.getByTestId('panel-back').click();
+  await expect(page.getByTestId('province-name')).toHaveText('Île-de-France');
+  await expect(page.getByTestId('panel-back')).toHaveCount(0);
+  await page.getByTestId('province-close').click();
+  await expect(page.getByTestId('province-panel')).toHaveCount(0);
 
   // The other map modes still work, and the political one comes back.
   await page.getByTestId('map-mode-provinces').click();
@@ -140,7 +147,6 @@ test('the map and the panels follow a change of owner', async ({ page }, testInf
   await expect(page.getByTestId('province-country')).toHaveText('France');
   await page.getByTestId('province-country').click();
   await expect(page.getByTestId('country-provinces')).toHaveText('24');
-  await page.getByTestId('province-close').click();
   await page.mouse.move(strasbourg.x, strasbourg.y);
   await expect(page.getByTestId('map-tooltip')).toHaveText('Grand Est · France');
   await waitForFrames(page, 3);
@@ -172,7 +178,6 @@ test('the map and the panels follow a change of owner', async ({ page }, testInf
   await page.getByTestId('province-country').click();
   await expect(page.getByTestId('country-name')).toHaveText('Germany');
   await expect(page.getByTestId('country-provinces')).toHaveText('17');
-  await page.getByTestId('province-close').click();
   await page.mouse.move(strasbourg.x, 30);
   await waitForFrames(page, 3);
   await shot('after-owner-change');
@@ -330,7 +335,7 @@ test('the tiny provinces can be seen and clicked', async ({ page }, testInfo) =>
   await expect(page.getByTestId('province-neighbors').getByRole('button')).toHaveText([
     'Andalusia',
   ]);
-  await page.getByTestId('country-close').click();
+  await page.getByTestId('province-close').click();
   await waitForFrames(page, 3);
   await shot('gibraltar');
 

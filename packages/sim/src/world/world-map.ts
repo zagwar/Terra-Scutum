@@ -1,4 +1,5 @@
 import type { GameData } from '../data/game-data';
+import type { Climate } from './world-data';
 
 /**
  * Fast lookups over the map, built once when a campaign starts. Systems use
@@ -48,6 +49,8 @@ export interface WorldMap {
   readonly countryMapColor: readonly string[];
   /** Each region's color in the regions map mode, as #rrggbb. */
   readonly regionMapColor: readonly string[];
+  /** Each region's climate (section 4.1). */
+  readonly regionClimate: readonly Climate[];
 }
 
 /** True for a coast zone (the water along a shore), false for an open-sea zone. */
@@ -150,5 +153,6 @@ export function buildWorldMap(data: GameData): WorldMap {
     ),
     countryMapColor: countries.map((c) => c.mapColor),
     regionMapColor: regions.map((r) => r.mapColor),
+    regionClimate: regions.map((r) => r.climate),
   };
 }

@@ -22,6 +22,12 @@ import {
 } from '../politics/government-types';
 import { type GameConfig, gameConfigSchema } from './game-config';
 import { type MapViewConfig, mapViewSchema } from './map-view-config';
+import {
+  type NotificationsConfig,
+  checkNotifications,
+  checkPlayerCountry,
+  notificationsSchema,
+} from './notifications-config';
 
 /**
  * The list of JSON data files in `data/`, each with the zod schema that
@@ -41,6 +47,7 @@ export const DATA_FILES = {
   governmentTypes: { file: 'government_types.json', schema: governmentTypesFileSchema },
   countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
+  notifications: { file: 'notifications.json', schema: notificationsSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -60,6 +67,8 @@ export interface GameData {
   readonly countryStart: CountryStartFile;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
+  /** Message types and alert types of the UI shell (F122); used by the game, not by the sim's systems. */
+  readonly notifications: NotificationsConfig;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */
@@ -99,6 +108,8 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkWorldData,
   checkGovernmentTypes,
   checkCountryStart,
+  checkNotifications,
+  checkPlayerCountry,
 ];
 
 /**
