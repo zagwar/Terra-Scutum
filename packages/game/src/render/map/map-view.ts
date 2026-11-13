@@ -48,8 +48,9 @@ import { createShapeLookup } from './shape-lookup';
 
 /**
  * The world map in the 3D scene (F01): sea zones underneath, provinces on
- * top, border lines, mouse picking and the camera (fixed for now: the
- * strategy camera is F03 and will steer this view through `lookAt`).
+ * top, border lines, mouse picking and the camera. The camera is basic for
+ * now (mouse wheel to zoom, drag or arrow keys to move): the strategy camera
+ * (F03) will replace the input handling and steer this view through `lookAt`.
  *
  * - Everything lies flat on the ground (y = 0); terrain comes with F125.
  * - The map wraps east–west: the camera's position is kept inside the main
@@ -106,6 +107,8 @@ export interface MapView {
   provinceAt(longitude: number, latitude: number): number;
   /** Where a longitude/latitude is on screen, in CSS pixels from the canvas's top-left corner. */
   screenPosition(longitude: number, latitude: number): { x: number; y: number };
+  /** The longitude/latitude under a point of the canvas (CSS pixels), or null if it misses the ground. */
+  placeAt(x: number, y: number): { longitude: number; latitude: number } | null;
   /** Scrolls the map east (positive) or west (negative), in degrees of longitude. */
   scrollBy(degrees: number): void;
   /**
@@ -115,6 +118,13 @@ export interface MapView {
   lookAt(longitude: number, latitude: number, zoom: number): void;
   /** The longitude at the middle of the screen. */
   centerLongitude(): number;
+  /** How far the view is zoomed in: 1 shows the whole world. */
+  zoom(): number;
+  /**
+   * Brings a province into view: centers the map on it and, if it would be
+   * too small to see, zooms in until it is.
+   */
+  focusProvince(province: number): void;
   dispose(): void;
 }
 
@@ -340,6 +350,8 @@ export async function createMapView(
   let pointer: { x: number; y: number } | null = null;
   let pointerMoved = false;
   let pressedAt: { x: number; y: number } | null = null;
+  /** While the map is being dragged: where the mouse was at the last step. */
+  let dragFrom: { x: number; y: number } | null = null;
 
   // ── Camera: looks north, fitted so the whole world is visible at zoom 1 ───
   const camera = new ArcRotateCamera('map-camera', -Math.PI / 2, 0, 100, Vector3.Zero(), scene);
@@ -380,9 +392,21 @@ export async function createMapView(
       if (chunk.mesh.position.x !== x) chunk.mesh.position.x = x;
     }
   };
+  /**
+   * How far north or south the camera may look: nowhere but the fitted middle
+   * with the whole world in view, up to the map's edges when zoomed in.
+   */
+  const clampZ = (z: number) => {
+    const room = 1 - 1 / zoom;
+    const south = fit.targetZ - (fit.targetZ - projection.minZ) * room;
+    const north = fit.targetZ + (projection.maxZ - fit.targetZ) * room;
+    return Math.min(north, Math.max(south, z));
+  };
   const applyView = () => {
+    const z = clampZ(centerZ ?? fit.targetZ);
+    centerZ = zoom > 1 ? z : null;
     camera.radius = fit.radius / zoom;
-    camera.target.copyFromFloats(centerX, 0, centerZ ?? fit.targetZ);
+    camera.target.copyFromFloats(centerX, 0, z);
     camera.minZ = camera.radius * 0.05;
     camera.maxZ = camera.radius * 8;
     updateDetail();
@@ -410,6 +434,9 @@ export async function createMapView(
   // ── Mouse: hover and click ────────────────────────────────────────────────
   /** The map position under a point of the canvas (CSS pixels), or null if it misses the ground. */
   const groundAt = (x: number, y: number): { x: number; z: number } | null => {
+    // The view may have changed since the last frame was drawn (zooming, dragging).
+    camera.getViewMatrix(true);
+    camera.getProjectionMatrix(true);
     const ray = scene.createPickingRay(x, y, Matrix.Identity(), camera);
     if (Math.abs(ray.direction.y) < 1e-9) return null;
     const distance = -ray.origin.y / ray.direction.y;
@@ -433,39 +460,100 @@ export async function createMapView(
     refreshColors();
     events.onHover(province);
   };
+  // ── Moving the view: basic controls until the strategy camera (F03) ───────
+  /** Moves the view east (+x) and north (+z), in map units. */
+  const panBy = (dx: number, dz: number) => {
+    // Keeping the camera inside the main copy of the world is what makes the map endless.
+    centerX = projection.wrapX(centerX + dx);
+    if (dz !== 0) centerZ = (centerZ ?? fit.targetZ) + dz;
+    applyView();
+  };
+  const scrollBy = (degrees: number) => panBy(degrees, 0);
+  /** Zooms by a factor (above 1 = closer), keeping the place under a point of the canvas where it is. */
+  const zoomBy = (factor: number, around: { x: number; y: number } | null) => {
+    const next = Math.min(config.camera.maxZoom, Math.max(1, zoom * factor));
+    if (next === zoom) return;
+    const z = centerZ ?? fit.targetZ;
+    const ground = around ? groundAt(around.x, around.y) : null;
+    if (ground) {
+      // The camera only moves closer or farther: a place's offset from the view's middle scales with the distance.
+      const scale = zoom / next;
+      centerX = projection.wrapX(ground.x - (ground.x - centerX) * scale);
+      centerZ = ground.z - (ground.z - z) * scale;
+    } else {
+      centerZ = z;
+    }
+    zoom = next;
+    applyView();
+  };
+
   const onPointerMove = (event: PointerEvent) => {
     pointer = { x: event.offsetX, y: event.offsetY };
     pointerMoved = true;
+    if (!pressedAt) return;
+    // Holding the button and moving drags the map: the place that was grabbed stays under the mouse.
+    if (
+      !dragFrom &&
+      Math.hypot(pointer.x - pressedAt.x, pointer.y - pressedAt.y) > CLICK_TOLERANCE_PX
+    ) {
+      dragFrom = pressedAt;
+      canvas.style.cursor = 'grabbing';
+    }
+    if (!dragFrom) return;
+    const from = groundAt(dragFrom.x, dragFrom.y);
+    const to = groundAt(pointer.x, pointer.y);
+    dragFrom = pointer;
+    if (from && to) panBy(from.x - to.x, from.z - to.z);
+  };
+  const endDrag = () => {
+    pressedAt = null;
+    if (!dragFrom) return;
+    dragFrom = null;
+    canvas.style.cursor = hovered === null ? 'default' : 'pointer';
   };
   const onPointerLeave = () => {
     pointer = null;
-    pressedAt = null;
+    endDrag();
     setHovered(null);
   };
   const onPointerDown = (event: PointerEvent) => {
-    if (event.button === 0) pressedAt = { x: event.offsetX, y: event.offsetY };
+    if (event.button !== 0) return;
+    pressedAt = { x: event.offsetX, y: event.offsetY };
+    // Keep getting the mouse while it is dragged across a panel or out of the window.
+    canvas.setPointerCapture(event.pointerId);
   };
   const onPointerUp = (event: PointerEvent) => {
     if (event.button !== 0 || !pressedAt) return;
-    const moved = Math.hypot(event.offsetX - pressedAt.x, event.offsetY - pressedAt.y);
-    pressedAt = null;
-    if (moved <= CLICK_TOLERANCE_PX)
-      events.onClick(provinceAtCanvasPoint(event.offsetX, event.offsetY));
+    const dragged = dragFrom !== null;
+    endDrag();
+    if (!dragged) events.onClick(provinceAtCanvasPoint(event.offsetX, event.offsetY));
+  };
+  const onWheel = (event: WheelEvent) => {
+    event.preventDefault();
+    // One notch of a mouse wheel is about 100 pixels, or 3 lines; touchpads send many small steps.
+    const notches = event.deltaY / (event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 3 : 100);
+    const steps = Math.max(-3, Math.min(3, -notches));
+    zoomBy(config.camera.wheelZoomStep ** steps, { x: event.offsetX, y: event.offsetY });
   };
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('wheel', onWheel, { passive: false });
 
-  // ── Keyboard: temporary east–west scrolling until the strategy camera (F03) ──
-  const scrollBy = (degrees: number) => {
-    // Keeping the camera inside the main copy of the world is what makes the map endless.
-    centerX = projection.wrapX(centerX + degrees);
-    applyView();
-  };
+  const ARROW_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
   const heldKeys = new Set<string>();
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    // Typing in a text field, or a shortcut of the browser: not ours.
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === '+' || event.key === '=' || event.key === '-') {
+      const step = config.camera.wheelZoomStep;
+      zoomBy(event.key === '-' ? 1 / step : step, null);
+      event.preventDefault();
+      return;
+    }
+    if (!ARROW_KEYS.includes(event.key)) return;
     heldKeys.add(event.key);
     event.preventDefault();
   };
@@ -477,12 +565,15 @@ export async function createMapView(
 
   const beforeRender = scene.onBeforeRenderObservable.add(() => {
     fitCamera();
-    const direction = (heldKeys.has('ArrowRight') ? 1 : 0) - (heldKeys.has('ArrowLeft') ? 1 : 0);
-    if (direction !== 0) {
+    const east = (heldKeys.has('ArrowRight') ? 1 : 0) - (heldKeys.has('ArrowLeft') ? 1 : 0);
+    const north = (heldKeys.has('ArrowUp') ? 1 : 0) - (heldKeys.has('ArrowDown') ? 1 : 0);
+    if (east !== 0 || north !== 0) {
       const seconds = Math.min(0.1, engine.getDeltaTime() / 1000);
-      scrollBy(direction * config.camera.scrollDegreesPerSecond * seconds);
+      // The same speed across the screen at every zoom level.
+      const distance = (config.camera.scrollDegreesPerSecond * seconds) / zoom;
+      panBy(east * distance, north * distance);
     }
-    if (pointerMoved && pointer) {
+    if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
       setHovered(provinceAtCanvasPoint(pointer.x, pointer.y));
     }
@@ -559,6 +650,15 @@ export async function createMapView(
       const scale = engine.getHardwareScalingLevel();
       return { x: projected.x * scale, y: projected.y * scale };
     },
+    placeAt(x, y) {
+      const ground = groundAt(x, y);
+      return (
+        ground && {
+          longitude: projection.longitude(projection.wrapX(ground.x)),
+          latitude: projection.latitude(ground.z),
+        }
+      );
+    },
     scrollBy,
     lookAt(longitude, latitude, nextZoom) {
       zoom = Math.max(1, nextZoom);
@@ -567,12 +667,34 @@ export async function createMapView(
       applyView();
     },
     centerLongitude: () => projection.longitude(centerX),
+    zoom: () => zoom,
+    focusProvince(province) {
+      // The province's biggest piece (a province can have islands).
+      let piece: MapPolygon | null = null;
+      for (const polygon of provincePolygons) {
+        if (polygon.item !== province) continue;
+        const size = (polygon.maxX - polygon.minX) * (polygon.maxZ - polygon.minZ);
+        if (!piece || size > (piece.maxX - piece.minX) * (piece.maxZ - piece.minZ)) piece = polygon;
+      }
+      if (!piece) return;
+      // Zoom in if it would be too small to see; never zoom out.
+      const widest = Math.max(piece.maxX - piece.minX, piece.maxZ - piece.minZ);
+      const cssHeight = engine.getRenderHeight() * engine.getHardwareScalingLevel();
+      const degreesPerPixelAtZoom1 = (2 * fit.radius * Math.tan(camera.fov / 2)) / cssHeight;
+      const needed = (config.camera.focusMinProvincePx * degreesPerPixelAtZoom1) / widest;
+      zoom = Math.max(zoom, Math.min(config.camera.maxZoom, needed));
+      centerX = projection.wrapX((piece.minX + piece.maxX) / 2);
+      centerZ = (piece.minZ + piece.maxZ) / 2;
+      applyView();
+    },
     dispose() {
       scene.onBeforeRenderObservable.remove(beforeRender);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', endDrag);
+      canvas.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);

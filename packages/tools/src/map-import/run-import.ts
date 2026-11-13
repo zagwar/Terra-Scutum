@@ -6,7 +6,7 @@ import { topology } from 'topojson-server';
 import { presimplify, simplify } from 'topojson-simplify';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { DATA_DIR, LOCALES_DIR, REPO_ROOT } from '../load-data';
-import { assignCountryColors, varyColor } from './colors';
+import { assignCountryColors, mapColorContrast, varyColor } from './colors';
 import { type MapConfig, loadMapConfig } from './config';
 import {
   type Polygons,
@@ -48,6 +48,8 @@ export const REPORT_DIR = join(REPO_ROOT, 'packages/tools/map-config/report');
 export const MAP_LOCALE_FILE = join(LOCALES_DIR, 'en.map.json');
 
 const OUTSIDE = 0xffff;
+/** Bordering countries whose map colors differ by less than this (see `mapColorContrast`) are hard to tell apart: the import warns. */
+export const MIN_BORDER_COLOR_DIFFERENCE = 0.1;
 /** A province whose final shape is smaller than this can't be seen or clicked: the import warns. */
 const MIN_VISIBLE_AREA_KM2 = 0.5;
 
@@ -326,7 +328,36 @@ export async function runMapImport(
       countryNeighbors.get(a)!.add(b);
     }
   });
-  const colors = assignCountryColors(countryIds, countryNeighbors);
+  // Countries that almost touch (across a strait or a narrow sea). The gap between two provinces
+  // is estimated from their label points and areas, as if they were round.
+  const nearCountries = new Map<string, Set<string>>();
+  const reach = provinces.map((p) => Math.sqrt(p.areaKm2 / Math.PI));
+  for (let i = 0; i < provinces.length; i++) {
+    for (let j = i + 1; j < provinces.length; j++) {
+      const a = provinces[i].country;
+      const b = provinces[j].country;
+      if (a === b || nearCountries.get(a)?.has(b)) continue;
+      const gap = distanceKm(centers[i], centers[j]) - reach[i] - reach[j];
+      if (gap > settings.colors.nearCountryKm) continue;
+      if (!nearCountries.has(a)) nearCountries.set(a, new Set());
+      if (!nearCountries.has(b)) nearCountries.set(b, new Set());
+      nearCountries.get(a)!.add(b);
+      nearCountries.get(b)!.add(a);
+    }
+  }
+  const colors = assignCountryColors(countryIds, countryNeighbors, nearCountries);
+  // How well it worked: the two bordering countries whose colors are most alike.
+  let closestColors = { difference: Infinity, a: '', b: '' };
+  for (const [a, list] of countryNeighbors) {
+    for (const b of list) {
+      const difference = mapColorContrast(colors.get(a)!, colors.get(b)!);
+      if (a < b && difference < closestColors.difference) closestColors = { difference, a, b };
+    }
+  }
+  if (closestColors.difference < MIN_BORDER_COLOR_DIFFERENCE)
+    warn(
+      `the map colors of ${closestColors.a} and ${closestColors.b}, which share a border, are hard to tell apart (difference ${closestColors.difference.toFixed(3)})`,
+    );
   const capitalOf = (country: string): string => {
     const own = provinces.filter((p) => p.country === country);
     const capital = own
@@ -446,6 +477,7 @@ export async function runMapImport(
       tinyReport,
       zones.length,
       warnings,
+      `${new Set(colors.values()).size} map colors in use; the two bordering countries with the most similar colors are ${closestColors.a} and ${closestColors.b} (difference ${closestColors.difference.toFixed(2)}; below ${MIN_BORDER_COLOR_DIFFERENCE} would be hard to tell apart).`,
     ),
   );
 
@@ -467,6 +499,7 @@ function buildReport(
   tiny: TinyProvinceReport,
   seaZoneCount: number,
   warnings: readonly string[],
+  colorNote: string,
 ): string {
   const lines: string[] = [];
   const perCountry = new Map<string, number>();
@@ -483,7 +516,8 @@ function buildReport(
     `- **Provinces:** ${provinces.length} (made by ${report.merges} merges of the ${config.settings.naturalEarth.version} Natural Earth states and provinces; provinces are never cut)`,
   );
   lines.push(`- **Regions:** ${config.regions.regions.length}`);
-  lines.push(`- **Sea zones:** ${seaZoneCount}`, '');
+  lines.push(`- **Sea zones:** ${seaZoneCount}`);
+  lines.push(`- **Country colors:** ${colorNote}`, '');
   lines.push('Pictures: [provinces by country](provinces.png) · [regions](regions.png)', '');
   if (warnings.length > 0) {
     lines.push('## Warnings', '', ...warnings.map((w) => `- ${w}`), '');

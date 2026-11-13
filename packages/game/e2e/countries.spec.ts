@@ -183,6 +183,109 @@ test('the map and the panels follow a change of owner', async ({ page }, testInf
   expect(problems).toEqual([]);
 });
 
+test('the mouse wheel zooms, dragging moves the map, and a province picked from a list comes into view', async ({
+  page,
+}, testInfo) => {
+  const problems = await openMap(page);
+  const shot = (name: string) =>
+    page.screenshot({
+      path: join(SCREENSHOT_DIR, `countries-${name}-${testInfo.project.name}.png`),
+    });
+  const map = {
+    zoom: () => page.evaluate(() => window.__terraScutum!.map.zoom()!),
+    center: () => page.evaluate(() => window.__terraScutum!.map.centerLongitude()!),
+    selected: () => page.evaluate(() => window.__terraScutum!.map.selectedProvince()),
+  };
+  const ROME = [12.4534, 41.9033] as const;
+
+  // Zooming in with the wheel keeps the place under the mouse exactly where it is.
+  expect(await map.zoom()).toBe(1);
+  const placeAt = (x: number, y: number) =>
+    page.evaluate(([px, py]) => window.__terraScutum!.map.placeAt(px, py)!, [x, y] as const);
+  const aimAt = async (longitude: number, latitude: number) => {
+    const position = await screenPosition(page, longitude, latitude);
+    const point = { x: Math.round(position.x), y: Math.round(position.y) };
+    await page.mouse.move(point.x, point.y);
+    return point;
+  };
+  let mouse = await aimAt(...ROME);
+  const placeBefore = await placeAt(mouse.x, mouse.y);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100);
+  expect(await map.zoom()).toBeCloseTo(1.25 ** 8, 6);
+  const placeAfter = await placeAt(mouse.x, mouse.y);
+  expect(placeAfter.longitude).toBeCloseTo(placeBefore.longitude, 3);
+  expect(placeAfter.latitude).toBeCloseTo(placeBefore.latitude, 3);
+
+  // So a tiny country can be reached by hand: aim at Rome, zoom in, aim again, click.
+  await aimAt(...ROME);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100);
+  mouse = await aimAt(...ROME);
+  await expect(page.getByTestId('map-tooltip')).toHaveText('Vatican City · Vatican City');
+  await page.mouse.click(mouse.x, mouse.y);
+  await expect(page.getByTestId('province-name')).toHaveText('Vatican City');
+  await waitForFrames(page, 3);
+  await shot('zoomed-with-wheel');
+
+  // The zoom stops at its limit, and zooming out ends with the whole world in view.
+  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -100);
+  expect(await map.zoom()).toBe(80);
+  for (let i = 0; i < 40; i++) await page.mouse.wheel(0, 100);
+  expect(await map.zoom()).toBe(1);
+
+  // Dragging moves the map with the mouse and does not count as a click.
+  await page.getByTestId('province-close').click();
+  const start = await screenPosition(page, 20, 10);
+  const longitudeBefore = await map.center();
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x - 60, start.y, { steps: 4 });
+  await page.mouse.move(start.x - 120, start.y, { steps: 4 });
+  await page.mouse.up();
+  expect(await map.center()).toBeGreaterThan(longitudeBefore + 10);
+  expect(await map.selected()).toBeNull();
+  // The place that was grabbed is still under the mouse.
+  const grabbed = await screenPosition(page, 20, 10);
+  expect(Math.abs(grabbed.x - (start.x - 120))).toBeLessThan(3);
+
+  // Zoomed in, dragging also moves north and south, and the arrow keys move the map.
+  await page.evaluate(() => window.__terraScutum!.map.lookAt(10, 50, 6));
+  const paris = await screenPosition(page, ...PARIS);
+  await page.mouse.move(paris.x, paris.y);
+  await page.mouse.down();
+  await page.mouse.move(paris.x + 40, paris.y + 80, { steps: 5 });
+  await page.mouse.up();
+  const parisDragged = await screenPosition(page, ...PARIS);
+  expect(Math.abs(parisDragged.x - (paris.x + 40))).toBeLessThan(3);
+  expect(Math.abs(parisDragged.y - (paris.y + 80))).toBeLessThan(3);
+  await page.keyboard.down('ArrowUp');
+  await page.waitForFunction(
+    ([lon, lat, y]) => window.__terraScutum!.map.screenPosition(lon, lat)!.y > y + 20,
+    [...PARIS, parisDragged.y] as const,
+    { timeout: 60_000 },
+  );
+  await page.keyboard.up('ArrowUp');
+
+  // A province picked from a list is brought into view, zoomed in if it is tiny.
+  await page.evaluate(() => window.__terraScutum!.map.lookAt(0, 0, 1));
+  const lazio = await screenPosition(page, 12.9, 41.5);
+  await page.mouse.click(lazio.x, lazio.y);
+  await expect(page.getByTestId('province-name')).toHaveText('Lazio');
+  await page
+    .getByTestId('province-neighbors')
+    .getByRole('button')
+    .filter({ hasText: 'Vatican City' })
+    .click();
+  await expect(page.getByTestId('province-name')).toHaveText('Vatican City');
+  expect(await map.zoom()).toBeGreaterThan(20);
+  const vatican = await screenPosition(page, ...ROME);
+  expect(Math.abs(vatican.x - 640)).toBeLessThan(40);
+  expect(Math.abs(vatican.y - 360)).toBeLessThan(60);
+  await waitForFrames(page, 3);
+  await shot('focused-from-list');
+
+  expect(problems).toEqual([]);
+});
+
 test('the tiny provinces can be seen and clicked', async ({ page }, testInfo) => {
   const problems = await openMap(page);
   const shot = (name: string) =>

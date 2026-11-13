@@ -28,11 +28,15 @@ export interface DebugApi {
     provinceAt(longitude: number, latitude: number): string | null;
     /** Where a longitude/latitude is on the page, in CSS pixels. */
     screenPosition(longitude: number, latitude: number): { x: number; y: number } | null;
+    /** The longitude/latitude under a point of the page, in CSS pixels. */
+    placeAt(x: number, y: number): { longitude: number; latitude: number } | null;
     /** Scrolls the map east (positive) or west (negative), in degrees of longitude. */
     scrollBy(degrees: number): void;
     /** Points the camera at a place; zoom 1 shows the whole world, 4 is four times closer. */
     lookAt(longitude: number, latitude: number, zoom: number): void;
     centerLongitude(): number | null;
+    /** How far the view is zoomed in (1 = the whole world). */
+    zoom(): number | null;
     /** The id of the selected province, or null. */
     selectedProvince(): string | null;
   };
@@ -77,9 +81,11 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
       provinceAt: (longitude, latitude) => idOf(renderer?.map?.provinceAt(longitude, latitude)),
       screenPosition: (longitude, latitude) =>
         renderer?.map?.screenPosition(longitude, latitude) ?? null,
+      placeAt: (x, y) => renderer?.map?.placeAt(x, y) ?? null,
       scrollBy: (degrees) => renderer?.map?.scrollBy(degrees),
       lookAt: (longitude, latitude, zoom) => renderer?.map?.lookAt(longitude, latitude, zoom),
       centerLongitude: () => renderer?.map?.centerLongitude() ?? null,
+      zoom: () => renderer?.map?.zoom() ?? null,
       selectedProvince: () => idOf(store.getState().selectedProvince),
     },
   };

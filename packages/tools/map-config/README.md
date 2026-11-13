@@ -55,6 +55,9 @@ and always gives the same result for the same inputs.
   - `dominantShare`: a combined province keeps its main member's name when the other members are
     tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
+  - `colors.nearCountryKm`: countries whose land is closer together than this (across a strait or
+    a narrow sea) get clearly different map colors, as countries sharing a border always do. The
+    report names the two bordering countries whose colors are most alike.
 
 ## How provinces are made
 

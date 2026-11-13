@@ -97,7 +97,11 @@ createRoot(requireElement('ui')).render(
     <App
       store={store}
       onAdvanceDay={() => void sim.step(1)}
-      onSelectProvince={(province) => store.update({ selectedProvince: province })}
+      onSelectProvince={(province) => {
+        store.update({ selectedProvince: province });
+        // A province picked from a list (not on the map) is brought into view.
+        if (province !== null) renderer?.map?.focusProvince(province);
+      }}
       onSelectCountry={(country) => store.update({ selectedCountry: country })}
       onSetMapMode={(mapMode) => store.update({ mapMode })}
     />

@@ -8,7 +8,10 @@
     "tiltDegrees": 22,
     "fieldOfViewDegrees": 36,
     "fitMargin": 0.02,
-    "scrollDegreesPerSecond": 90
+    "scrollDegreesPerSecond": 90,
+    "maxZoom": 80,
+    "wheelZoomStep": 1.25,
+    "focusMinProvincePx": 60
   },
   "detail": {
     "farSimplifyDegrees": 0.08,

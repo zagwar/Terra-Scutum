@@ -1,6 +1,13 @@
 import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { assignCountryColors } from '../src/map-import/colors';
+import { buildWorldMap, summarizeCountry } from '@terra-scutum/sim';
+import { loadGameDataFromDisk } from '../src';
+import {
+  COUNTRY_PALETTE,
+  assignCountryColors,
+  colorDifference,
+  mapColorContrast,
+} from '../src/map-import/colors';
 import { loadMapConfig } from '../src/map-import/config';
 import {
   type Polygons,
@@ -301,6 +308,71 @@ describe('countries', () => {
     ]);
     const colors = assignCountryColors(['A', 'B', 'C'], neighbors);
     expect(new Set(colors.values()).size).toBe(3);
+  });
+
+  it('measures how different two colors look', () => {
+    expect(colorDifference('#336699', '#336699')).toBe(0);
+    expect(colorDifference('#000000', '#ffffff')).toBeCloseTo(1, 2);
+    // Two greens that are hard to tell apart, and a green next to a red.
+    expect(colorDifference('#5f7f5a', '#5a7a5a')).toBeLessThan(0.03);
+    expect(colorDifference('#5f7f5a', '#a0614f')).toBeGreaterThan(0.1);
+    // On the map, a light and a dark shade of one color count as much more alike than two colors.
+    expect(mapColorContrast('#c9b8f0', '#7a5fa8')).toBeLessThan(
+      colorDifference('#c9b8f0', '#7a5fa8') * 0.6,
+    );
+    expect(mapColorContrast('#c9b8f0', '#7fae5c')).toBeGreaterThan(0.15);
+  });
+
+  it('has a palette of clearly different colors', () => {
+    expect(COUNTRY_PALETTE.length).toBeGreaterThanOrEqual(30);
+    for (const color of COUNTRY_PALETTE) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    let closest = Infinity;
+    COUNTRY_PALETTE.forEach((a, i) =>
+      COUNTRY_PALETTE.forEach((b, j) => {
+        if (i < j) closest = Math.min(closest, colorDifference(a, b));
+      }),
+    );
+    expect(closest).toBeGreaterThan(0.04);
+  });
+
+  it('keeps the colors of countries that touch, nearly touch or share a neighbor far apart', () => {
+    // A chain A–B–C–D–E, with F facing A across a strait.
+    const ids = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const neighbors = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]));
+    for (const [a, b] of ['AB', 'BC', 'CD', 'DE'].map((pair) => [...pair])) {
+      neighbors.get(a)!.add(b);
+      neighbors.get(b)!.add(a);
+    }
+    const near = new Map([
+      ['A', new Set(['F'])],
+      ['F', new Set(['A'])],
+    ]);
+    const colors = assignCountryColors(ids, neighbors, near);
+    const apart = (a: string, b: string) => mapColorContrast(colors.get(a)!, colors.get(b)!);
+    for (const [a, b] of ['AB', 'BC', 'CD', 'DE'].map((pair) => [...pair]))
+      expect(apart(a, b)).toBeGreaterThan(0.15);
+    expect(apart('A', 'F')).toBeGreaterThan(0.12);
+    expect(apart('A', 'C')).toBeGreaterThan(0.07); // both border B
+    // The same input always gives the same colors.
+    expect([...assignCountryColors(ids, neighbors, near)]).toEqual([...colors]);
+  });
+
+  it('the real map: countries that share a border have clearly different colors', () => {
+    const data = loadGameDataFromDisk();
+    const world = buildWorldMap(data);
+    const alike: string[] = [];
+    world.countryIds.forEach((id, country) => {
+      for (const other of summarizeCountry(world, world.provinceCountry, country).neighbors) {
+        const difference = mapColorContrast(
+          world.countryMapColor[country],
+          world.countryMapColor[other],
+        );
+        if (other > country && difference < 0.1)
+          alike.push(`${id} and ${world.countryIds[other]}: ${difference.toFixed(3)}`);
+      }
+    });
+    expect(alike).toEqual([]);
+    expect(new Set(world.countryMapColor).size).toBeGreaterThanOrEqual(30);
   });
 
   it('the map-config files are valid', () => {

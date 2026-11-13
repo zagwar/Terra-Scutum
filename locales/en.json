@@ -49,7 +49,7 @@
   "MAP_MODE_POLITICAL": "Political",
   "MAP_MODE_PROVINCES": "Provinces",
   "MAP_MODE_REGIONS": "Regions",
-  "MAP_HINT": "Click a province for its details. Hold ← or → to scroll the map.",
+  "MAP_HINT": "Click a province for its details. Mouse wheel: zoom. Drag or arrow keys: move the map.",
   "MAP_TOOLTIP_PROVINCE": "{province} · {country}",
   "CLIMATE_TROPICAL": "Tropical",
   "CLIMATE_ARID": "Arid",

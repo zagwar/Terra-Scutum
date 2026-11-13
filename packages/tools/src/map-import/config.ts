@@ -44,6 +44,13 @@ export const settingsSchema = z.strictObject({
     /** Islets smaller than this are dropped from a province (its largest piece is always kept). */
     minIsletAreaKm2: z.number().min(0),
   }),
+  colors: z.strictObject({
+    /**
+     * Countries without a shared border still get clearly different map colors when their
+     * land is closer together than this (across a strait or a narrow sea).
+     */
+    nearCountryKm: z.number().min(0),
+  }),
   raster: z.strictObject({
     /** Size of one pixel of the grid used to find sea zones and coastlines. */
     degreesPerPixel: z.number().positive(),
