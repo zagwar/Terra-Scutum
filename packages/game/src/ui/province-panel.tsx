@@ -7,6 +7,7 @@ import {
   seaZoneNameKey,
 } from '@terra-scutum/sim';
 import { formatArea, t, tKey } from './i18n';
+import { LinkList } from './link-list';
 
 export interface ProvincePanelProps {
   readonly world: WorldMap;
@@ -15,6 +16,8 @@ export interface ProvincePanelProps {
   /** Index of the province to show. */
   readonly province: number;
   readonly onSelectProvince: (province: number | null) => void;
+  /** Selects a sea zone (shows its panel instead of this one). */
+  readonly onSelectSeaZone: (seaZone: number) => void;
   /** Opens a country's panel. */
   readonly onSelectCountry: (country: number) => void;
 }
@@ -23,12 +26,14 @@ export interface ProvincePanelProps {
  * The province info panel (F01): name, country, region and what the province
  * borders. Population, buildings and construction join it with their features.
  * The country is the province's current owner (F02); clicking it opens the country panel.
+ * Clicking a bordering sea zone shows that sea zone (F70).
  */
 export function ProvincePanel({
   world,
   provinceOwner,
   province,
   onSelectProvince,
+  onSelectSeaZone,
   onSelectCountry,
 }: ProvincePanelProps) {
   const owner = provinceOwner[province];
@@ -38,9 +43,10 @@ export function ProvincePanel({
     index,
     name: provinceName(index),
   })).sort(byName);
-  const seaZones = Array.from(neighborsOf(world.provinceSeaZones, province), (index) =>
-    tKey(seaZoneNameKey(world.seaZoneIds[index])),
-  ).sort((a, b) => a.localeCompare(b));
+  const seaZones = Array.from(neighborsOf(world.provinceSeaZones, province), (index) => ({
+    index,
+    name: tKey(seaZoneNameKey(world.seaZoneIds[index])),
+  })).sort(byName);
 
   return (
     <section className="panel province-panel" data-testid="province-panel">
@@ -81,27 +87,10 @@ export function ProvincePanel({
       </dl>
 
       <h3 className="list-title">{t('PROVINCE_PANEL_NEIGHBORS', { count: neighbors.length })}</h3>
-      {neighbors.length === 0 ? (
-        <p className="list-empty">{t('PANEL_NONE')}</p>
-      ) : (
-        <ul className="link-list" data-testid="province-neighbors">
-          {neighbors.map(({ index, name }) => (
-            <li key={index}>
-              <button type="button" className="link-button" onClick={() => onSelectProvince(index)}>
-                {name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <LinkList items={neighbors} testId="province-neighbors" onSelect={onSelectProvince} />
 
       <h3 className="list-title">{t('PROVINCE_PANEL_SEA_ZONES', { count: seaZones.length })}</h3>
-      <p
-        className={seaZones.length === 0 ? 'list-empty' : 'list-text'}
-        data-testid="province-sea-zones"
-      >
-        {seaZones.length === 0 ? t('PANEL_NONE') : seaZones.join(', ')}
-      </p>
+      <LinkList items={seaZones} testId="province-sea-zones" onSelect={onSelectSeaZone} />
     </section>
   );
 }

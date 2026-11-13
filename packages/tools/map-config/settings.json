@@ -22,6 +22,12 @@
   "raster": {
     "degreesPerPixel": 0.05
   },
+  "seaZones": {
+    "coastBandKm": 200,
+    "minIslandKm2": 5000,
+    "minOpenShare": 0.25,
+    "minPieceKm2": 15000
+  },
   "geometry": {
     "quantization": 100000,
     "provinceMinWeight": 0.0005,

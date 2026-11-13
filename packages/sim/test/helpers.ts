@@ -54,8 +54,20 @@ export function testWorld() {
     },
     seaZones: {
       seaZones: [
-        { id: 'west_sea', depth: 'deep', center: [0, 5], adjacentSeaZones: ['east_sea'] },
-        { id: 'east_sea', depth: 'shallow', center: [2, 5], adjacentSeaZones: ['west_sea'] },
+        {
+          id: 'west_sea',
+          depth: 'deep',
+          kind: 'sea',
+          center: [0, 5],
+          adjacentSeaZones: ['east_sea'],
+        },
+        {
+          id: 'east_sea',
+          depth: 'shallow',
+          kind: 'coast',
+          center: [2, 5],
+          adjacentSeaZones: ['west_sea'],
+        },
       ],
     },
   };
@@ -86,9 +98,11 @@ export function testMapView() {
       land: '#808080',
       landVariation: 0.1,
       politicalVariation: 0.05,
-      seaDeep: '#000040',
-      seaShallow: '#000080',
-      seaVariation: 0.05,
+      sea: '#000060',
+      seaCoastal: '#1f3d58',
+      seaOpen: '#132538',
+      seaSelected: '#3f86c6',
+      seaSelectedStrength: 0.6,
       regionVariation: 0.1,
       selected: '#ffff00',
       neighbor: '#c0c000',
@@ -101,6 +115,7 @@ export function testMapView() {
       regionBorder: line,
       coast: line,
       seaZoneBorder: line,
+      seaZoneBorderEmphasis: line,
       selection: line,
     },
   };

@@ -5,6 +5,7 @@ const MODE_TEXT: Record<MapMode, TranslationKey> = {
   political: 'MAP_MODE_POLITICAL',
   provinces: 'MAP_MODE_PROVINCES',
   regions: 'MAP_MODE_REGIONS',
+  seaZones: 'MAP_MODE_SEA_ZONES',
 };
 
 export interface MapModeBarProps {

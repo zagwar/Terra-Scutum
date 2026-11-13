@@ -54,7 +54,7 @@ test('the world map shows every province; clicking one opens its info panel', as
   await waitForFrames(page);
   const stats = await page.evaluate(() => window.__terraScutum!.map.stats()!);
   expect(stats.provinces).toBe(1294);
-  expect(stats.seaZones).toBe(126);
+  expect(stats.seaZones).toBe(221);
   expect(stats.detail).toBe('far');
   expect(stats.drawnTriangles).toBeGreaterThan(50_000);
   // The whole world from far away stays cheap: well under half a million triangles a frame.
@@ -97,11 +97,14 @@ test('the world map shows every province; clicking one opens its info panel', as
   expect(await page.evaluate(() => window.__terraScutum!.map.zoom()!)).toBeGreaterThan(1);
   await page.evaluate(() => window.__terraScutum!.map.lookAt(0, 0, 1));
 
-  // Clicking the sea clears the selection, and so does the close button.
+  // Clicking the sea selects its sea zone instead (F70); the close buttons clear the selection.
   const sea = await screenPosition(page, ...MID_ATLANTIC);
   await page.mouse.click(sea.x, sea.y);
   await expect(page.getByTestId('province-panel')).toHaveCount(0);
-  await expect(page.getByTestId('map-tooltip')).toHaveCount(0);
+  await expect(page.getByTestId('sea-zone-name')).toHaveText('North Atlantic');
+  await expect(page.getByTestId('map-tooltip')).toHaveText('North Atlantic');
+  await page.getByTestId('sea-zone-close').click();
+  await expect(page.getByTestId('sea-zone-panel')).toHaveCount(0);
   await page.mouse.click(paris.x, paris.y);
   await expect(page.getByTestId('province-name')).toHaveText('Île-de-France');
   await page.getByTestId('province-close').click();

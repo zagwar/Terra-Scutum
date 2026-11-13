@@ -5,6 +5,7 @@ import {
   buildWorldMap,
   countryNameKey,
   formatDataIssue,
+  isCoastZone,
   neighborsOf,
   parseGameData,
   provinceNameKey,
@@ -151,6 +152,13 @@ describe('world map lookups', () => {
     expect(world.provinceIds[world.countryCapital[c('BBB')]]).toBe('beta_main');
     expect(world.countryMapColor).toEqual(['#112233', '#445566']);
     expect(world.regionMapColor).toEqual(['#778899', '#aa8844']);
+  });
+
+  it("knows each sea zone's label point and whether it is a coast zone", () => {
+    const z = (id: string) => world.seaZoneIndex.get(id)!;
+    expect([...world.seaZoneCenter]).toEqual([2, 5, 0, 5]); // east_sea, then west_sea
+    expect(isCoastZone(world, z('east_sea'))).toBe(true);
+    expect(isCoastZone(world, z('west_sea'))).toBe(false);
   });
 
   it('is part of every game state', () => {

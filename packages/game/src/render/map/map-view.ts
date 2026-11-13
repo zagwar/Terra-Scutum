@@ -14,6 +14,7 @@ import { type LineMaterial, type LineStyles, createLineMaterial } from './line-m
 import {
   type MapMode,
   applyHighlight,
+  applySeaHighlight,
   parseHexColor,
   provinceBaseColors,
   seaZoneColors,
@@ -44,7 +45,9 @@ import {
   uploadLineKinds,
 } from './map-meshes';
 import { createMapProjection } from './map-projection';
-import { createShapeLookup } from './shape-lookup';
+import { type MapTarget, createShapeLookup, findTarget } from './shape-lookup';
+
+export type { MapTarget } from './shape-lookup';
 
 /**
  * The world map in the 3D scene (F01): sea zones underneath, provinces on
@@ -62,7 +65,9 @@ import { createShapeLookup } from './shape-lookup';
  *   political colors and the country borders follow the current owners.
  *   Border lines know the provinces on their two sides, so a change of
  *   owner only rewrites one small number per vertex of the lines it affects.
- * - Picking uses the shape lookup (exact, no GPU readback).
+ * - Picking uses the shape lookup (exact, no GPU readback). Sea zones (F70)
+ *   are picked the same way; land wins where the two overlap, because the
+ *   sea zone shapes continue under the land.
  * - The land has two levels of detail. Far away: simplified shapes, drawn as
  *   three copies. Close up: the full shapes, cut into chunks; only the chunks
  *   on screen are drawn, each placed on the copy of the world nearest to the
@@ -70,10 +75,10 @@ import { createShapeLookup } from './shape-lookup';
  */
 
 export interface MapViewEvents {
-  /** The province under the mouse changed (index, or null for none). */
-  onHover(province: number | null): void;
-  /** The map was clicked: on a province (index) or on the sea or outside the map (null). */
-  onClick(province: number | null): void;
+  /** The province or sea zone under the mouse changed (null: nothing, outside the map). */
+  onHover(target: MapTarget | null): void;
+  /** The map was clicked: on a province, on a sea zone, or outside the map (null). */
+  onClick(target: MapTarget | null): void;
 }
 
 /** Numbers for checking the map's performance. */
@@ -103,8 +108,11 @@ export interface MapView {
   /** Who owns each province now (country indices, from the sim's snapshot). */
   setProvinceOwners(provinceOwner: Uint16Array): void;
   setSelectedProvince(province: number | null): void;
+  setSelectedSeaZone(seaZone: number | null): void;
   /** The province index at a longitude/latitude, or -1 for the sea. */
   provinceAt(longitude: number, latitude: number): number;
+  /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
+  seaZoneAt(longitude: number, latitude: number): number;
   /** Where a longitude/latitude is on screen, in CSS pixels from the canvas's top-left corner. */
   screenPosition(longitude: number, latitude: number): { x: number; y: number };
   /** The longitude/latitude under a point of the canvas (CSS pixels), or null if it misses the ground. */
@@ -125,6 +133,8 @@ export interface MapView {
    * too small to see, zooms in until it is.
    */
   focusProvince(province: number): void;
+  /** Brings a sea zone into view: centers the map on its label point. */
+  focusSeaZone(seaZone: number): void;
   dispose(): void;
 }
 
@@ -146,12 +156,17 @@ async function fetchTopology(url: string): Promise<MapTopology> {
 /** How wide the far edge of the view is compared with its middle (the camera leans back). */
 const FAR_EDGE_ALLOWANCE = 1.5;
 
+/** The line style for sea zone borders in a map mode: they stand out in the sea zones map mode. */
+function seaLineStyles(mode: MapMode, lines: MapViewConfig['lines']): LineStyles {
+  return { plain: mode === 'seaZones' ? lines.seaZoneBorderEmphasis : lines.seaZoneBorder };
+}
+
 /** The line styles for land borders in a map mode: which borders stand out, and how. */
 function landLineStyles(mode: MapMode, lines: MapViewConfig['lines']): LineStyles {
   return {
     plain: lines.provinceBorder,
     coast: lines.coast,
-    // Political and provinces modes: country borders stand out. Regions mode: region borders.
+    // Regions mode: region borders stand out. All other modes: country borders.
     emphasis: mode === 'regions' ? lines.regionBorder : lines.countryBorder,
     emphasisFlag: mode === 'regions' ? LINE_OTHER_REGION : LINE_OTHER_COUNTRY,
   };
@@ -219,6 +234,8 @@ export async function createMapView(
     return material;
   };
 
+  let mode: MapMode = 'political';
+
   // The sea: always drawn the same way (it has few shapes), as three copies.
   const seaPolygons = decodePolygons(
     seaTopology,
@@ -226,8 +243,8 @@ export async function createMapView(
     indexIn(world.seaZoneIndex, 'sea zone'),
     projection,
   );
+  const seaLookup = createShapeLookup(seaPolygons, projection);
   const seaTable = createColorTable('sea-zone-colors', scene, world.seaZoneIds.length);
-  seaTable.update(seaZoneColors(world, config.colors));
   const seaMaterial = createFillMaterial('sea-zones-material', scene, seaTable);
   const seaFill = createFillMesh(
     'sea-zones',
@@ -237,18 +254,21 @@ export async function createMapView(
     seaMaterial,
     SEA_GROUP,
   );
+  const seaLineMaterial = lineMaterial(
+    'sea-zone-borders-material',
+    seaLineStyles(mode, config.lines),
+  );
   const seaLines = createLineMesh(
     'sea-zone-borders',
     scene,
     buildLineGeometry(buildInnerBorders(seaTopology, 'seaZones', projection).map(wholeLine)),
-    lineMaterial('sea-zone-borders-material', { plain: config.lines.seaZoneBorder }).material,
+    seaLineMaterial.material,
     SEA_GROUP,
     0,
   );
   allMeshes.push(...addWrapCopies(seaFill, worldWidth), ...addWrapCopies(seaLines, worldWidth));
 
   // The land. Both levels of detail share the color table and the materials.
-  let mode: MapMode = 'political';
   // Until the sim's first owners arrive: the starting owners.
   let owners: Uint16Array = world.provinceCountry.slice();
   /** Every land border mesh with its geometry, to change border kinds when provinces change owner. */
@@ -258,6 +278,7 @@ export async function createMapView(
   const landLines = lineMaterial('borders-material', landLineStyles(mode, config.lines));
   const selectionMaterial = lineMaterial('selection-material', { plain: config.lines.selection });
   let selectionMeshes: Mesh[] = [];
+  let seaSelectionMeshes: Mesh[] = [];
 
   /** Builds the land (fills and border lines) from one set of shapes, one pair of meshes per chunk. */
   const buildLand = (
@@ -339,12 +360,32 @@ export async function createMapView(
   let baseColors = provinceBaseColors(mode, world, config.colors, owners);
   const shownColors = new Uint8Array(baseColors.length);
   let selected: number | null = null;
-  let hovered: number | null = null;
+  let hovered: MapTarget | null = null;
+  const hoveredOf = (kind: MapTarget['kind']) => (hovered?.kind === kind ? hovered.index : null);
   const refreshColors = () => {
-    applyHighlight(baseColors, shownColors, { selected, hovered }, world, config.colors);
+    applyHighlight(
+      baseColors,
+      shownColors,
+      { selected, hovered: hoveredOf('province') },
+      world,
+      config.colors,
+    );
     provinceTable.update(shownColors);
   };
   refreshColors();
+  let seaBaseColors = seaZoneColors(mode, world, config.colors);
+  const seaShownColors = new Uint8Array(seaBaseColors.length);
+  let selectedSeaZone: number | null = null;
+  const refreshSeaColors = () => {
+    applySeaHighlight(
+      seaBaseColors,
+      seaShownColors,
+      { selected: selectedSeaZone, hovered: hoveredOf('seaZone') },
+      config.colors,
+    );
+    seaTable.update(seaShownColors);
+  };
+  refreshSeaColors();
 
   // Mouse state (used further down; the camera code needs to flag "look under the mouse again").
   let pointer: { x: number; y: number } | null = null;
@@ -446,19 +487,21 @@ export async function createMapView(
       z: ray.origin.z + ray.direction.z * distance,
     };
   };
-  const provinceAtCanvasPoint = (x: number, y: number): number | null => {
+  /** The province or sea zone at a map position (land wins: the sea zone shapes continue under it). */
+  const targetAt = (x: number, z: number) => findTarget(lookup, seaLookup, x, z);
+  const targetAtCanvasPoint = (x: number, y: number): MapTarget | null => {
     const ground = groundAt(x, y);
-    if (!ground) return null;
-    const found = lookup.find(ground.x, ground.z);
-    return found < 0 ? null : found;
+    return ground && targetAt(ground.x, ground.z);
   };
 
-  const setHovered = (province: number | null) => {
-    if (province === hovered) return;
-    hovered = province;
-    canvas.style.cursor = province === null ? 'default' : 'pointer';
-    refreshColors();
-    events.onHover(province);
+  const setHovered = (target: MapTarget | null) => {
+    if (target?.kind === hovered?.kind && target?.index === hovered?.index) return;
+    const before = hovered;
+    hovered = target;
+    canvas.style.cursor = target === null ? 'default' : 'pointer';
+    if (before?.kind === 'province' || target?.kind === 'province') refreshColors();
+    if (before?.kind === 'seaZone' || target?.kind === 'seaZone') refreshSeaColors();
+    events.onHover(target);
   };
   // ── Moving the view: basic controls until the strategy camera (F03) ───────
   /** Moves the view east (+x) and north (+z), in map units. */
@@ -526,7 +569,7 @@ export async function createMapView(
     if (event.button !== 0 || !pressedAt) return;
     const dragged = dragFrom !== null;
     endDrag();
-    if (!dragged) events.onClick(provinceAtCanvasPoint(event.offsetX, event.offsetY));
+    if (!dragged) events.onClick(targetAtCanvasPoint(event.offsetX, event.offsetY));
   };
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
@@ -575,7 +618,7 @@ export async function createMapView(
     }
     if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
-      setHovered(provinceAtCanvasPoint(pointer.x, pointer.y));
+      setHovered(targetAtCanvasPoint(pointer.x, pointer.y));
     }
   });
 
@@ -599,7 +642,10 @@ export async function createMapView(
       mode = next;
       baseColors = provinceBaseColors(mode, world, config.colors, owners);
       refreshColors();
+      seaBaseColors = seaZoneColors(mode, world, config.colors);
+      refreshSeaColors();
       landLines.setStyles(landLineStyles(mode, config.lines));
+      seaLineMaterial.setStyles(seaLineStyles(mode, config.lines));
     },
     setProvinceOwners(provinceOwner) {
       if (provinceOwner.length !== owners.length)
@@ -634,8 +680,32 @@ export async function createMapView(
         selectionMeshes = addWrapCopies(mesh, worldWidth);
       }
     },
+    setSelectedSeaZone(seaZone) {
+      if (seaZone === selectedSeaZone) return;
+      selectedSeaZone = seaZone;
+      refreshSeaColors();
+      for (const mesh of seaSelectionMeshes) mesh.dispose();
+      seaSelectionMeshes = [];
+      if (seaZone !== null) {
+        // Drawn with the sea, so the land covers the part of the outline that runs under it.
+        const outline = outlineOf(seaPolygons, seaZone, projection).map(wholeLine);
+        const mesh = createLineMesh(
+          'sea-selection',
+          scene,
+          buildLineGeometry(outline),
+          selectionMaterial.material,
+          SEA_GROUP,
+          1,
+        );
+        seaSelectionMeshes = addWrapCopies(mesh, worldWidth);
+      }
+    },
     provinceAt: (longitude, latitude) =>
       lookup.find(projection.x(longitude), projection.z(latitude)),
+    seaZoneAt(longitude, latitude) {
+      const target = targetAt(projection.x(longitude), projection.z(latitude));
+      return target?.kind === 'seaZone' ? target.index : -1;
+    },
     screenPosition(longitude, latitude) {
       // Use the copy of the world that is nearest to the middle of the screen.
       const x = centerX + projection.wrapX(projection.x(longitude) - centerX);
@@ -687,6 +757,12 @@ export async function createMapView(
       centerZ = (piece.minZ + piece.maxZ) / 2;
       applyView();
     },
+    focusSeaZone(seaZone) {
+      // Sea zones are big: centering on the label point is enough, no zooming.
+      centerX = projection.wrapX(projection.x(world.seaZoneCenter[seaZone * 2]));
+      centerZ = projection.z(world.seaZoneCenter[seaZone * 2 + 1]);
+      applyView();
+    },
     dispose() {
       scene.onBeforeRenderObservable.remove(beforeRender);
       canvas.removeEventListener('pointermove', onPointerMove);
@@ -698,7 +774,7 @@ export async function createMapView(
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
-      for (const mesh of [...allMeshes, ...selectionMeshes]) mesh.dispose();
+      for (const mesh of [...allMeshes, ...selectionMeshes, ...seaSelectionMeshes]) mesh.dispose();
       for (const material of lineMaterials) material.material.dispose();
       seaMaterial.dispose();
       provinceMaterial.dispose();

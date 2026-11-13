@@ -30,6 +30,10 @@ export interface WorldMap {
   readonly provinceAreaKm2: Float32Array;
   /** 1 for a deep sea zone, 0 for a shallow one. */
   readonly seaZoneDeep: Uint8Array;
+  /** 1 for a coast zone (the water along a shore), 0 for an open-sea zone. */
+  readonly seaZoneCoast: Uint8Array;
+  /** Each sea zone's label point: longitude and latitude, two numbers per sea zone. */
+  readonly seaZoneCenter: Float32Array;
   readonly provinceNeighbors: Adjacency;
   readonly provinceSeaZones: Adjacency;
   readonly seaZoneNeighbors: Adjacency;
@@ -44,6 +48,11 @@ export interface WorldMap {
   readonly countryMapColor: readonly string[];
   /** Each region's color in the regions map mode, as #rrggbb. */
   readonly regionMapColor: readonly string[];
+}
+
+/** True for a coast zone (the water along a shore), false for an open-sea zone. */
+export function isCoastZone(world: WorldMap, seaZone: number): boolean {
+  return world.seaZoneCoast[seaZone] === 1;
 }
 
 /** The neighbors of item `index` in an adjacency list. */
@@ -122,6 +131,8 @@ export function buildWorldMap(data: GameData): WorldMap {
     provinceRegion,
     provinceAreaKm2,
     seaZoneDeep: Uint8Array.from(seaZones, (s) => (s.depth === 'deep' ? 1 : 0)),
+    seaZoneCoast: Uint8Array.from(seaZones, (s) => (s.kind === 'coast' ? 1 : 0)),
+    seaZoneCenter: Float32Array.from(seaZones.flatMap((s) => s.center)),
     provinceNeighbors: buildAdjacency(
       provinces.map((p) => p.adjacentProvinces.map((n) => lookup(provinceIndex, n, 'province'))),
     ),

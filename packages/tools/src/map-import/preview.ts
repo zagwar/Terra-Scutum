@@ -17,6 +17,8 @@ export interface PreviewInput {
   readonly landColor: (label: number) => [number, number, number];
   /** Optional group per province label: borders between groups are drawn thicker. */
   readonly group?: (label: number) => number;
+  /** Optional color for each sea zone label; without it, sea zones are shades of blue. */
+  readonly seaColor?: (label: number) => [number, number, number];
   readonly scale: number;
 }
 
@@ -39,8 +41,9 @@ export function renderPreview(input: PreviewInput): Buffer {
       if (l === 0xffff) color = OUTSIDE_LAND;
       else if (l !== 0) color = input.landColor(l);
       else if (sea[i] !== 0) {
-        const shade = varyColor('#1d3550', `zone${sea[i]}`, 0.22);
-        color = shade;
+        color = input.seaColor
+          ? input.seaColor(sea[i])
+          : varyColor('#1d3550', `zone${sea[i]}`, 0.22);
       } else color = LAKE;
       const right = at(Math.min(width - 1, x + 1), y);
       const down = at(x, Math.min(height - 1, y + 1));

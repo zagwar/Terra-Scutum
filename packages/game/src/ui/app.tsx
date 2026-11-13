@@ -7,12 +7,15 @@ import { t } from './i18n';
 import { MapModeBar } from './map-mode-bar';
 import { MapTooltip } from './map-tooltip';
 import { ProvincePanel } from './province-panel';
+import { SeaZonePanel } from './sea-zone-panel';
 
 export interface AppProps {
   readonly store: AppStore;
   readonly onAdvanceDay: () => void;
   /** Select a province by its index, or null to clear the selection. */
   readonly onSelectProvince: (province: number | null) => void;
+  /** Select a sea zone by its index, or null to clear the selection. */
+  readonly onSelectSeaZone: (seaZone: number | null) => void;
   /** Open a country's panel by its index, or null to close it. */
   readonly onSelectCountry: (country: number | null) => void;
   readonly onSetMapMode: (mode: MapMode) => void;
@@ -23,6 +26,7 @@ export function App({
   store,
   onAdvanceDay,
   onSelectProvince,
+  onSelectSeaZone,
   onSelectCountry,
   onSetMapMode,
 }: AppProps) {
@@ -53,12 +57,32 @@ export function App({
           provinceOwner={provinceOwner}
           province={state.selectedProvince}
           onSelectProvince={onSelectProvince}
+          onSelectSeaZone={onSelectSeaZone}
           onSelectCountry={onSelectCountry}
+        />
+      )}
+      {world && state.selectedSeaZone !== null && (
+        <SeaZonePanel
+          world={world}
+          seaZone={state.selectedSeaZone}
+          onSelectSeaZone={onSelectSeaZone}
+          onSelectProvince={onSelectProvince}
         />
       )}
       {state.map === 'ready' && <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} />}
       {world && provinceOwner && state.hoveredProvince !== null && (
-        <MapTooltip world={world} provinceOwner={provinceOwner} province={state.hoveredProvince} />
+        <MapTooltip
+          world={world}
+          provinceOwner={provinceOwner}
+          target={{ kind: 'province', index: state.hoveredProvince }}
+        />
+      )}
+      {world && provinceOwner && state.hoveredSeaZone !== null && (
+        <MapTooltip
+          world={world}
+          provinceOwner={provinceOwner}
+          target={{ kind: 'seaZone', index: state.hoveredSeaZone }}
+        />
       )}
 
       {state.error && (

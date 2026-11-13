@@ -1,4 +1,4 @@
-import { type MapViewConfig, type WorldMap, neighborsOf } from '@terra-scutum/sim';
+import { type MapViewConfig, type WorldMap, isCoastZone, neighborsOf } from '@terra-scutum/sim';
 
 /**
  * Province and sea zone colors for each map mode. Pure code: the renderer
@@ -9,7 +9,7 @@ import { type MapViewConfig, type WorldMap, neighborsOf } from '@terra-scutum/si
  */
 
 /** The map modes that exist so far (section 12.2); more come with their features. */
-export const MAP_MODES = ['political', 'provinces', 'regions'] as const;
+export const MAP_MODES = ['political', 'provinces', 'regions', 'seaZones'] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 type Rgb = readonly [number, number, number];
@@ -81,6 +81,7 @@ export function provinceBaseColors(
       ),
     );
   } else {
+    // Provinces and sea zones map modes: plain land, so the borders (or the sea) stand out.
     const land = parseHexColor(colors.land);
     world.provinceIds.forEach((id, province) =>
       write(result, province, vary(land, id, colors.landVariation)),
@@ -90,7 +91,7 @@ export function provinceBaseColors(
 }
 
 export interface ProvinceHighlight {
-  /** Province indices, or null for none. */
+  /** Province (or sea zone) indices, or null for none. */
   readonly selected: number | null;
   readonly hovered: number | null;
 }
@@ -121,13 +122,46 @@ export function applyHighlight(
   }
 }
 
-/** The color of every sea zone: deep or shallow water, each zone shaded slightly differently. */
-export function seaZoneColors(world: WorldMap, colors: Colors): Uint8Array {
+/**
+ * The color of every sea zone in a map mode. Every mode but "sea zones" shows
+ * a calm sea: one even blue. The sea zones map mode shows coastal sea zones
+ * (bordering at least one province) in one blue and open sea in another, so
+ * the coast stands out a little. No random shading: two zones of the same
+ * kind always look the same.
+ */
+export function seaZoneColors(mode: MapMode, world: WorldMap, colors: Colors): Uint8Array {
   const result = new Uint8Array(world.seaZoneIds.length * 4);
-  const deep = parseHexColor(colors.seaDeep);
-  const shallow = parseHexColor(colors.seaShallow);
-  world.seaZoneIds.forEach((id, zone) =>
-    write(result, zone, vary(world.seaZoneDeep[zone] ? deep : shallow, id, colors.seaVariation)),
-  );
+  const sea = parseHexColor(colors.sea);
+  const coastal = parseHexColor(colors.seaCoastal);
+  const open = parseHexColor(colors.seaOpen);
+  world.seaZoneIds.forEach((_, zone) => {
+    if (mode !== 'seaZones') write(result, zone, sea);
+    else write(result, zone, isCoastZone(world, zone) ? coastal : open);
+  });
   return result;
+}
+
+/** Copies `base` into `target` and marks the selected and the hovered sea zone. */
+export function applySeaHighlight(
+  base: Uint8Array,
+  target: Uint8Array,
+  highlight: ProvinceHighlight,
+  colors: Colors,
+): void {
+  target.set(base);
+  const read = (index: number): Rgb => [
+    target[index * 4],
+    target[index * 4 + 1],
+    target[index * 4 + 2],
+  ];
+  if (highlight.selected !== null)
+    write(
+      target,
+      highlight.selected,
+      mix(read(highlight.selected), parseHexColor(colors.seaSelected), colors.seaSelectedStrength),
+    );
+  if (highlight.hovered !== null) {
+    const white: Rgb = [255, 255, 255];
+    write(target, highlight.hovered, mix(read(highlight.hovered), white, colors.hoverBrighten));
+  }
 }

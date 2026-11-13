@@ -39,6 +39,10 @@ export interface DebugApi {
     zoom(): number | null;
     /** The id of the selected province, or null. */
     selectedProvince(): string | null;
+    /** The id of the sea zone at a longitude/latitude; null on land or outside the map. */
+    seaZoneAt(longitude: number, latitude: number): string | null;
+    /** The id of the selected sea zone, or null. */
+    selectedSeaZone(): string | null;
   };
 }
 
@@ -60,6 +64,10 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
     province === null || province === undefined || province < 0
       ? null
       : (store.getState().world?.provinceIds[province] ?? null);
+  const seaZoneIdOf = (seaZone: number | null | undefined): string | null =>
+    seaZone === null || seaZone === undefined || seaZone < 0
+      ? null
+      : (store.getState().world?.seaZoneIds[seaZone] ?? null);
 
   window.__terraScutum = {
     isReady() {
@@ -87,6 +95,9 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
       centerLongitude: () => renderer?.map?.centerLongitude() ?? null,
       zoom: () => renderer?.map?.zoom() ?? null,
       selectedProvince: () => idOf(store.getState().selectedProvince),
+      seaZoneAt: (longitude, latitude) =>
+        seaZoneIdOf(renderer?.map?.seaZoneAt(longitude, latitude)),
+      selectedSeaZone: () => seaZoneIdOf(store.getState().selectedSeaZone),
     },
   };
 

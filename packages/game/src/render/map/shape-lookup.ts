@@ -82,3 +82,24 @@ export function createShapeLookup(
     },
   };
 }
+
+/** Something on the map that can be hovered and clicked: a province or a sea zone (by index). */
+export type MapTarget =
+  | { readonly kind: 'province'; readonly index: number }
+  | { readonly kind: 'seaZone'; readonly index: number };
+
+/**
+ * What is at map position (x, z): a province, a sea zone, or nothing (null).
+ * Land wins where the two overlap, because the sea zone shapes continue under the land.
+ */
+export function findTarget(
+  provinces: ShapeLookup,
+  seaZones: ShapeLookup,
+  x: number,
+  z: number,
+): MapTarget | null {
+  const province = provinces.find(x, z);
+  if (province >= 0) return { kind: 'province', index: province };
+  const seaZone = seaZones.find(x, z);
+  return seaZone >= 0 ? { kind: 'seaZone', index: seaZone } : null;
+}

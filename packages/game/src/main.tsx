@@ -39,8 +39,16 @@ function showMapWhenPossible(): void {
   const view = renderer;
   view
     .showMap(ready.world, ready.mapView, {
-      onHover: (province) => store.update({ hoveredProvince: province }),
-      onClick: (province) => store.update({ selectedProvince: province }),
+      onHover: (target) =>
+        store.update({
+          hoveredProvince: target?.kind === 'province' ? target.index : null,
+          hoveredSeaZone: target?.kind === 'seaZone' ? target.index : null,
+        }),
+      onClick: (target) =>
+        store.update({
+          selectedProvince: target?.kind === 'province' ? target.index : null,
+          selectedSeaZone: target?.kind === 'seaZone' ? target.index : null,
+        }),
     })
     .then(
       (map) => {
@@ -50,6 +58,7 @@ function showMapWhenPossible(): void {
           map.setMode(state.mapMode);
           if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
           map.setSelectedProvince(state.selectedProvince);
+          map.setSelectedSeaZone(state.selectedSeaZone);
         };
         store.subscribe(sync);
         sync();
@@ -98,9 +107,22 @@ createRoot(requireElement('ui')).render(
       store={store}
       onAdvanceDay={() => void sim.step(1)}
       onSelectProvince={(province) => {
-        store.update({ selectedProvince: province });
+        store.update(
+          province === null
+            ? { selectedProvince: null }
+            : { selectedProvince: province, selectedSeaZone: null },
+        );
         // A province picked from a list (not on the map) is brought into view.
         if (province !== null) renderer?.map?.focusProvince(province);
+      }}
+      onSelectSeaZone={(seaZone) => {
+        store.update(
+          seaZone === null
+            ? { selectedSeaZone: null }
+            : { selectedSeaZone: seaZone, selectedProvince: null },
+        );
+        // A sea zone picked from a list is brought into view too.
+        if (seaZone !== null) renderer?.map?.focusSeaZone(seaZone);
       }}
       onSelectCountry={(country) => store.update({ selectedCountry: country })}
       onSetMapMode={(mapMode) => store.update({ mapMode })}

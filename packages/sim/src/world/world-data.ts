@@ -25,6 +25,8 @@ export const CLIMATES = [
 export type Climate = (typeof CLIMATES)[number];
 export const SEA_DEPTHS = ['shallow', 'deep'] as const;
 export type SeaDepth = (typeof SEA_DEPTHS)[number];
+/** Coast zones run along the shores; open-sea zones lie beyond them (designer decision, F70). */
+export const SEA_ZONE_KINDS = ['coast', 'sea'] as const;
 
 /** `data/countries.json` */
 export const countriesFileSchema = z.strictObject({
@@ -75,6 +77,8 @@ export const seaZonesFileSchema = z.strictObject({
     z.strictObject({
       id,
       depth: z.enum(SEA_DEPTHS),
+      /** A coast zone (the water along a shore) or an open-sea zone. */
+      kind: z.enum(SEA_ZONE_KINDS),
       center: lonLat,
       adjacentSeaZones: z.array(id),
     }),

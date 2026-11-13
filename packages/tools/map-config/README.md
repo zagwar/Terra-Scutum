@@ -9,7 +9,7 @@ These files are the **source of the game map**. The map import turns them, toget
 | `data/countries.json`, `data/provinces.json`, `data/regions.json`, `data/sea_zones.json` | The map facts the simulation uses: owners, regions, borders (adjacency), coasts, areas |
 | `data/geometry/*.topo.json` | The shapes (TopoJSON), drawn by the game |
 | `locales/en.map.json` | The English names of every country, province, region and sea zone |
-| `report/` | `map-report.md` (lists, counts, warnings) and preview pictures |
+| `report/` | `map-report.md` (lists, counts, warnings) and preview pictures (provinces, regions, sea zones) |
 
 **Never edit the outputs by hand**: change the files here and run the import again:
 
@@ -38,8 +38,11 @@ and always gives the same result for the same inputs.
   which win over `countries`). Anything not listed joins the region with the nearest `seeds` point,
   and the import warns about it.
 - **`sea-zones.json`**: the sea zones. Each grows through the water from its seed points (which
-  must be in open water). `connections` adds links through straits too narrow for the import's
-  grid (for example the Bosporus).
+  must be in open water), then the import splits it into a coast zone and an open-sea zone (see
+  `seaZones` in `settings.json`). `connections` adds links through straits too narrow for the import's
+  grid (for example the Bosporus). If a zone grows around a coast that really faces another zone,
+  add a seed for that other zone just off the coast; `report/sea_zones.png` shows every sea zone in
+  its own color, so you can see which coasts each one touches.
 - **`province-names.json`**: better display names for generated provinces, by province id. Ids never
   change when a name does.
 - **`tiny-provinces.json`**: provinces that are too small for the map data's precision (their
@@ -64,6 +67,13 @@ and always gives the same result for the same inputs.
   - `dominantShare`: a combined province keeps its main member's name when the other members are
     tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
+  - `seaZones`: how sea zones are split into **coast zones** and **open sea**. `coastBandKm`: how far
+    out from the shore a coast zone reaches; `minIslandKm2`: smaller islands don't count as a coast;
+    `minOpenShare`: a zone whose open part would be smaller than this share of its water becomes a coast
+    zone as a whole; `minPieceKm2`: a separate piece of coast or open sea smaller than this joins the
+    zone next to it (a coast piece joins the neighboring coast zone). A split zone keeps its id and name
+    for the open part; the coast part gets `_coast` and "Coast" ("North Sea Coast"); a coast that falls
+    into separate pieces gets a direction ("Arabian Sea Coast (west)").
   - `colors.nearCountryKm`, `colors.nearMinProvinceKm2`: countries whose land is closer together
     than this (across a strait or a narrow sea, counting only provinces at least this big) get
     clearly different map colors, as countries sharing a border always do.
