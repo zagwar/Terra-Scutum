@@ -67,24 +67,34 @@ test('sea zones can be hovered and clicked; their panel links to sea zones and p
   await page.mouse.move(northSea.x, northSea.y);
   await expect(page.getByTestId('map-tooltip')).toHaveText('North Sea');
 
-  // Clicking opens the sea zone panel: name, depth, bordering sea zones, coastal provinces.
+  // Clicking opens the sea zone panel: name, type, depth, bordering sea zones, coastal provinces.
+  // The middle of the North Sea is open sea; the coast zone runs around it.
   await page.mouse.click(northSea.x, northSea.y);
   await expect(page.getByTestId('sea-zone-name')).toHaveText('North Sea');
+  await expect(page.getByTestId('sea-zone-type')).toHaveText('Open sea');
   await expect(page.getByTestId('sea-zone-depth')).toHaveText('Shallow');
   const neighbors = page.getByTestId('sea-zone-neighbors').getByRole('button');
-  await expect(neighbors.filter({ hasText: 'English Channel' })).toHaveCount(1);
-  await expect(neighbors.filter({ hasText: 'Skagerrak and Kattegat' })).toHaveCount(1);
-  const coasts = page.getByTestId('sea-zone-coasts').getByRole('button');
-  await expect(coasts.filter({ hasText: 'Scotland' })).toHaveCount(1);
-  await expect(coasts.filter({ hasText: 'Lower Saxony' })).toHaveCount(1);
+  await expect(neighbors.filter({ hasText: 'North Sea Coast' })).toHaveCount(1);
   expect(await map.selectedSeaZone()).toBe('north_sea');
   await waitForFrames(page);
   await shot('selected');
 
   // A bordering sea zone's name selects that sea zone and brings it into view.
-  await neighbors.filter({ hasText: 'English Channel' }).click();
+  await neighbors.filter({ hasText: 'North Sea Coast' }).click();
+  await expect(page.getByTestId('sea-zone-name')).toHaveText('North Sea Coast');
+  await expect(page.getByTestId('sea-zone-type')).toHaveText('Coast zone');
+  expect(await map.selectedSeaZone()).toBe('north_sea_coast');
+  const coasts = page.getByTestId('sea-zone-coasts').getByRole('button');
+  await expect(coasts.filter({ hasText: 'Lower Saxony' })).toHaveCount(1);
+  await expect(coasts.filter({ hasText: 'East of England' })).toHaveCount(1);
+  await page
+    .getByTestId('sea-zone-neighbors')
+    .getByRole('button', { name: 'English Channel' })
+    .click();
   await expect(page.getByTestId('sea-zone-name')).toHaveText('English Channel');
   expect(await map.selectedSeaZone()).toBe('english_channel');
+  await waitForFrames(page);
+  await shot('coast-zone');
 
   // A coastal province's name selects the province (the sea zone panel makes way).
   await page.getByTestId('sea-zone-coasts').getByRole('button', { name: 'Normandie' }).click();

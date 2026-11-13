@@ -63,6 +63,17 @@ export const settingsSchema = z.strictObject({
     /** Size of one pixel of the grid used to find sea zones and coastlines. */
     degreesPerPixel: z.number().positive(),
   }),
+  /** How sea zones are split into coast zones and open-sea zones [DEFAULT]. */
+  seaZones: z.strictObject({
+    /** How far out from the shore a coast zone reaches, in km. */
+    coastBandKm: z.number().positive(),
+    /** Islands smaller than this (km²) don't count as a coast: the water around them stays open sea. */
+    minIslandKm2: z.number().min(0),
+    /** A zone whose open part would be less than this share of its water becomes a coast zone as a whole. */
+    minOpenShare: z.number().min(0).max(1),
+    /** A separate piece of coast or open sea smaller than this (km²) joins the zone's other part. */
+    minPieceKm2: z.number().min(0),
+  }),
   geometry: z.strictObject({
     /** TopoJSON quantization (grid steps across the world). */
     quantization: z.number().int().min(1000),
