@@ -10,5 +10,5 @@ Where we are: F132, F64, F01, F02, F70 (sea zones), F03 (strategy camera) and F0
 What F71 should do (first pass, as the build order says): approximate real-world 2025 starting data per country for the 172 countries: population, economy size (GDP) and government type, kept in data files with zod schemas and cross-checks, with sources noted. Show the new numbers in the country panel. Anything the design doesn't define yet gets a simple placeholder marked [DEFAULT]; ask me before inventing anything bigger. Tell me where the numbers come from and how accurate they are.
 
 I'm a beginner, so walk me through anything I need to do myself step by step.
-When the feature is done, push it, open the pull request, tell me how to test it on the preview link, then give me the next prompt.
+When the feature is done, push it, open the pull request and watch it (fix failing checks), tell me how to test it on the preview link, then give me the next prompt.
 ```
