@@ -5,7 +5,7 @@ import { loadGameDataFromDisk } from '../src';
 import {
   COUNTRY_PALETTE,
   MIN_BORDER_CONTRAST,
-  assignCountryColors,
+  assignDistinctColors,
   assignTraditionalColors,
   colorDifference,
   mapColorContrast,
@@ -308,7 +308,7 @@ describe('countries', () => {
       ['B', new Set(['A', 'C'])],
       ['C', new Set(['A', 'B'])],
     ]);
-    const colors = assignCountryColors(['A', 'B', 'C'], neighbors);
+    const colors = assignDistinctColors(['A', 'B', 'C'], neighbors);
     expect(new Set(colors.values()).size).toBe(3);
   });
 
@@ -349,14 +349,14 @@ describe('countries', () => {
       ['A', new Set(['F'])],
       ['F', new Set(['A'])],
     ]);
-    const colors = assignCountryColors(ids, neighbors, near);
+    const colors = assignDistinctColors(ids, neighbors, near);
     const apart = (a: string, b: string) => mapColorContrast(colors.get(a)!, colors.get(b)!);
     for (const [a, b] of ['AB', 'BC', 'CD', 'DE'].map((pair) => [...pair]))
       expect(apart(a, b)).toBeGreaterThan(0.15);
     expect(apart('A', 'F')).toBeGreaterThan(0.12);
     expect(apart('A', 'C')).toBeGreaterThan(0.07); // both border B
     // The same input always gives the same colors.
-    expect([...assignCountryColors(ids, neighbors, near)]).toEqual([...colors]);
+    expect([...assignDistinctColors(ids, neighbors, near)]).toEqual([...colors]);
   });
 
   it('keeps traditional colors, and shifts the smaller of two look-alike neighbors', () => {
@@ -406,6 +406,48 @@ describe('countries', () => {
     }
     // Every country in the game has a traditional color.
     expect(world.countryIds.filter((id) => !(id in traditional))).toEqual([]);
+  });
+
+  it('the real map: small countries are not cut finer than big ones', () => {
+    const data = loadGameDataFromDisk();
+    const count = (id: string) => data.provinces.provinces.filter((p) => p.country === id).length;
+    // Countries made of many small real regions are merged down to their budget…
+    expect(count('SVN')).toBe(2);
+    expect(count('MKD')).toBe(2);
+    expect(count('KOS')).toBe(2);
+    expect(count('IRL')).toBe(4); // Leinster, Munster, Connacht, Ulster
+    // …but areas marked "keep" stay on their own.
+    const moldova = data.provinces.provinces.filter((p) => p.country === 'MDA').map((p) => p.id);
+    expect(moldova).toEqual(expect.arrayContaining(['mda_transnistria', 'mda_gagauzia']));
+    expect(data.provinces.provinces.some((p) => p.id === 'aze_nakhchivan')).toBe(true);
+    // Spain is divided into its autonomous communities.
+    expect(count('ESP')).toBe(18);
+  });
+
+  it('the real map: regions that share a border have clearly different colors', () => {
+    const world = buildWorldMap(loadGameDataFromDisk());
+    const alike = new Set<string>();
+    for (let province = 0; province < world.provinceIds.length; province++) {
+      const region = world.provinceRegion[province];
+      for (
+        let k = world.provinceNeighbors.offsets[province];
+        k < world.provinceNeighbors.offsets[province + 1];
+        k++
+      ) {
+        const other = world.provinceRegion[world.provinceNeighbors.targets[k]];
+        if (other <= region) continue;
+        const difference = mapColorContrast(
+          world.regionMapColor[region],
+          world.regionMapColor[other],
+        );
+        if (difference < MIN_BORDER_CONTRAST * 0.999)
+          alike.add(
+            `${world.regionIds[region]} and ${world.regionIds[other]}: ${difference.toFixed(3)}`,
+          );
+      }
+    }
+    expect([...alike]).toEqual([]);
+    expect(new Set(world.regionMapColor).size).toBeGreaterThanOrEqual(25);
   });
 
   it('the real map: countries that share a border have clearly different colors', () => {

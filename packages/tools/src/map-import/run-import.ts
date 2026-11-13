@@ -8,6 +8,7 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import { DATA_DIR, LOCALES_DIR, REPO_ROOT } from '../load-data';
 import {
   MIN_BORDER_CONTRAST,
+  assignDistinctColors,
   assignTraditionalColors,
   mapColorContrast,
   varyColor,
@@ -331,27 +332,44 @@ export async function runMapImport(
       countryNeighbors.get(a)!.add(b);
     }
   });
-  // Countries that almost touch (across a strait or a narrow sea). The gap between two provinces
-  // is estimated from their label points and areas, as if they were round.
+  // Countries (and regions) that almost touch (across a strait or a narrow sea). The gap between
+  // two provinces is estimated from their label points and areas, as if they were round.
   const nearCountries = new Map<string, Set<string>>();
+  const nearRegions = new Map<string, Set<string>>();
+  const addPair = (map: Map<string, Set<string>>, a: string, b: string) => {
+    if (!map.has(a)) map.set(a, new Set());
+    if (!map.has(b)) map.set(b, new Set());
+    map.get(a)!.add(b);
+    map.get(b)!.add(a);
+  };
   const reach = provinces.map((p) => Math.sqrt(p.areaKm2 / Math.PI));
   const provinceCount = new Map<string, number>();
   for (const p of provinces) provinceCount.set(p.country, (provinceCount.get(p.country) ?? 0) + 1);
   // A big country's specks far from home (a base, an islet) don't make it "near" anyone.
   const countsAsNear = (p: ProvinceDraft) =>
     p.areaKm2 >= settings.colors.nearMinProvinceKm2 || (provinceCount.get(p.country) ?? 0) <= 3;
+  const bigEnough = (p: ProvinceDraft) => p.areaKm2 >= settings.colors.nearMinProvinceKm2;
   for (let i = 0; i < provinces.length; i++) {
-    if (!countsAsNear(provinces[i])) continue;
     for (let j = i + 1; j < provinces.length; j++) {
       const a = provinces[i].country;
       const b = provinces[j].country;
-      if (a === b || nearCountries.get(a)?.has(b) || !countsAsNear(provinces[j])) continue;
+      const ra = provinceRegion[i];
+      const rb = provinceRegion[j];
+      const countries =
+        a !== b &&
+        !nearCountries.get(a)?.has(b) &&
+        countsAsNear(provinces[i]) &&
+        countsAsNear(provinces[j]);
+      const regions =
+        ra !== rb &&
+        !nearRegions.get(ra)?.has(rb) &&
+        bigEnough(provinces[i]) &&
+        bigEnough(provinces[j]);
+      if (!countries && !regions) continue;
       const gap = distanceKm(centers[i], centers[j]) - reach[i] - reach[j];
       if (gap > settings.colors.nearCountryKm) continue;
-      if (!nearCountries.has(a)) nearCountries.set(a, new Set());
-      if (!nearCountries.has(b)) nearCountries.set(b, new Set());
-      nearCountries.get(a)!.add(b);
-      nearCountries.get(b)!.add(a);
+      if (countries) addPair(nearCountries, a, b);
+      if (regions) addPair(nearRegions, ra, rb);
     }
   }
   // Every country's traditional color (country-colors.json), shifted a little only where a
@@ -383,6 +401,29 @@ export async function runMapImport(
   if (closestColors.difference < MIN_BORDER_CONTRAST * 0.999)
     warn(
       `the map colors of ${closestColors.a} and ${closestColors.b}, which share a border, are hard to tell apart (difference ${closestColors.difference.toFixed(3)})`,
+    );
+  // Regions: clearly different colors from the spare palette, chosen the same way, so that
+  // regions that border or nearly touch are easy to tell apart.
+  const regionNeighbors = new Map<string, Set<string>>();
+  landNeighbors.forEach((list, i) => {
+    for (const j of list) {
+      const a = provinceRegion[i];
+      const b = provinceRegion[j];
+      if (a !== b) addPair(regionNeighbors, a, b);
+    }
+  });
+  const regionIds = regionConfigs.map((r) => r.id);
+  const regionColors = assignDistinctColors(regionIds, regionNeighbors, nearRegions);
+  let closestRegions = { difference: Infinity, a: '', b: '' };
+  for (const [a, list] of regionNeighbors) {
+    for (const b of list) {
+      const difference = mapColorContrast(regionColors.get(a)!, regionColors.get(b)!);
+      if (a < b && difference < closestRegions.difference) closestRegions = { difference, a, b };
+    }
+  }
+  if (closestRegions.difference < MIN_BORDER_CONTRAST * 0.999)
+    warn(
+      `the map colors of regions ${closestRegions.a} and ${closestRegions.b}, which share a border, are hard to tell apart (difference ${closestRegions.difference.toFixed(3)})`,
     );
   const capitalOf = (country: string): string => {
     const own = provinces.filter((p) => p.country === country);
@@ -426,6 +467,7 @@ export async function runMapImport(
       id: region.id,
       climate: region.climate,
       center: center(regionCenter(region.id)),
+      mapColor: regionColors.get(region.id),
     })),
   );
   writeRows(
@@ -454,18 +496,6 @@ export async function runMapImport(
   log('Writing the report and preview pictures…');
   mkdirSync(REPORT_DIR, { recursive: true });
   const regionIndex = new Map(regionConfigs.map((r, i) => [r.id, i]));
-  const regionPalette = [
-    '#8c6d4f',
-    '#5f7f5a',
-    '#7a5c7e',
-    '#4f6f8f',
-    '#9a7b3c',
-    '#6b8e8a',
-    '#a0614f',
-    '#5b6b9a',
-    '#7f8f4f',
-    '#8f5f6f',
-  ];
   writeFileSync(
     join(REPORT_DIR, 'provinces.png'),
     renderPreview({
@@ -485,10 +515,8 @@ export async function runMapImport(
       land,
       sea,
       scale: 3,
-      landColor: (label) => {
-        const r = regionIndex.get(provinceRegion[label - 1])!;
-        return varyColor(regionPalette[r % regionPalette.length], `${r}`, 0.25);
-      },
+      landColor: (label) =>
+        varyColor(regionColors.get(provinceRegion[label - 1])!, provinces[label - 1].id),
       group: (label) => regionIndex.get(provinceRegion[label - 1])!,
     }),
   );
@@ -505,6 +533,8 @@ export async function runMapImport(
       warnings,
       [
         `every country has its traditional color from \`country-colors.json\`; ${adjustedColors.length} were shifted a little to stay apart from a neighbor. The two bordering countries with the most similar colors are ${closestColors.a} and ${closestColors.b} (difference ${closestColors.difference.toFixed(2)}; below ${MIN_BORDER_CONTRAST} would be hard to tell apart).`,
+        '',
+        `**Region colors:** clearly different colors chosen so that regions that border or nearly touch are easy to tell apart; the two bordering regions with the most similar colors are ${closestRegions.a} and ${closestRegions.b} (difference ${closestRegions.difference.toFixed(2)}).`,
         '',
         '## Country colors that were shifted',
         '',

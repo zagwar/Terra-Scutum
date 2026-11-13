@@ -48,8 +48,8 @@ export function testWorld() {
     },
     regions: {
       regions: [
-        { id: 'north', climate: 'temperate', center: [0, 10] },
-        { id: 'south', climate: 'arid', center: [2, 10] },
+        { id: 'north', climate: 'temperate', center: [0, 10], mapColor: '#778899' },
+        { id: 'south', climate: 'arid', center: [2, 10], mapColor: '#aa8844' },
       ],
     },
     seaZones: {
@@ -89,7 +89,6 @@ export function testMapView() {
       seaDeep: '#000040',
       seaShallow: '#000080',
       seaVariation: 0.05,
-      regionPalette: ['#800000', '#008000', '#000080', '#808000'],
       regionVariation: 0.1,
       selected: '#ffff00',
       neighbor: '#c0c000',

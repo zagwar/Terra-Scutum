@@ -42,6 +42,8 @@ export interface WorldMap {
   readonly countryCapital: Int32Array;
   /** Each country's color on the political map, as #rrggbb. */
   readonly countryMapColor: readonly string[];
+  /** Each region's color in the regions map mode, as #rrggbb. */
+  readonly regionMapColor: readonly string[];
 }
 
 /** The neighbors of item `index` in an adjacency list. */
@@ -105,6 +107,7 @@ export function buildWorldMap(data: GameData): WorldMap {
   });
 
   const countries = [...data.countries.countries].sort((a, b) => byId(a.id, b.id));
+  const regions = [...data.regions.regions].sort((a, b) => byId(a.id, b.id));
 
   return {
     provinceIds,
@@ -135,5 +138,6 @@ export function buildWorldMap(data: GameData): WorldMap {
       lookup(provinceIndex, c.capitalProvince, 'province'),
     ),
     countryMapColor: countries.map((c) => c.mapColor),
+    regionMapColor: regions.map((r) => r.mapColor),
   };
 }

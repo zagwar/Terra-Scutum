@@ -50,10 +50,10 @@ test('the world map shows every province; clicking one opens its info panel', as
   const shot = (name: string) =>
     page.screenshot({ path: join(SCREENSHOT_DIR, `map-${name}-${testInfo.project.name}.png`) });
 
-  await expect(page.getByTestId('map-status')).toHaveText('1,422 provinces');
+  await expect(page.getByTestId('map-status')).toHaveText('1,294 provinces');
   await waitForFrames(page);
   const stats = await page.evaluate(() => window.__terraScutum!.map.stats()!);
-  expect(stats.provinces).toBe(1422);
+  expect(stats.provinces).toBe(1294);
   expect(stats.seaZones).toBe(126);
   expect(stats.detail).toBe('far');
   expect(stats.drawnTriangles).toBeGreaterThan(50_000);

@@ -347,12 +347,14 @@
     {
       "country": "MDA",
       "name": "Gagauzia",
-      "units": ["MD-GA"]
+      "units": ["MD-GA"],
+      "keep": true
     },
     {
       "country": "MDA",
       "name": "Transnistria",
-      "units": ["MD-SN", "MD-BD", "MD-CAM", "MD-GRI"]
+      "units": ["MD-SN", "MD-BD", "MD-CAM", "MD-GRI"],
+      "keep": true
     },
     {
       "country": "BGR",
@@ -576,6 +578,309 @@
       "country": "ARG",
       "name": "Buenos Aires",
       "units": ["AR-B", "AR-C"]
+    },
+    {
+      "country": "IRL",
+      "name": "Leinster",
+      "units": [
+        "IE-D",
+        "IE-WW",
+        "IE-WX",
+        "IE-KK",
+        "IE-CW",
+        "IE-KE",
+        "IE-MH",
+        "IE-LH",
+        "IE-LS",
+        "IE-OY",
+        "IE-WH",
+        "IE-LD"
+      ]
+    },
+    {
+      "country": "IRL",
+      "name": "Munster",
+      "units": ["IE-CO", "IE-KY", "IE-LK", "IE-CE", "IE-TA", "IE-WD"]
+    },
+    {
+      "country": "IRL",
+      "name": "Connacht",
+      "units": ["IE-G", "IE-MO", "IE-SO", "IE-LM", "IE-RN"]
+    },
+    {
+      "country": "IRL",
+      "name": "Ulster",
+      "units": ["IE-DL", "IE-CN", "IE-MN"]
+    },
+    {
+      "country": "SVN",
+      "name": "Western Slovenia",
+      "groupings": [
+        "Osrednjeslovenska",
+        "Gorenjska",
+        "Goriška",
+        "Obalno-kraška",
+        "Notranjsko-kraška"
+      ]
+    },
+    {
+      "country": "SVN",
+      "name": "Eastern Slovenia",
+      "groupings": [
+        "Pomurska",
+        "Podravska",
+        "Koroška",
+        "Savinjska",
+        "Zasavska",
+        "Spodnjeposavska",
+        "Jugovzhodna Slovenija"
+      ]
+    },
+    {
+      "country": "ESP",
+      "name": "Andalusia",
+      "groupings": ["Andalucía"]
+    },
+    {
+      "country": "ESP",
+      "name": "Aragon",
+      "groupings": ["Aragón"]
+    },
+    {
+      "country": "ESP",
+      "name": "Asturias",
+      "groupings": ["Asturias"]
+    },
+    {
+      "country": "ESP",
+      "name": "Balearic Islands",
+      "groupings": ["Islas Baleares"]
+    },
+    {
+      "country": "ESP",
+      "name": "Basque Country",
+      "groupings": ["País Vasco"]
+    },
+    {
+      "country": "ESP",
+      "name": "Canary Islands",
+      "groupings": ["Canary Is."]
+    },
+    {
+      "country": "ESP",
+      "name": "Cantabria",
+      "groupings": ["Cantabria"]
+    },
+    {
+      "country": "ESP",
+      "name": "Castile and León",
+      "groupings": ["Castilla y León"]
+    },
+    {
+      "country": "ESP",
+      "name": "Castilla–La Mancha",
+      "groupings": ["Castilla-La Mancha"]
+    },
+    {
+      "country": "ESP",
+      "name": "Catalonia",
+      "groupings": ["Cataluña"]
+    },
+    {
+      "country": "ESP",
+      "name": "Extremadura",
+      "groupings": ["Extremadura"]
+    },
+    {
+      "country": "ESP",
+      "name": "Galicia",
+      "groupings": ["Galicia"]
+    },
+    {
+      "country": "ESP",
+      "name": "La Rioja",
+      "groupings": ["La Rioja"]
+    },
+    {
+      "country": "ESP",
+      "name": "Community of Madrid",
+      "groupings": ["Madrid"]
+    },
+    {
+      "country": "ESP",
+      "name": "Region of Murcia",
+      "groupings": ["Murcia"]
+    },
+    {
+      "country": "ESP",
+      "name": "Navarre",
+      "groupings": ["Foral de Navarra"]
+    },
+    {
+      "country": "ESP",
+      "name": "Valencian Community",
+      "groupings": ["Valenciana"]
+    },
+    {
+      "country": "ITA",
+      "name": "Piedmont and Liguria",
+      "groupings": ["Piemonte", "Valle d'Aosta", "Liguria"]
+    },
+    {
+      "country": "ITA",
+      "name": "Venetia",
+      "groupings": ["Veneto", "Friuli-Venezia Giulia", "Trentino-Alto Adige"]
+    },
+    {
+      "country": "ITA",
+      "name": "Umbria and Marche",
+      "groupings": ["Umbria", "Marche"]
+    },
+    {
+      "country": "ITA",
+      "name": "Abruzzo and Molise",
+      "groupings": ["Abruzzo", "Molise"]
+    },
+    {
+      "country": "ITA",
+      "name": "Apulia and Basilicata",
+      "groupings": ["Apulia", "Basilicata"]
+    },
+    {
+      "country": "AZE",
+      "name": "Nakhchivan",
+      "groupings": ["Naxçıvan Autonomous Republic"],
+      "keep": true
+    },
+    {
+      "country": "PHL",
+      "name": "Ilocos",
+      "groupings": ["Ilocos (Region I)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Cagayan Valley",
+      "groupings": ["Cagayan Valley (Region II)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Central Luzon",
+      "groupings": ["Central Luzon (Region III)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Calabarzon",
+      "groupings": ["CALABARZON (Region IV-A)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Mimaropa",
+      "groupings": ["MIMAROPA (Region IV-B)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Bicol",
+      "groupings": ["Bicol (Region V)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Western Visayas",
+      "groupings": ["Western Visayas (Region VI)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Central Visayas",
+      "groupings": ["Central Visayas (Region VII)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Eastern Visayas",
+      "groupings": ["Eastern Visayas (Region VIII)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Zamboanga Peninsula",
+      "groupings": ["Zamboanga Peninsula (Region IX)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Northern Mindanao",
+      "groupings": ["Northern Mindanao (Region X)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Davao",
+      "groupings": ["Davao (Region XI)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Soccsksargen",
+      "groupings": ["SOCCSKSARGEN (Region XII)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Caraga",
+      "groupings": ["Dinagat Islands (Region XIII)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Bangsamoro",
+      "groupings": ["Autonomous Region in Muslim Mindanao (ARMM)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Cordillera",
+      "groupings": ["Cordillera Administrative Region (CAR)"]
+    },
+    {
+      "country": "PHL",
+      "name": "Metro Manila",
+      "groupings": ["National Capital Region"]
+    },
+    {
+      "country": "LKA",
+      "name": "Western Province",
+      "groupings": ["Basnāhira paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Central Province",
+      "groupings": ["Madhyama paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Southern Province",
+      "groupings": ["Dakuṇu paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Northern Province",
+      "groupings": ["Uturu paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Eastern Province",
+      "groupings": ["Næ̆gĕnahira paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "North Western Province",
+      "groupings": ["Vayamba paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "North Central Province",
+      "groupings": ["Uturumæ̆da paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Uva",
+      "groupings": ["Ūva paḷāta"]
+    },
+    {
+      "country": "LKA",
+      "name": "Sabaragamuwa",
+      "groupings": ["Sabaragamuva paḷāta"]
     }
   ]
 }

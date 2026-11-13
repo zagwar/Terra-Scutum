@@ -29,7 +29,8 @@ and always gives the same result for the same inputs.
 - **`province-groups.json`**: states/provinces that are always combined into one province with a
   real name ("New England", "Transylvania", "Tōhoku"). A group lists its members by ISO 3166-2 code
   (`units`, e.g. `"US-CT"`), by source grouping (`groupings`, e.g. `"East Wales"`), by name
-  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). `keepSeparate` lists countries whose
+  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). A group with `"keep": true` is never
+  merged with another province (for areas that matter on their own, such as Transnistria). `keepSeparate` lists countries whose
   states are never combined automatically (only by their groups).
 - **`regions.json`**: the ~60 regions, as real geographic areas. A region lists its territories
   (`countries`, Natural Earth codes: `"GBR"` is Great Britain itself, overseas territories have
@@ -56,6 +57,10 @@ and always gives the same result for the same inputs.
     `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
   - `mergeBelowLoad`, `seaMergeBelowLoad`, `wholeGroupingBelowLoad`, `groupingMergePenalty`:
     which small states are combined, and how.
+  - `maxProvincesFactor`: the province budget. A country (each separate piece of land) may have at
+    most this many times its target number of provinces; above it, provinces are merged further,
+    even real regions and named groups (except groups marked `keep`), so small countries are not cut
+    finer than big ones.
   - `dominantShare`: a combined province keeps its main member's name when the other members are
     tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
@@ -73,7 +78,9 @@ Provinces always follow **real borders**: states and provinces are only ever com
 3. In each cluster: the named groups are combined first; then small source groupings that are still
    complete become single provinces with their real name ("Greater London", "Bretagne"); then, unless
    the country is in `keepSeparate`, the lightest provinces merge with a neighbor until the cluster
-   reaches its target.
+   reaches its target. If a cluster still has more provinces than its budget (`maxProvincesFactor`
+   × target), merging goes on across real regions and named groups too (never `keep` groups),
+   always joining the lightest province with the neighbor that gives the most compact result.
 4. Combined provinces are named: the group's name, the source grouping's name, the main member's name
    (a tiny piece was added), "A and B" for two members, or a direction in the country ("Northern
    Algeria"). The report lists every combined province and how it got its name; better names go in

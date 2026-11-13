@@ -5,7 +5,7 @@
  * sea, or shares a neighbor with it) would look too much alike: then the
  * less important of the two gets the nearest shade that can be told apart
  * (`assignTraditionalColors`). A country without a traditional color gets
- * one from a palette of clearly different colors (`assignCountryColors`).
+ * one from a palette of clearly different colors (`assignDistinctColors`).
  *
  * "How different two colors look" is measured in OKLab, a color space built
  * so that equal distances look like equal differences to the eye. Colors are
@@ -129,18 +129,19 @@ function hash(text: string): number {
 }
 
 /**
- * Gives every country a palette color.
+ * Gives every item (a country without a traditional color, a region) a
+ * palette color, as different as possible from the items around it.
  *
- * - `neighbors`: countries sharing a land border. Their colors are kept as far apart as possible.
- * - `near`: countries close to each other without a land border (across a strait or a narrow sea).
- * - Countries that share a neighbor are kept apart too, a little less strictly.
+ * - `neighbors`: items sharing a land border. Their colors are kept as far apart as possible.
+ * - `near`: items close to each other without a land border (across a strait or a narrow sea).
+ * - Items that share a neighbor are kept apart too, a little less strictly.
  *
- * Countries are colored one by one (the most hemmed-in first), each taking
+ * Items are colored one by one (the most hemmed-in first), each taking
  * the color that differs most from the ones around it; then every country is
  * looked at again a few times in case a better color has become available.
  * The result is always the same for the same input.
  */
-export function assignCountryColors(
+export function assignDistinctColors(
   countries: readonly string[],
   neighbors: ReadonlyMap<string, ReadonlySet<string>>,
   near: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
@@ -298,7 +299,7 @@ export function assignTraditionalColors(
   // Traditional colors only give way to countries that touch or nearly touch (not to ones that
   // merely share a neighbor): keeping the colors people expect matters more here.
   const links = buildLinks(countries, neighbors, near, false);
-  const fallback = assignCountryColors(countries, neighbors, near);
+  const fallback = assignDistinctColors(countries, neighbors, near);
   const wanted = countries.map((id) => preferred.get(id) ?? fallback.get(id)!);
   const chosen: (string | null)[] = countries.map(() => null);
   const order = countries

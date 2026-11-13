@@ -78,7 +78,12 @@ describe('map data checks', () => {
     ).toContain('country "CCC" has no provinces');
     expect(
       issuesAfter((raw) => {
-        raw.regions.regions.push({ id: 'empty', climate: 'polar', center: [0, 0] });
+        raw.regions.regions.push({
+          id: 'empty',
+          climate: 'polar',
+          center: [0, 0],
+          mapColor: '#123456',
+        });
       }).join('\n'),
     ).toContain('region "empty" has no provinces');
     expect(
@@ -145,6 +150,7 @@ describe('world map lookups', () => {
     expect(world.provinceIds[world.countryCapital[c('AAA')]]).toBe('alpha_west');
     expect(world.provinceIds[world.countryCapital[c('BBB')]]).toBe('beta_main');
     expect(world.countryMapColor).toEqual(['#112233', '#445566']);
+    expect(world.regionMapColor).toEqual(['#778899', '#aa8844']);
   });
 
   it('is part of every game state', () => {

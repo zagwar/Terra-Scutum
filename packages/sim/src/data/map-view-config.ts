@@ -81,8 +81,10 @@ export const mapViewSchema = z.strictObject({
      * (`data/countries.json`); each province is shaded slightly differently.
      */
     politicalVariation: fraction,
-    /** Colors for the "regions" map mode; neighboring regions get different ones. */
-    regionPalette: z.array(hexColor).min(4),
+    /**
+     * The "regions" map mode colors provinces by their region's map color (`data/regions.json`,
+     * chosen by the map import); each province is shaded slightly differently.
+     */
     regionVariation: fraction,
     /** The selected province, and how strongly its neighbors are tinted with `neighbor`. */
     selected: hexColor,

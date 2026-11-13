@@ -26,6 +26,12 @@ export const settingsSchema = z.strictObject({
     populationUnit: z.number().positive(),
     /** Only provinces lighter than this (in "average province" units) are merged into a neighbor. */
     mergeBelowLoad: z.number().positive(),
+    /**
+     * The most provinces a country (each separate piece of land: one cluster) may have, as a
+     * multiple of its target. Above it, provinces are merged further, even real regions and named
+     * groups (except those marked `keep`), so small countries aren't cut finer than big ones.
+     */
+    maxProvincesFactor: z.number().min(1),
     /** A province with no land neighbor of its country (an island) only merges across the sea if lighter than this. */
     seaMergeBelowLoad: z.number().min(0),
     /**
@@ -145,6 +151,11 @@ export const provinceGroupsSchema = z.strictObject({
       names: z.array(z.string().min(1)).optional(),
       /** Whole Natural Earth territories (e.g. "HKG" for Hong Kong). */
       territories: z.array(z.string().regex(countryIdPattern)).optional(),
+      /**
+       * Never merged with another province, even when the country has more provinces than its
+       * budget: for areas that matter on their own (a breakaway or autonomous region).
+       */
+      keep: z.boolean().optional(),
     }),
   ),
 });

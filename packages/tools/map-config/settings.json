@@ -6,6 +6,7 @@
     "areaPerProvinceKm2": 500000,
     "populationUnit": 1000000,
     "mergeBelowLoad": 0.4,
+    "maxProvincesFactor": 1.5,
     "seaMergeBelowLoad": 0.2,
     "wholeGroupingBelowLoad": 2.2,
     "groupingMergePenalty": 3,

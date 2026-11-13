@@ -314,7 +314,9 @@ test('the tiny provinces can be seen and clicked', async ({ page }, testInfo) =>
   await expect(page.getByTestId('province-name')).toHaveText('Gibraltar');
   await expect(page.getByTestId('province-country')).toHaveText('United Kingdom');
   await expect(page.getByTestId('province-area')).toHaveText('6.8 km²');
-  await expect(page.getByTestId('province-neighbors').getByRole('button')).toHaveText(['Cádiz']);
+  await expect(page.getByTestId('province-neighbors').getByRole('button')).toHaveText([
+    'Andalusia',
+  ]);
   await page.getByTestId('country-close').click();
   await waitForFrames(page, 3);
   await shot('gibraltar');

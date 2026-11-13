@@ -6,7 +6,6 @@ import seaZonesText from '../../../data/geometry/sea_zones.topo.json?raw';
 import {
   MAP_MODES,
   applyHighlight,
-  assignRegionPalette,
   provinceBaseColors,
   seaZoneColors,
 } from '../src/render/map/map-colors';
@@ -127,7 +126,7 @@ describe('picking (which province is at a point)', () => {
     expect(at(12.4534, 41.9033 + 0.07)).toBe('vat_vatican_city'); // 8 km north: still the disc
     expect(at(12.4534, 41.9033 + 0.12)).toBe('ita_lazio'); // 13 km north: Italy around it
     expect(at(-5.3536, 36.1408)).toBe('gbr_gibraltar');
-    expect(at(-5.3536, 36.1408 + 0.12)).toBe('esp_cadiz');
+    expect(at(-5.3536, 36.1408 + 0.12)).toBe('esp_andalusia');
     expect(at(72.43, -7.33)).toBe('gbr_british_indian_ocean_territory');
     // Their label points and every other province's lie inside the province.
     const outside = data.provinces.provinces.filter((p) => at(p.center[0], p.center[1]) !== p.id);
@@ -275,14 +274,22 @@ describe('map colors', () => {
   const colors = data.mapView.colors;
   const rgb = (table: Uint8Array, index: number) => [...table.subarray(index * 4, index * 4 + 3)];
 
-  it('gives neighboring regions different colors', () => {
-    const choice = assignRegionPalette(world, colors.regionPalette.length);
+  it('colors provinces by their region in the regions map mode', () => {
+    const near = (a: number[], b: number[]) =>
+      a.every((value, i) => Math.abs(value - b[i]) <= 255 * colors.regionVariation + 1);
+    const hex = (color: string) => [1, 3, 5].map((i) => Number.parseInt(color.slice(i, i + 2), 16));
+    const table = provinceBaseColors('regions', world, colors, world.provinceCountry);
+    world.provinceIds.forEach((_, province) => {
+      const region = world.provinceRegion[province];
+      expect(near(rgb(table, province), hex(world.regionMapColor[region]))).toBe(true);
+    });
+    // Neighboring regions never share a color.
     const clashes: string[] = [];
     for (let province = 0; province < world.provinceIds.length; province++) {
       const region = world.provinceRegion[province];
       for (const neighbor of neighborsOf(world.provinceNeighbors, province)) {
         const other = world.provinceRegion[neighbor];
-        if (other !== region && choice[other] === choice[region])
+        if (other !== region && world.regionMapColor[other] === world.regionMapColor[region])
           clashes.push(`${world.regionIds[region]} / ${world.regionIds[other]}`);
       }
     }

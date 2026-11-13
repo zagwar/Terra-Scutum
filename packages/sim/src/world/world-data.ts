@@ -63,6 +63,8 @@ export const regionsFileSchema = z.strictObject({
       id,
       climate: z.enum(CLIMATES),
       center: lonLat,
+      /** Color in the regions map mode [DEFAULT]: chosen by the map import so neighbors are easy to tell apart. */
+      mapColor: z.string().regex(/^#[0-9a-f]{6}$/),
     }),
   ),
 });
