@@ -128,20 +128,20 @@ export function applyHighlight(
 }
 
 /**
- * The color of every sea zone in a map mode. The sea zones map mode shades
- * coastal sea zones (bordering at least one province) a little differently
- * from open sea; every other mode shows deep and shallow water. Each zone is
- * shaded slightly differently. The sea always stays blue.
+ * The color of every sea zone in a map mode. Every mode but "sea zones" shows
+ * a calm sea: one even blue. The sea zones map mode shows coastal sea zones
+ * (bordering at least one province) in one blue and open sea in another, so
+ * the coast stands out a little. No random shading: two zones of the same
+ * kind always look the same.
  */
 export function seaZoneColors(mode: MapMode, world: WorldMap, colors: Colors): Uint8Array {
   const result = new Uint8Array(world.seaZoneIds.length * 4);
-  const [first, second] =
-    mode === 'seaZones'
-      ? [parseHexColor(colors.seaCoastal), parseHexColor(colors.seaOpen)]
-      : [parseHexColor(colors.seaShallow), parseHexColor(colors.seaDeep)];
-  world.seaZoneIds.forEach((id, zone) => {
-    const isFirst = mode === 'seaZones' ? isCoastalSeaZone(world, zone) : !world.seaZoneDeep[zone];
-    write(result, zone, vary(isFirst ? first : second, id, colors.seaVariation));
+  const sea = parseHexColor(colors.sea);
+  const coastal = parseHexColor(colors.seaCoastal);
+  const open = parseHexColor(colors.seaOpen);
+  world.seaZoneIds.forEach((_, zone) => {
+    if (mode !== 'seaZones') write(result, zone, sea);
+    else write(result, zone, isCoastalSeaZone(world, zone) ? coastal : open);
   });
   return result;
 }

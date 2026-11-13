@@ -205,13 +205,16 @@ export function traceLabels(grid: Grid, labels: Uint16Array): Map<number, Polygo
   const from: number[] = [];
   const to: number[] = [];
   const owner: number[] = [];
+  /** The label on the other side of each edge. */
+  const across: number[] = [];
   const outgoing = new Map<number, number[]>();
-  const addEdge = (x0: number, y0: number, x1: number, y1: number, l: number) => {
+  const addEdge = (x0: number, y0: number, x1: number, y1: number, l: number, other: number) => {
     const id = from.length;
     const start = y0 * stride + x0;
     from.push(start);
     to.push(y1 * stride + x1);
     owner.push(l);
+    across.push(other);
     const list = outgoing.get(start);
     if (list) list.push(id);
     else outgoing.set(start, [id]);
@@ -220,10 +223,14 @@ export function traceLabels(grid: Grid, labels: Uint16Array): Map<number, Polygo
     for (let x = 0; x < width; x++) {
       const l = labels[y * width + x];
       if (l === 0) continue;
-      if (label(x, y - 1) !== l) addEdge(x + 1, y, x, y, l);
-      if (label(x - 1, y) !== l) addEdge(x, y, x, y + 1, l);
-      if (label(x, y + 1) !== l) addEdge(x, y + 1, x + 1, y + 1, l);
-      if (label(x + 1, y) !== l) addEdge(x + 1, y + 1, x + 1, y, l);
+      const up = label(x, y - 1);
+      const left = label(x - 1, y);
+      const down = label(x, y + 1);
+      const right = label(x + 1, y);
+      if (up !== l) addEdge(x + 1, y, x, y, l, up);
+      if (left !== l) addEdge(x, y, x, y + 1, l, left);
+      if (down !== l) addEdge(x, y + 1, x + 1, y + 1, l, down);
+      if (right !== l) addEdge(x + 1, y + 1, x + 1, y, l, right);
     }
   }
 
@@ -238,10 +245,12 @@ export function traceLabels(grid: Grid, labels: Uint16Array): Map<number, Polygo
     if (visited[startEdge]) continue;
     const l = owner[startEdge];
     const points: [number, number][] = [];
+    const edges: number[] = [];
     let edge = startEdge;
     for (;;) {
       visited[edge] = 1;
       points.push([from[edge] % stride, Math.floor(from[edge] / stride)]);
+      edges.push(edge);
       const [dx, dy] = direction(edge);
       const options = (outgoing.get(to[edge]) ?? []).filter(
         (e) => owner[e] === l && (!visited[e] || e === startEdge),
@@ -258,10 +267,14 @@ export function traceLabels(grid: Grid, labels: Uint16Array): Map<number, Polygo
       if (next === startEdge) break;
       edge = next;
     }
-    // Keep only the corners.
+    // Keep only the corners, and the points where the neighbor on the other side changes: a
+    // neighboring shape has a corner there, and both shapes need that point to share their border
+    // (otherwise the shared border can't be found and its line goes missing).
     const corners = points.filter((p, i) => {
-      const prev = points[(i - 1 + points.length) % points.length];
+      const before = (i - 1 + points.length) % points.length;
+      const prev = points[before];
       const next = points[(i + 1) % points.length];
+      if (across[edges[before]] !== across[edges[i]]) return true;
       return (p[0] - prev[0]) * (next[1] - p[1]) - (p[1] - prev[1]) * (next[0] - p[0]) !== 0;
     });
     const list = rings.get(l) ?? [];
