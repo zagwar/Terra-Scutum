@@ -11,6 +11,7 @@ import {
   assignDistinctColors,
   assignTraditionalColors,
   mapColorContrast,
+  parseHex,
   varyColor,
 } from './colors';
 import { type MapConfig, loadMapConfig } from './config';
@@ -518,6 +519,24 @@ export async function runMapImport(
       landColor: (label) =>
         varyColor(regionColors.get(provinceRegion[label - 1])!, provinces[label - 1].id),
       group: (label) => regionIndex.get(provinceRegion[label - 1])!,
+    }),
+  );
+  // Sea zones in clearly different colors on gray land, to check which coasts each one touches.
+  const seaZoneColors = assignDistinctColors(
+    zones.map((zone) => zone.id),
+    new Map(
+      zones.map((zone, i) => [zone.id, new Set([...zoneNeighbors[i]].map((j) => zones[j].id))]),
+    ),
+  );
+  writeFileSync(
+    join(REPORT_DIR, 'sea_zones.png'),
+    renderPreview({
+      grid,
+      land,
+      sea,
+      scale: 3,
+      landColor: (label) => varyColor('#8a8a80', provinces[label - 1].id, 0.08),
+      seaColor: (label) => parseHex(seaZoneColors.get(zones[label - 1].id)!),
     }),
   );
   writeFileSync(

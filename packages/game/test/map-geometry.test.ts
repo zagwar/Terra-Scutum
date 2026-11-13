@@ -1,4 +1,4 @@
-import { buildWorldMap, neighborsOf, parseGameData } from '@terra-scutum/sim';
+import { buildWorldMap, isCoastalSeaZone, neighborsOf, parseGameData } from '@terra-scutum/sim';
 import type { Objects, Topology } from 'topojson-specification';
 import { describe, expect, it } from 'vitest';
 import provincesText from '../../../data/geometry/provinces.topo.json?raw';
@@ -6,6 +6,7 @@ import seaZonesText from '../../../data/geometry/sea_zones.topo.json?raw';
 import {
   MAP_MODES,
   applyHighlight,
+  applySeaHighlight,
   provinceBaseColors,
   seaZoneColors,
 } from '../src/render/map/map-colors';
@@ -27,7 +28,7 @@ import {
   wholeLine,
 } from '../src/render/map/map-geometry';
 import { createMapProjection } from '../src/render/map/map-projection';
-import { createShapeLookup } from '../src/render/map/shape-lookup';
+import { createShapeLookup, findTarget } from '../src/render/map/shape-lookup';
 import { RAW_GAME_DATA } from '../src/worker/game-data';
 
 // These tests run on the real map: all provinces and sea zones of the game.
@@ -302,7 +303,11 @@ describe('map colors', () => {
       expect(table.length).toBe(world.provinceIds.length * 4);
       for (let i = 3; i < table.length; i += 4) expect(table[i]).toBe(255);
     }
-    expect(seaZoneColors(world, colors).length).toBe(world.seaZoneIds.length * 4);
+    for (const mode of MAP_MODES) {
+      const sea = seaZoneColors(mode, world, colors);
+      expect(sea.length).toBe(world.seaZoneIds.length * 4);
+      for (let i = 3; i < sea.length; i += 4) expect(sea[i]).toBe(255);
+    }
   });
 
   it('colors provinces by their current owner in the political map mode', () => {
@@ -349,5 +354,99 @@ describe('map colors', () => {
     // Clearing the highlight brings the base colors back.
     applyHighlight(base, shown, { selected: null, hovered: null }, world, colors);
     expect(shown).toEqual(base);
+  });
+
+  it('shades sea zones by depth, and by coastal or open sea in the sea zones map mode', () => {
+    const hex = (color: string) => [1, 3, 5].map((i) => Number.parseInt(color.slice(i, i + 2), 16));
+    const near = (a: number[], color: string) =>
+      a.every((value, i) => Math.abs(value - hex(color)[i]) <= 255 * colors.seaVariation + 1);
+    const zone = (id: string) => world.seaZoneIndex.get(id)!;
+    const byDepth = seaZoneColors('political', world, colors);
+    const byCoast = seaZoneColors('seaZones', world, colors);
+    world.seaZoneIds.forEach((_, z) => {
+      expect(near(rgb(byDepth, z), world.seaZoneDeep[z] ? colors.seaDeep : colors.seaShallow)).toBe(
+        true,
+      );
+      expect(
+        near(rgb(byCoast, z), isCoastalSeaZone(world, z) ? colors.seaCoastal : colors.seaOpen),
+      ).toBe(true);
+      // The sea stays blue in every map mode.
+      for (const table of [byDepth, byCoast]) {
+        const [r, g, b] = rgb(table, z);
+        expect(b).toBeGreaterThan(Math.max(r, g));
+      }
+    });
+    // Every map mode but sea zones shows the same sea.
+    for (const mode of MAP_MODES)
+      if (mode !== 'seaZones') expect(seaZoneColors(mode, world, colors)).toEqual(byDepth);
+    // The North Sea is coastal; the open North Atlantic is not.
+    expect(isCoastalSeaZone(world, zone('north_sea'))).toBe(true);
+    expect(isCoastalSeaZone(world, zone('north_atlantic'))).toBe(false);
+  });
+
+  it('marks the selected and the hovered sea zone', () => {
+    const base = seaZoneColors('seaZones', world, colors);
+    const shown = new Uint8Array(base.length);
+    const northSea = world.seaZoneIndex.get('north_sea')!;
+    const baltic = world.seaZoneIndex.get('baltic_sea')!;
+    applySeaHighlight(base, shown, { selected: northSea, hovered: baltic }, colors);
+    expect(rgb(shown, northSea)[0]).toBeGreaterThan(rgb(base, northSea)[0]);
+    expect(rgb(shown, baltic)[0]).toBeGreaterThan(rgb(base, baltic)[0]);
+    applySeaHighlight(base, shown, { selected: null, hovered: null }, colors);
+    expect(shown).toEqual(base);
+  });
+});
+
+describe('sea zone picking', () => {
+  const seaLookup = createShapeLookup(
+    decodePolygons(seaTopology, 'seaZones', (id) => world.seaZoneIndex.get(id)!, projection),
+    projection,
+  );
+  const targetAt = (longitude: number, latitude: number) =>
+    findTarget(lookup, seaLookup, projection.x(longitude), projection.z(latitude));
+
+  it('finds sea zones on the water, and provinces on land (land wins over the sea zone under it)', () => {
+    expect(targetAt(3, 56)).toEqual({
+      kind: 'seaZone',
+      index: world.seaZoneIndex.get('north_sea'),
+    });
+    expect(targetAt(-40, 45)).toEqual({
+      kind: 'seaZone',
+      index: world.seaZoneIndex.get('north_atlantic'),
+    });
+    // Paris: the sea zone shapes continue under the land, but the province is found.
+    expect(seaLookup.find(projection.x(2.35), projection.z(48.86))).toBeGreaterThanOrEqual(0);
+    expect(targetAt(2.35, 48.86)).toEqual({
+      kind: 'province',
+      index: world.provinceIndex.get('fra_ile_de_france'),
+    });
+    // Across the date line, on either side.
+    expect(targetAt(179.5, 20)?.kind).toBe('seaZone');
+    expect(targetAt(-179.5, 20)?.kind).toBe('seaZone');
+    // Outside the map (north of its top edge): nothing.
+    expect(targetAt(0, 89.9)).toBeNull();
+  });
+
+  it('finds every sea zone at its label point', () => {
+    const wrong: string[] = [];
+    world.seaZoneIds.forEach((id, zone) => {
+      const longitude = world.seaZoneCenter[zone * 2];
+      const latitude = world.seaZoneCenter[zone * 2 + 1];
+      const { southLatitude, northLatitude } = data.mapView.projection;
+      // Some polar label points (the North Pole, the far Southern Ocean) are on or past the map's edge.
+      if (latitude >= northLatitude || latitude <= southLatitude) return;
+      const found = targetAt(longitude, latitude);
+      if (found?.kind !== 'seaZone' || found.index !== zone)
+        wrong.push(`${id} → ${found ? `${found.kind} ${found.index}` : 'nothing'}`);
+    });
+    expect(wrong).toEqual([]);
+  });
+
+  it('lists coastal provinces that really face the sea zone (the Philippine Sea)', () => {
+    const coasts = neighborsOf(world.seaZoneProvinces, world.seaZoneIndex.get('philippine_sea')!);
+    const ids = Array.from(coasts, (province) => world.provinceIds[province]);
+    expect(ids).toEqual(
+      expect.arrayContaining(['phl_bicol', 'phl_davao', 'jpn_okinawa', 'jpn_shikoku']),
+    );
   });
 });

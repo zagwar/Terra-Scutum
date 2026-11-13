@@ -21,9 +21,15 @@ export interface AppState {
   readonly world: WorldMap | null;
   readonly saveFormatVersion: number | null;
   readonly mapMode: MapMode;
-  /** Province indices (see `WorldMap`), or null for none. */
+  /**
+   * Province indices (see `WorldMap`), or null for none. At most one province
+   * or one sea zone is selected: selecting one clears the other.
+   */
   readonly selectedProvince: number | null;
   readonly hoveredProvince: number | null;
+  /** Sea zone indices (see `WorldMap`), or null for none. */
+  readonly selectedSeaZone: number | null;
+  readonly hoveredSeaZone: number | null;
   /** The country (index) whose panel is open, or null. */
   readonly selectedCountry: number | null;
   /** A problem to show the player: a translation key plus technical detail for bug reports. */
@@ -48,6 +54,8 @@ export function createAppStore(): AppStore {
     mapMode: 'political',
     selectedProvince: null,
     hoveredProvince: null,
+    selectedSeaZone: null,
+    hoveredSeaZone: null,
     selectedCountry: null,
     error: null,
   };

@@ -5,6 +5,7 @@ import {
   buildWorldMap,
   countryNameKey,
   formatDataIssue,
+  isCoastalSeaZone,
   neighborsOf,
   parseGameData,
   provinceNameKey,
@@ -151,6 +152,19 @@ describe('world map lookups', () => {
     expect(world.provinceIds[world.countryCapital[c('BBB')]]).toBe('beta_main');
     expect(world.countryMapColor).toEqual(['#112233', '#445566']);
     expect(world.regionMapColor).toEqual(['#778899', '#aa8844']);
+  });
+
+  it("knows each sea zone's label point and whether it is coastal", () => {
+    const z = (id: string) => world.seaZoneIndex.get(id)!;
+    expect([...world.seaZoneCenter]).toEqual([2, 5, 0, 5]); // east_sea, then west_sea
+    expect(isCoastalSeaZone(world, z('east_sea'))).toBe(true);
+    // A sea zone that no province borders is open sea.
+    const raw = structuredClone(testRawData()) as Raw;
+    for (const province of raw.provinces.provinces)
+      province.adjacentSeaZones = province.adjacentSeaZones.filter((id) => id !== 'west_sea');
+    const open = buildWorldMap(parseGameData(raw));
+    expect(isCoastalSeaZone(open, open.seaZoneIndex.get('west_sea')!)).toBe(false);
+    expect(isCoastalSeaZone(open, open.seaZoneIndex.get('east_sea')!)).toBe(true);
   });
 
   it('is part of every game state', () => {

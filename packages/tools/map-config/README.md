@@ -9,7 +9,7 @@ These files are the **source of the game map**. The map import turns them, toget
 | `data/countries.json`, `data/provinces.json`, `data/regions.json`, `data/sea_zones.json` | The map facts the simulation uses: owners, regions, borders (adjacency), coasts, areas |
 | `data/geometry/*.topo.json` | The shapes (TopoJSON), drawn by the game |
 | `locales/en.map.json` | The English names of every country, province, region and sea zone |
-| `report/` | `map-report.md` (lists, counts, warnings) and preview pictures |
+| `report/` | `map-report.md` (lists, counts, warnings) and preview pictures (provinces, regions, sea zones) |
 
 **Never edit the outputs by hand**: change the files here and run the import again:
 
@@ -39,7 +39,9 @@ and always gives the same result for the same inputs.
   and the import warns about it.
 - **`sea-zones.json`**: the sea zones. Each grows through the water from its seed points (which
   must be in open water). `connections` adds links through straits too narrow for the import's
-  grid (for example the Bosporus).
+  grid (for example the Bosporus). If a zone grows around a coast that really faces another zone,
+  add a seed for that other zone just off the coast; `report/sea_zones.png` shows every sea zone in
+  its own color, so you can see which coasts each one touches.
 - **`province-names.json`**: better display names for generated provinces, by province id. Ids never
   change when a name does.
 - **`tiny-provinces.json`**: provinces that are too small for the map data's precision (their

@@ -1,4 +1,4 @@
-import { type WorldMap, countryNameKey, provinceNameKey } from '@terra-scutum/sim';
+import { type WorldMap, countryNameKey, provinceNameKey, seaZoneNameKey } from '@terra-scutum/sim';
 import { useLayoutEffect, useRef } from 'react';
 import { t, tKey } from './i18n';
 
@@ -6,8 +6,8 @@ export interface MapTooltipProps {
   readonly world: WorldMap;
   /** The country (index) that owns each province right now. */
   readonly provinceOwner: Uint16Array;
-  /** Index of the province under the mouse. */
-  readonly province: number;
+  /** What is under the mouse: a province or a sea zone (by index). */
+  readonly target: { readonly kind: 'province' | 'seaZone'; readonly index: number };
 }
 
 /** Distance between the mouse and the tooltip, in pixels. */
@@ -20,11 +20,12 @@ window.addEventListener('pointermove', (event) => {
 });
 
 /**
- * The small label that follows the mouse over the map. It moves itself with
+ * The small label that follows the mouse over the map: a province's name and
+ * owner, or a sea zone's name. It moves itself with
  * the mouse (without going through the app store), so React only re-renders
  * when the province changes.
  */
-export function MapTooltip({ world, provinceOwner, province }: MapTooltipProps) {
+export function MapTooltip({ world, provinceOwner, target }: MapTooltipProps) {
   const element = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -47,10 +48,14 @@ export function MapTooltip({ world, provinceOwner, province }: MapTooltipProps) 
 
   return (
     <div ref={element} className="map-tooltip" data-testid="map-tooltip">
-      {t('MAP_TOOLTIP_PROVINCE', {
-        province: tKey(provinceNameKey(world.provinceIds[province])),
-        country: tKey(countryNameKey(world.countryIds[provinceOwner[province]])),
-      })}
+      {target.kind === 'province'
+        ? t('MAP_TOOLTIP_PROVINCE', {
+            province: tKey(provinceNameKey(world.provinceIds[target.index])),
+            country: tKey(countryNameKey(world.countryIds[provinceOwner[target.index]])),
+          })
+        : t('MAP_TOOLTIP_SEA_ZONE', {
+            seaZone: tKey(seaZoneNameKey(world.seaZoneIds[target.index])),
+          })}
     </div>
   );
 }

@@ -73,9 +73,19 @@ export const mapViewSchema = z.strictObject({
     /** Land in the "provinces" map mode; each province is shaded slightly differently. */
     land: hexColor,
     landVariation: fraction,
+    /** The sea in every map mode except "sea zones": deep and shallow sea zones. */
     seaDeep: hexColor,
     seaShallow: hexColor,
     seaVariation: fraction,
+    /**
+     * The sea in the "sea zones" map mode: coastal sea zones (bordering at least one
+     * province) and open-sea zones, so the coast stands out a little.
+     */
+    seaCoastal: hexColor,
+    seaOpen: hexColor,
+    /** The selected sea zone is tinted with this color (a lighter blue: the sea stays blue), this strongly. */
+    seaSelected: hexColor,
+    seaSelectedStrength: fraction,
     /**
      * The "political" map mode colors provinces by their owner's map color
      * (`data/countries.json`); each province is shaded slightly differently.
@@ -99,6 +109,8 @@ export const mapViewSchema = z.strictObject({
     regionBorder: lineStyle,
     coast: lineStyle,
     seaZoneBorder: lineStyle,
+    /** Sea zone borders in the "sea zones" map mode, where they stand out. */
+    seaZoneBorderEmphasis: lineStyle,
     selection: lineStyle,
   }),
 });
