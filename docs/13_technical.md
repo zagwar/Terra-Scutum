@@ -110,6 +110,46 @@ terra-scutum/
 ### Scope for release
 Single-player only. **No multiplayer, modding support or extra languages for now**; they may be added after release. To keep that door open cheaply: content in data files, all text through translation keys, and a deterministic sim separate from the UI.
 
+### Performance plan and engine checkpoints
+**Performance is the designer's biggest concern, so it's measured early, before most of the game is built, while switching engines is still cheap.**
+
+**Where the risk is:**
+| Area | Risk in the browser | Why |
+|---|---|---|
+| **Simulation** (daily tick) | **Low to medium** | Modern browser JavaScript is fast for number-crunching on typed arrays, and the sim runs in a Web Worker so it never stutters the graphics. Hot spots can move to Rust/WebAssembly for near-native speed |
+| **Rendering** (cities, units, bugs, terrain) | **Medium to high** | Browser 3D has more overhead per draw call and fewer graphics features than a native engine. Huge numbers of visible objects with realistic lighting are the hardest part |
+| **Memory** | **Medium** | Browser tabs have tighter memory limits than native apps, so the map, terrain and data must stay compact |
+
+A desktop wrapper (Electron/Tauri) does **not** fix performance, since it uses the same browser engine inside.
+
+**Performance budgets [DEFAULT]**, measured on a **mid-range PC** (not just the designer's own PC):
+- **Simulation:** daily tick ≤ 30 ms average, worst-case day ≤ 100 ms, weekly calculations ≤ 150 ms, with ~1,000 provinces and every country simulated. Top game speed runs several days per second.
+- **Rendering:** ≥ 60 FPS at strategic zoom and ≥ 30 FPS in the busiest close-up and battle views.
+- **Memory:** total tab memory ≤ 2 GB in a late-game save.
+- **Loading:** a new game loads in ≤ 20 seconds on a normal connection.
+
+**Stress tests** (built in M1, extended in M2, rerun at every milestone):
+- **Sim stress test** (campaign runner): the full map, every country, 10+ years of game time, many seeds. Reports average and worst tick times and memory.
+- **Render stress test** (a debug scene opened with `?debug=stress`): the full map with **late-game load**: about 20,000 building instances, 5,000 unit models, a battle with 2,000+ bugs, full infrastructure lines, weather and effects. It reports FPS, frame time, draw calls and memory, and Playwright records the numbers. The numbers from the headless cloud browser aren't real-world numbers, so the designer also opens the stress test on the preview link and reads the on-screen counter.
+
+**What to do when a budget is missed (in this order):**
+1. Optimize the TypeScript: typed arrays, no allocation in hot loops, fewer messages between worker and game.
+2. Rendering: more instancing, lower detail at distance, fewer shadows and effects, merged meshes, WebGPU.
+3. Split the sim across **several workers** (for example per region or per system).
+4. Move the hottest sim code to **Rust compiled to WebAssembly**.
+5. Lower visual ambition where it doesn't hurt the game (for example aggregated buildings at mid zoom).
+6. **Switch engines** (to Godot), only if the budgets still can't be met. This is what the checkpoints are for.
+
+**Engine checkpoints:**
+- **Checkpoint 1, end of M1 (F139):** the full map, terrain and the render stress test, plus a sim stress test with placeholder load. It answers: can the browser draw this world fast enough?
+- **Checkpoint 2, end of M2 (F140):** the real economy simulation across every country, and buildings on the map. It answers: can the browser run this simulation and show a living world fast enough?
+- At each checkpoint Claude Code gives the designer a **plain-language report**: the numbers vs the budgets, what was tried, and a clear recommendation (**continue in the browser**, or **switch to Godot now**). **Work doesn't continue to the next milestone until the designer decides.** Switching at checkpoint 2 costs only M1–M2's code; the design and data carry over.
+
+**Keep the project portable** (so a switch, now or later, stays cheap):
+- The sim stays pure TypeScript with no browser shortcuts, and all content stays in engine-neutral **JSON** data.
+- 3D generators work from **engine-neutral specs** in data (parts, sizes, colors, seeds), so only the code that turns specs into meshes would change.
+- **Reference runs:** the campaign runner saves a short summary and checksum of the game state for a few fixed seeds (`packages/runner/reference/`). A port to another engine can be checked by running the same seeds and comparing.
+
 ### Save system
 The sim serializes `GameState` (with a **save format version**) to compressed JSON. The game stores saves in **IndexedDB** and offers **Export save / Import save** as files. Saves from older versions are migrated or rejected with a clear message (M10).
 
@@ -162,7 +202,7 @@ The foundations from this section exist as of F132. A quick map for later featur
 - **Country colors (map import, `colors.ts`):** every country has its **traditional color** (the one commonly associated with it, as in Paradox games) in `packages/tools/map-config/country-colors.json`. A country keeps it exactly unless a country that borders it, or faces it across a narrow sea (`colors.nearCountryKm`, counting only provinces of at least `colors.nearMinProvinceKm2`), would look too much alike; then the one with fewer provinces is shifted to the nearest shade that can be told apart (`assignTraditionalColors`). "Alike" is measured by `mapColorContrast` (OKLab, with hue counting far more than lightness) against `MIN_BORDER_CONTRAST`. The report lists every shifted country with its traditional and its map color; to change a country's color, edit `country-colors.json` and run the import. A country missing from the file gets a spare palette color (`assignCountryColors`, 39 evenly different colors) and the import warns.
 - **Region colors:** chosen by the map import with the same method as the spare country colors (`assignDistinctColors`: regions that border or nearly touch get colors as different as possible) and stored as `mapColor` in `data/regions.json`; `WorldMap.regionMapColor`. The old `regionPalette` in `data/map_view.json` is gone.
 - **Province budget (map import, `provinces.ts` step 4):** each separate piece of a country (a cluster) may have at most `maxProvincesFactor` × its target provinces (`settings.json`, 1.5 **[DEFAULT]**). Above that, provinces are merged further, also across real regions and named groups: the lightest province joins the neighbor that gives the most compact, balanced result, preferring the same source grouping. Named groups marked `keep` (Transnistria, Gagauzia, Nakhchivan) are never merged; countries in `keepSeparate` are exempt. A merge of two named regions is called "A and B" when that is short (at most 36 characters), otherwise by its direction in the country; a country of three provinces or fewer names its biggest one after itself. Real region names for merged areas come from `province-groups.json` (Ireland's four provinces, Slovenia's two cohesion regions, Spain's autonomous communities, Italy's macro-regions, the Philippines' regions, Sri Lanka's provinces).
-- **Basic map controls (in `map-view.ts`, until the strategy camera, F03):** the mouse wheel zooms towards the place under the mouse (`zoomBy`), dragging moves the map (the grabbed place stays under the mouse; a drag is not a click), the arrow keys move it and `+`/`-` zoom. North–south movement is limited by `clampZ`: none with the whole world in view, up to the map's edges when zoomed in. Settings in `data/map_view.json` under `camera` (`maxZoom`, `wheelZoomStep`, `focusMinProvincePx`). `MapView.focusProvince` centers a province and zooms in if it is tiny; the game calls it when a province is picked from a list in a panel (not when it is clicked on the map). Debug hooks: `map.zoom()`, `map.placeAt(x, y)`.
+- **Basic map controls (in `map-view.ts`; since F03 part of the strategy camera, see "What F03 built"):** the mouse wheel zooms towards the place under the mouse (`zoomBy`), dragging moves the map (the grabbed place stays under the mouse; a drag is not a click), the arrow keys move it and `+`/`-` zoom. North–south movement is limited by `clampZ`: none with the whole world in view, up to the map's edges when zoomed in. Settings in `data/map_view.json` under `camera` (`maxZoom`, `wheelZoomStep`, `focusMinProvincePx`). `MapView.focusProvince` centers a province and zooms in if it is tiny; the game calls it when a province is picked from a list in a panel (not when it is clicked on the map). Debug hooks: `map.zoom()`, `map.placeAt(x, y)`.
 - **UI:** `ui/country-panel.tsx` (name, color, capital, number of provinces, total area, neighboring countries; opened by the country name in the province panel; `selectedCountry` in the app store; top-left until the UI shell, F122). The province panel and the tooltip show the current owner. `formatArea` in `ui/i18n.ts` shows one decimal below 10 km².
 - **Tiny provinces (map import):** `packages/tools/src/map-import/tiny-provinces.ts` replaces a listed province's shape with a disc (`radiusKm`, `discPoints` in `tiny-provinces.json`) and cuts the disc out of whatever province lies under it (with `polygon-clipping`), adding the points where borders meet so the border stays shared; `leaveOut` removes a province. The data keeps the real `areaKm2` from the config. Label points (`center`) now come from `innerLabelPoint` (the point farthest from the outline) on the final shapes.
 - **Tests:** `packages/sim/test/ownership.test.ts`, the save and command tests, `packages/game/test/map-geometry.test.ts` (political colors, borders following owners, tiny provinces clickable, every label point inside its province), `packages/game/e2e/countries.spec.ts` (political map, country panel, an ownership change on screen, wheel zoom, dragging and list focus, the tiny provinces), color tests in `packages/tools/test/map-import.test.ts`.
@@ -176,3 +216,12 @@ The foundations from this section exist as of F132. A quick map for later featur
 - **Map data:** sea zones grow from the seed points in `packages/tools/map-config/sea-zones.json`; where a zone grows around a coast that faces another one, add a seed off that coast. The import draws `report/sea_zones.png` (every sea zone in its own color on grey land) to check which coasts each zone touches.
 - **Debug hooks:** `map.seaZoneAt(longitude, latitude)`, `map.selectedSeaZone()`.
 - **Tests:** sea colors, highlights and picking (land wins, the date line, every sea zone at its label point, the Philippine Sea's coasts) in `packages/game/test/map-geometry.test.ts`; `isCoastZone` and `seaZoneCenter` in `packages/sim/test/world.test.ts`; the split itself in `packages/tools/test/sea-zone-split.test.ts`; every border connecting, and only tiny islands touching open sea, in `map-geometry.test.ts`; `packages/game/e2e/sea-zones.spec.ts` (hover, click, the panel's links both ways, the map mode).
+
+### What F03 built (the strategy camera)
+- **Where:** the camera lives in `render/map/map-view.ts` ("The strategy camera"); its pure math is `render/map/camera-motion.ts` (`tiltForZoom`, `glideFraction`, `wrappedDelta`, `screenAxes`, `cameraAlphaForHeading`, `edgeScrollDirection`; unit tested in `test/map-math.test.ts`).
+- **How it moves:** the camera has where it is (`centerX`, `centerZ`, `zoom`, `heading`) and where it is going (`goal`). Input changes the goal (`setGoal` keeps it within the limits: zoom range, `clampZ`, north up at zoom 1); every frame `stepCamera` covers part of the remaining way (an exponential glide, `smoothSeconds`). A wheel zoom keeps a `zoomAnchor`: after each step the camera is shifted so the place that was under the mouse is under it again (exact even though the tilt changes with the zoom). Dragging, `lookAt` and `scrollBy` move the camera and its goal together (`jumpTo`), so they are exact and instant. `focusProvince` and `focusSeaZone` glide.
+- **Heading and tilt:** `heading` is where the top of the screen points (0 = north); scrolling uses the screen's directions on the ground (`screenAxes`). The tilt comes from the zoom (`tiltDegrees` at zoom 1, `tiltNearDegrees` at `maxZoom`, evenly per zoom step); the whole-world fit still uses `tiltDegrees`. The schema refuses tilts that would show the horizon.
+- **Levels of detail with a turned, tilted view:** `updateDetail` measures what the screen shows of the ground (the four corners' rays) instead of assuming a north-up view, and places the close-up chunks on the copy of the world nearest the middle of that.
+- **Settings** (`data/map_view.json`, `camera`): `tiltNearDegrees`, `smoothSeconds`, `fastScrollFactor` (how much faster WASD and the arrow keys scroll with Shift held), `edgeScrollPx` (0 = no edge scrolling), `rotateDegreesPerSecond` (Q/E), `rotateDegreesPerPixel` (middle mouse button), plus the earlier ones.
+- **MapView API:** `heading()`, `tilt()`, `isMoving()`, `settle()` (finish the glide), `resetView()`, `setEdgeScrolling(enabled)`. The game's **Whole world** button (map mode box) calls `resetView`.
+- **Tests:** the debug scenario `foundation` turns edge scrolling off (the tests park the mouse at the window's top edge); `map.setEdgeScrolling(true)` turns it back on. Tests that check the camera right after a wheel zoom or a focus call `map.settle()` first. `e2e/camera.spec.ts` covers the glide, the tilt, WASD, turning (keys and middle mouse button), exact picking, dragging and wheel zoom when turned, the reset, and edge scrolling. Debug hooks: `map.heading()` and `map.tilt()` (degrees), `map.isMoving()`, `map.settle()`, `map.setEdgeScrolling()`.

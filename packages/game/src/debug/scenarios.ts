@@ -7,11 +7,16 @@
 export interface DebugScenario {
   /** Seed for the campaign, so every run is identical. */
   readonly seed: number;
+  /**
+   * Whether the map scrolls when the mouse is at the window's edge. Off in the
+   * test scenarios: the tests park the mouse at the edge to keep it off the map.
+   */
+  readonly edgeScrolling: boolean;
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
   /** The basics: the world map and a new campaign. */
-  foundation: { seed: 42 },
+  foundation: { seed: 42, edgeScrolling: false },
 };
 
 export interface LaunchOptions {
