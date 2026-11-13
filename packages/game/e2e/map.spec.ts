@@ -94,6 +94,7 @@ test('the world map shows every province; clicking one opens its info panel', as
   await expect(page.getByTestId('province-name')).toHaveText('Normandie');
   await expect(page.getByTestId('province-sea-zones')).not.toHaveText('None');
   // A province picked from a list is brought into view (zoomed in, because it was small on screen).
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await page.evaluate(() => window.__terraScutum!.map.zoom()!)).toBeGreaterThan(1);
   await page.evaluate(() => window.__terraScutum!.map.lookAt(0, 0, 1));
 

@@ -60,7 +60,7 @@ test('the political map is the default; a province opens its country panel', asy
     });
 
   // The political map mode comes first and is on from the start.
-  await expect(page.getByTestId('map-mode-bar').getByRole('button')).toHaveText([
+  await expect(page.getByTestId('map-mode-bar').locator('.button-row button')).toHaveText([
     'Political',
     'Provinces',
     'Regions',
@@ -212,6 +212,8 @@ test('the mouse wheel zooms, dragging moves the map, and a province picked from 
   let mouse = await aimAt(...ROME);
   const placeBefore = await placeAt(mouse.x, mouse.y);
   for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100);
+  // The camera glides; finish the glide before measuring.
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await map.zoom()).toBeCloseTo(1.25 ** 8, 6);
   const placeAfter = await placeAt(mouse.x, mouse.y);
   expect(placeAfter.longitude).toBeCloseTo(placeBefore.longitude, 3);
@@ -220,6 +222,7 @@ test('the mouse wheel zooms, dragging moves the map, and a province picked from 
   // So a tiny country can be reached by hand: aim at Rome, zoom in, aim again, click.
   await aimAt(...ROME);
   for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100);
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   mouse = await aimAt(...ROME);
   await expect(page.getByTestId('map-tooltip')).toHaveText('Vatican City · Vatican City');
   await page.mouse.click(mouse.x, mouse.y);
@@ -229,8 +232,10 @@ test('the mouse wheel zooms, dragging moves the map, and a province picked from 
 
   // The zoom stops at its limit, and zooming out ends with the whole world in view.
   for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -100);
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await map.zoom()).toBe(80);
   for (let i = 0; i < 40; i++) await page.mouse.wheel(0, 100);
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await map.zoom()).toBe(1);
 
   // Dragging moves the map with the mouse and does not count as a click.
@@ -277,6 +282,7 @@ test('the mouse wheel zooms, dragging moves the map, and a province picked from 
     .filter({ hasText: 'Vatican City' })
     .click();
   await expect(page.getByTestId('province-name')).toHaveText('Vatican City');
+  await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await map.zoom()).toBeGreaterThan(20);
   const vatican = await screenPosition(page, ...ROME);
   expect(Math.abs(vatican.x - 640)).toBeLessThan(40);

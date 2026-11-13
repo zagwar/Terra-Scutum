@@ -19,6 +19,8 @@ export interface AppProps {
   /** Open a country's panel by its index, or null to close it. */
   readonly onSelectCountry: (country: number | null) => void;
   readonly onSetMapMode: (mode: MapMode) => void;
+  /** Brings the whole world back into view, north up. */
+  readonly onResetView: () => void;
 }
 
 /** The root of the React UI: an HTML layer drawn on top of the 3D view. */
@@ -29,6 +31,7 @@ export function App({
   onSelectSeaZone,
   onSelectCountry,
   onSetMapMode,
+  onResetView,
 }: AppProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const { world, provinceOwner } = state;
@@ -69,7 +72,9 @@ export function App({
           onSelectProvince={onSelectProvince}
         />
       )}
-      {state.map === 'ready' && <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} />}
+      {state.map === 'ready' && (
+        <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} onResetView={onResetView} />
+      )}
       {world && provinceOwner && state.hoveredProvince !== null && (
         <MapTooltip
           world={world}

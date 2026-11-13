@@ -6,12 +6,17 @@
   },
   "camera": {
     "tiltDegrees": 22,
+    "tiltNearDegrees": 45,
     "fieldOfViewDegrees": 36,
     "fitMargin": 0.02,
     "scrollDegreesPerSecond": 90,
     "maxZoom": 80,
     "wheelZoomStep": 1.25,
-    "focusMinProvincePx": 60
+    "focusMinProvincePx": 60,
+    "smoothSeconds": 0.09,
+    "edgeScrollPx": 8,
+    "rotateDegreesPerSecond": 90,
+    "rotateDegreesPerPixel": 0.3
   },
   "detail": {
     "farSimplifyDegrees": 0.08,

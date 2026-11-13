@@ -36,22 +36,40 @@ export const mapViewSchema = z.strictObject({
     .refine((p) => p.northLatitude - p.southLatitude >= 10, {
       message: 'the map must cover at least 10 degrees of latitude',
     }),
-  camera: z.strictObject({
-    /** How far the camera leans back from looking straight down, in degrees. */
-    tiltDegrees: z.number().min(0).max(75),
-    /** The camera's vertical field of view, in degrees. */
-    fieldOfViewDegrees: z.number().min(10).max(90),
-    /** Empty space kept around the map when it's fitted to the window (0.02 = 2 %). */
-    fitMargin: z.number().min(0).max(0.4),
-    /** Speed of arrow-key scrolling with the whole world in view, in degrees of longitude per second (slower when zoomed in). */
-    scrollDegreesPerSecond: z.number().positive(),
-    /** How far the player can zoom in: 1 shows the whole world, 50 is fifty times closer. */
-    maxZoom: z.number().min(1).max(1000),
-    /** How much one notch of the mouse wheel zooms (1.2 = 20 % closer or farther). */
-    wheelZoomStep: z.number().min(1.01).max(4),
-    /** A province picked from a list is brought into view at least this many pixels wide. */
-    focusMinProvincePx: z.number().min(1).max(2000),
-  }),
+  camera: z
+    .strictObject({
+      /** How far the camera leans back from looking straight down with the whole world in view (zoom 1), in degrees. */
+      tiltDegrees: z.number().min(0).max(75),
+      /** The same at the closest zoom; in between, the tilt changes evenly with each zoom step. */
+      tiltNearDegrees: z.number().min(0).max(75),
+      /** The camera's vertical field of view, in degrees. */
+      fieldOfViewDegrees: z.number().min(10).max(90),
+      /** Empty space kept around the map when it's fitted to the window (0.02 = 2 %). */
+      fitMargin: z.number().min(0).max(0.4),
+      /** Speed of arrow-key scrolling with the whole world in view, in degrees of longitude per second (slower when zoomed in). */
+      scrollDegreesPerSecond: z.number().positive(),
+      /** How far the player can zoom in: 1 shows the whole world, 50 is fifty times closer. */
+      maxZoom: z.number().min(1).max(1000),
+      /** How much one notch of the mouse wheel zooms (1.2 = 20 % closer or farther). */
+      wheelZoomStep: z.number().min(1.01).max(4),
+      /** A province picked from a list is brought into view at least this many pixels wide. */
+      focusMinProvincePx: z.number().min(1).max(2000),
+      /**
+       * How smoothly the camera glides to where it was sent (zoom, scrolling, turning): it covers
+       * about two thirds of the remaining way every this many seconds. 0 = no glide.
+       */
+      smoothSeconds: z.number().min(0).max(2),
+      /** The map scrolls when the mouse is this close to the window's edge, in pixels (0 = never). */
+      edgeScrollPx: z.number().min(0).max(200),
+      /** How fast Q and E turn the map, in degrees per second. */
+      rotateDegreesPerSecond: z.number().positive(),
+      /** How far the map turns per pixel of dragging with the middle mouse button, in degrees. */
+      rotateDegreesPerPixel: z.number().positive(),
+    })
+    .refine((c) => Math.max(c.tiltDegrees, c.tiltNearDegrees) + c.fieldOfViewDegrees / 2 <= 80, {
+      message:
+        'the tilt plus half the field of view must stay at or below 80 degrees, or the camera would see the horizon',
+    }),
   /**
    * Level of detail. From far away the land is drawn from simplified shapes
    * (three copies side by side, for the east–west wrap); close up, from the

@@ -37,6 +37,16 @@ export interface DebugApi {
     centerLongitude(): number | null;
     /** How far the view is zoomed in (1 = the whole world). */
     zoom(): number | null;
+    /** Which way the top of the screen points, in degrees (0 = north, 90 = east). */
+    heading(): number | null;
+    /** How far the camera leans back from straight down, in degrees. */
+    tilt(): number | null;
+    /** True while the camera glides to where it was sent. */
+    isMoving(): boolean | null;
+    /** Finishes the camera's glide at once. */
+    settle(): void;
+    /** Turns scrolling at the window's edge on or off. */
+    setEdgeScrolling(enabled: boolean): void;
     /** The id of the selected province, or null. */
     selectedProvince(): string | null;
     /** The id of the sea zone at a longitude/latitude; null on land or outside the map. */
@@ -94,6 +104,17 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
       lookAt: (longitude, latitude, zoom) => renderer?.map?.lookAt(longitude, latitude, zoom),
       centerLongitude: () => renderer?.map?.centerLongitude() ?? null,
       zoom: () => renderer?.map?.zoom() ?? null,
+      heading: () => {
+        const heading = renderer?.map?.heading();
+        return heading === undefined ? null : (heading * 180) / Math.PI;
+      },
+      tilt: () => {
+        const tilt = renderer?.map?.tilt();
+        return tilt === undefined ? null : (tilt * 180) / Math.PI;
+      },
+      isMoving: () => renderer?.map?.isMoving() ?? null,
+      settle: () => renderer?.map?.settle(),
+      setEdgeScrolling: (enabled) => renderer?.map?.setEdgeScrolling(enabled),
       selectedProvince: () => idOf(store.getState().selectedProvince),
       seaZoneAt: (longitude, latitude) =>
         seaZoneIdOf(renderer?.map?.seaZoneAt(longitude, latitude)),

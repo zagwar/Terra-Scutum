@@ -11,13 +11,14 @@ const MODE_TEXT: Record<MapMode, TranslationKey> = {
 export interface MapModeBarProps {
   readonly mode: MapMode;
   readonly onSetMapMode: (mode: MapMode) => void;
+  readonly onResetView: () => void;
 }
 
 /**
  * The map mode buttons (section 12.2), bottom-right. Each feature adds its
  * map mode here; the minimap joins them with the UI shell (F122).
  */
-export function MapModeBar({ mode, onSetMapMode }: MapModeBarProps) {
+export function MapModeBar({ mode, onSetMapMode, onResetView }: MapModeBarProps) {
   return (
     <section className="panel map-mode-bar" data-testid="map-mode-bar">
       <h2 className="panel-title">{t('MAP_MODE_TITLE')}</h2>
@@ -35,7 +36,18 @@ export function MapModeBar({ mode, onSetMapMode }: MapModeBarProps) {
           </button>
         ))}
       </div>
-      <p className="hint">{t('MAP_HINT')}</p>
+      <div className="map-hint-row">
+        <p className="hint">{t('MAP_HINT')}</p>
+        <button
+          type="button"
+          className="link-button"
+          title={t('MAP_RESET_VIEW_HINT')}
+          data-testid="map-reset-view"
+          onClick={onResetView}
+        >
+          {t('MAP_RESET_VIEW')}
+        </button>
+      </div>
     </section>
   );
 }

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { fitMapCamera, groundToScreen } from '../src/render/map/camera-fit';
+import {
+  cameraAlphaForHeading,
+  edgeScrollDirection,
+  glideFraction,
+  screenAxes,
+  tiltForZoom,
+  wrappedDelta,
+} from '../src/render/map/camera-motion';
 import { createMapProjection } from '../src/render/map/map-projection';
 
 describe('map projection', () => {
@@ -81,5 +89,57 @@ describe('camera fit', () => {
     const screen = groundToScreen(50, 25, { radius: 100, targetZ: 0 }, view);
     expect(screen.x).toBeCloseTo(0.25, 9);
     expect(screen.y).toBeCloseTo(0.25, 9);
+  });
+});
+
+describe('strategy camera math', () => {
+  it('leans back more the closer the camera zooms in', () => {
+    const far = 0.4;
+    const near = 0.8;
+    expect(tiltForZoom(1, 80, far, near)).toBe(far);
+    expect(tiltForZoom(80, 80, far, near)).toBeCloseTo(near, 12);
+    // Halfway in zoom steps (√80 ≈ 8.9×) is halfway in tilt.
+    expect(tiltForZoom(Math.sqrt(80), 80, far, near)).toBeCloseTo((far + near) / 2, 12);
+    expect(tiltForZoom(200, 80, far, near)).toBeCloseTo(near, 12);
+    expect(tiltForZoom(5, 1, far, near)).toBe(far);
+  });
+
+  it('glides the same way at every frame rate', () => {
+    // Ten frames of 1/100 s cover the same part of the way as one frame of 1/10 s.
+    const tenSmall = 1 - (1 - glideFraction(0.01, 0.1)) ** 10;
+    expect(tenSmall).toBeCloseTo(glideFraction(0.1, 0.1), 12);
+    expect(glideFraction(0.1, 0.1)).toBeCloseTo(1 - Math.exp(-1), 12);
+    expect(glideFraction(0.016, 0)).toBe(1);
+    expect(glideFraction(Infinity, 0.1)).toBe(1);
+  });
+
+  it('takes the short way around the world and around the compass', () => {
+    expect(wrappedDelta(170, -170, 360)).toBeCloseTo(20, 12);
+    expect(wrappedDelta(-170, 170, 360)).toBeCloseTo(-20, 12);
+    expect(wrappedDelta(10, 40, 360)).toBe(30);
+    expect(wrappedDelta(0.1, 2 * Math.PI - 0.1, 2 * Math.PI)).toBeCloseTo(-0.2, 12);
+  });
+
+  it('turns the screen directions with the heading', () => {
+    const north = screenAxes(0);
+    expect(north.up.x).toBeCloseTo(0, 12);
+    expect(north.up.z).toBeCloseTo(1, 12);
+    expect(north.right.x).toBeCloseTo(1, 12);
+    expect(north.right.z).toBeCloseTo(0, 12);
+    // Facing east: up is east, right is south.
+    const east = screenAxes(Math.PI / 2);
+    expect(east.up.x).toBeCloseTo(1, 12);
+    expect(east.right.z).toBeCloseTo(-1, 12);
+    // The camera sits behind its target: south of it when facing north.
+    expect(cameraAlphaForHeading(0)).toBeCloseTo(-Math.PI / 2, 12);
+    expect(Math.cos(cameraAlphaForHeading(Math.PI / 2))).toBeCloseTo(-1, 12);
+  });
+
+  it('scrolls at the window edges only', () => {
+    expect(edgeScrollDirection({ x: 640, y: 360 }, 1280, 720, 8)).toEqual({ right: 0, up: 0 });
+    expect(edgeScrollDirection({ x: 2, y: 360 }, 1280, 720, 8)).toEqual({ right: -1, up: 0 });
+    expect(edgeScrollDirection({ x: 1279, y: 0 }, 1280, 720, 8)).toEqual({ right: 1, up: 1 });
+    expect(edgeScrollDirection({ x: 640, y: 715 }, 1280, 720, 8)).toEqual({ right: 0, up: -1 });
+    expect(edgeScrollDirection({ x: 0, y: 0 }, 1280, 720, 0)).toEqual({ right: 0, up: 0 });
   });
 });

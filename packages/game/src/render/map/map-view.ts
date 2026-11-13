@@ -10,6 +10,14 @@ import type { Objects, Topology } from 'topojson-specification';
 import provincesUrl from '../../../../../data/geometry/provinces.topo.json?url';
 import seaZonesUrl from '../../../../../data/geometry/sea_zones.topo.json?url';
 import { type CameraFit, fitMapCamera } from './camera-fit';
+import {
+  cameraAlphaForHeading,
+  edgeScrollDirection,
+  glideFraction,
+  screenAxes,
+  tiltForZoom,
+  wrappedDelta,
+} from './camera-motion';
 import { type LineMaterial, type LineStyles, createLineMaterial } from './line-material';
 import {
   type MapMode,
@@ -51,9 +59,14 @@ export type { MapTarget } from './shape-lookup';
 
 /**
  * The world map in the 3D scene (F01): sea zones underneath, provinces on
- * top, border lines, mouse picking and the camera. The camera is basic for
- * now (mouse wheel to zoom, drag or arrow keys to move): the strategy camera
- * (F03) will replace the input handling and steer this view through `lookAt`.
+ * top, border lines, mouse picking and the strategy camera (F03).
+ *
+ * - The camera glides (zoom, scrolling, turning) towards where the input
+ *   sends it. Mouse wheel and +/-: zoom (towards the mouse); dragging: move,
+ *   exactly with the mouse; WASD, the arrow keys and the window's edge:
+ *   scroll; middle mouse button or Q/E: turn; Home: the whole world, north
+ *   up. The camera leans back more the closer it zooms in. The math is in
+ *   `camera-motion.ts`.
  *
  * - Everything lies flat on the ground (y = 0); terrain comes with F125.
  * - The map wraps east–west: the camera's position is kept inside the main
@@ -120,20 +133,33 @@ export interface MapView {
   /** Scrolls the map east (positive) or west (negative), in degrees of longitude. */
   scrollBy(degrees: number): void;
   /**
-   * Points the camera at a place. Zoom 1 shows the whole world (and ignores
-   * the latitude: the map stays centered top to bottom); zoom 4 is four times closer.
+   * Points the camera at a place right away (no glide). Zoom 1 shows the
+   * whole world (and ignores the latitude: the map stays centered top to
+   * bottom); zoom 4 is four times closer. The heading is kept (north up at zoom 1).
    */
   lookAt(longitude: number, latitude: number, zoom: number): void;
   /** The longitude at the middle of the screen. */
   centerLongitude(): number;
   /** How far the view is zoomed in: 1 shows the whole world. */
   zoom(): number;
+  /** Which way the top of the screen points, in radians: 0 = north, π/2 = east. */
+  heading(): number;
+  /** How far the camera leans back from looking straight down, in radians (it grows as the view zooms in). */
+  tilt(): number;
+  /** True while the camera is still gliding to where it was sent. */
+  isMoving(): boolean;
+  /** Finishes any glide at once (used by tests). */
+  settle(): void;
+  /** Glides back to the whole world, north up. */
+  resetView(): void;
+  /** Turns scrolling at the window's edge on or off (tests park the mouse at the edge). */
+  setEdgeScrolling(enabled: boolean): void;
   /**
-   * Brings a province into view: centers the map on it and, if it would be
-   * too small to see, zooms in until it is.
+   * Brings a province into view: glides to it and, if it would be too small
+   * to see, zooms in until it is.
    */
   focusProvince(province: number): void;
-  /** Brings a sea zone into view: centers the map on its label point. */
+  /** Brings a sea zone into view: glides to its label point. */
   focusSeaZone(seaZone: number): void;
   dispose(): void;
 }
@@ -152,9 +178,6 @@ async function fetchTopology(url: string): Promise<MapTopology> {
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return (await response.json()) as MapTopology;
 }
-
-/** How wide the far edge of the view is compared with its middle (the camera leans back). */
-const FAR_EDGE_ALLOWANCE = 1.5;
 
 /** The line style for sea zone borders in a map mode: they stand out in the sea zones map mode. */
 function seaLineStyles(mode: MapMode, lines: MapViewConfig['lines']): LineStyles {
@@ -393,86 +416,47 @@ export async function createMapView(
   let pressedAt: { x: number; y: number } | null = null;
   /** While the map is being dragged: where the mouse was at the last step. */
   let dragFrom: { x: number; y: number } | null = null;
+  /** While the map is being turned with the middle mouse button: where the mouse was at the last step. */
+  let rotateFrom: number | null = null;
 
-  // ── Camera: looks north, fitted so the whole world is visible at zoom 1 ───
-  const camera = new ArcRotateCamera('map-camera', -Math.PI / 2, 0, 100, Vector3.Zero(), scene);
-  const tilt = Math.max(0.001, (config.camera.tiltDegrees * Math.PI) / 180);
-  camera.fov = (config.camera.fieldOfViewDegrees * Math.PI) / 180;
+  // ── The strategy camera (F03) ─────────────────────────────────────────────
+  // The view glides: input changes where the camera is going (`goal`), and
+  // every frame the camera covers part of the remaining way (`stepCamera`).
+  // Dragging and the test hooks move both at once, so they are exact.
+  const settings = config.camera;
+  const degrees = (value: number) => (value * Math.PI) / 180;
+  const farTilt = Math.max(0.001, degrees(settings.tiltDegrees));
+  const nearTilt = Math.max(0.001, degrees(settings.tiltNearDegrees));
+  const tiltAt = (zoomLevel: number) => tiltForZoom(zoomLevel, settings.maxZoom, farTilt, nearTilt);
+  const camera = new ArcRotateCamera(
+    'map-camera',
+    -Math.PI / 2,
+    farTilt,
+    100,
+    Vector3.Zero(),
+    scene,
+  );
+  camera.fov = degrees(settings.fieldOfViewDegrees);
   camera.lowerBetaLimit = 0;
-  camera.beta = tilt;
   scene.activeCamera = camera;
 
+  /** Where the camera is now: the ground point in the middle of the screen, the zoom and the heading. */
   let centerX = 0;
-  /** Where the camera looks north–south; null = wherever fits the whole map. */
-  let centerZ: number | null = null;
+  let centerZ = 0;
   let zoom = 1;
+  let heading = 0;
+  /** Where the camera is going. */
+  const goal = { x: 0, z: 0, zoom: 1, heading: 0 };
+  /** While a mouse-wheel zoom glides: the place that must stay under the mouse. */
+  let zoomAnchor: {
+    readonly screen: { x: number; y: number };
+    readonly ground: { x: number; z: number };
+  } | null = null;
+  let edgeScrolling = settings.edgeScrollPx > 0;
   let fit: CameraFit = { radius: 100, targetZ: 0 };
   let fittedAspect = 0;
   let detail: 'far' | 'near' = 'far';
 
-  /** Shows the level of detail that suits the zoom, and puts the close-up chunks on the nearest copy of the world. */
-  const updateDetail = () => {
-    const scale = engine.getHardwareScalingLevel();
-    const degreesPerPixel =
-      (2 * camera.radius * Math.tan(camera.fov / 2)) / (engine.getRenderHeight() * scale);
-    const viewWidth = degreesPerPixel * engine.getRenderWidth() * scale * FAR_EDGE_ALLOWANCE;
-    // A chunk is drawn once, so it must never be needed on both sides of the screen at the same time.
-    const fitsOnce = viewWidth + config.detail.chunkDegrees + widestPolygon <= worldWidth;
-    const wanted =
-      degreesPerPixel <= config.detail.nearMaxDegreesPerPixel && fitsOnce ? 'near' : 'far';
-    if (wanted === 'near') nearChunks ??= buildNearLevel();
-    if (wanted !== detail) {
-      detail = wanted;
-      for (const mesh of farMeshes) mesh.setEnabled(detail === 'far');
-    }
-    if (!nearChunks) return;
-    for (const chunk of nearChunks) {
-      chunk.mesh.setEnabled(detail === 'near');
-      if (detail !== 'near') continue;
-      const x = Math.round((centerX - chunk.centerX) / worldWidth) * worldWidth;
-      if (chunk.mesh.position.x !== x) chunk.mesh.position.x = x;
-    }
-  };
-  /**
-   * How far north or south the camera may look: nowhere but the fitted middle
-   * with the whole world in view, up to the map's edges when zoomed in.
-   */
-  const clampZ = (z: number) => {
-    const room = 1 - 1 / zoom;
-    const south = fit.targetZ - (fit.targetZ - projection.minZ) * room;
-    const north = fit.targetZ + (projection.maxZ - fit.targetZ) * room;
-    return Math.min(north, Math.max(south, z));
-  };
-  const applyView = () => {
-    const z = clampZ(centerZ ?? fit.targetZ);
-    centerZ = zoom > 1 ? z : null;
-    camera.radius = fit.radius / zoom;
-    camera.target.copyFromFloats(centerX, 0, z);
-    camera.minZ = camera.radius * 0.05;
-    camera.maxZ = camera.radius * 8;
-    updateDetail();
-    pointerMoved = true; // the province under the mouse may have changed
-  };
-  const fitCamera = () => {
-    const aspect = engine.getRenderWidth() / Math.max(1, engine.getRenderHeight());
-    if (aspect === fittedAspect) return;
-    fittedAspect = aspect;
-    fit = fitMapCamera({
-      halfWidth: worldWidth / 2,
-      minZ: projection.minZ,
-      maxZ: projection.maxZ,
-      aspect,
-      fieldOfView: camera.fov,
-      tilt,
-      margin: config.camera.fitMargin,
-    });
-    for (const material of lineMaterials) material.updateResolution();
-    applyView();
-  };
-
-  fitCamera();
-
-  // ── Mouse: hover and click ────────────────────────────────────────────────
   /** The map position under a point of the canvas (CSS pixels), or null if it misses the ground. */
   const groundAt = (x: number, y: number): { x: number; z: number } | null => {
     // The view may have changed since the last frame was drawn (zooming, dragging).
@@ -487,6 +471,157 @@ export async function createMapView(
       z: ray.origin.z + ray.direction.z * distance,
     };
   };
+  const cssSize = () => {
+    const scale = engine.getHardwareScalingLevel();
+    return { width: engine.getRenderWidth() * scale, height: engine.getRenderHeight() * scale };
+  };
+
+  /** Shows the level of detail that suits the zoom, and puts the close-up chunks on the nearest copy of the world. */
+  const updateDetail = () => {
+    const { width, height } = cssSize();
+    const degreesPerPixel = (2 * camera.radius * Math.tan(camera.fov / 2)) / height;
+    // What the screen shows of the ground, east to west (the view can be turned and tilted).
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (const [x, y] of [
+      [0, 0],
+      [width, 0],
+      [0, height],
+      [width, height],
+    ]) {
+      const ground = groundAt(x, y);
+      minX = Math.min(minX, ground ? ground.x : -Infinity);
+      maxX = Math.max(maxX, ground ? ground.x : Infinity);
+    }
+    const viewWidth = maxX - minX;
+    const middleX = Number.isFinite(viewWidth) ? (minX + maxX) / 2 : centerX;
+    // A chunk is drawn once, so it must never be needed on both sides of the screen at the same time.
+    const fitsOnce = viewWidth + config.detail.chunkDegrees + widestPolygon <= worldWidth;
+    const wanted =
+      degreesPerPixel <= config.detail.nearMaxDegreesPerPixel && fitsOnce ? 'near' : 'far';
+    if (wanted === 'near') nearChunks ??= buildNearLevel();
+    if (wanted !== detail) {
+      detail = wanted;
+      for (const mesh of farMeshes) mesh.setEnabled(detail === 'far');
+    }
+    if (!nearChunks) return;
+    for (const chunk of nearChunks) {
+      chunk.mesh.setEnabled(detail === 'near');
+      if (detail !== 'near') continue;
+      const x = Math.round((middleX - chunk.centerX) / worldWidth) * worldWidth;
+      if (chunk.mesh.position.x !== x) chunk.mesh.position.x = x;
+    }
+  };
+  /**
+   * How far north or south the camera may look at a zoom level: nowhere but
+   * the fitted middle with the whole world in view, up to the map's edges
+   * when zoomed in.
+   */
+  const clampZ = (z: number, zoomLevel: number) => {
+    const room = 1 - 1 / zoomLevel;
+    const south = fit.targetZ - (fit.targetZ - projection.minZ) * room;
+    const north = fit.targetZ + (projection.maxZ - fit.targetZ) * room;
+    return Math.min(north, Math.max(south, z));
+  };
+  /** Puts the camera where `centerX`, `centerZ`, `zoom` and `heading` say. */
+  const applyView = () => {
+    // Keeping the camera inside the main copy of the world is what makes the map endless.
+    centerX = projection.wrapX(centerX);
+    centerZ = clampZ(centerZ, zoom);
+    camera.alpha = cameraAlphaForHeading(heading);
+    camera.beta = tiltAt(zoom);
+    camera.radius = fit.radius / zoom;
+    camera.target.copyFromFloats(centerX, 0, centerZ);
+    camera.minZ = camera.radius * 0.05;
+    camera.maxZ = camera.radius * 8;
+    updateDetail();
+    pointerMoved = true; // the province under the mouse may have changed
+  };
+  /** Sets where the camera is going, within the limits (zoom range, north–south room, north up with the whole world in view). */
+  const setGoal = (changes: Partial<typeof goal>) => {
+    Object.assign(goal, changes);
+    goal.zoom = Math.min(settings.maxZoom, Math.max(1, goal.zoom));
+    goal.x = projection.wrapX(goal.x);
+    goal.z = clampZ(goal.z, goal.zoom);
+    // The whole world is always shown north up.
+    if (goal.zoom <= 1) goal.heading = 0;
+  };
+  /** Moves the camera right away (no glide), and makes that its goal too. */
+  const jumpTo = (changes: Partial<typeof goal>) => {
+    zoomAnchor = null;
+    setGoal(changes);
+    centerX = goal.x;
+    centerZ = goal.z;
+    zoom = goal.zoom;
+    heading = goal.heading;
+    applyView();
+  };
+  /** One frame of gliding towards the goal (`seconds` = Infinity: arrive at once). Returns true if the camera moved. */
+  const stepCamera = (seconds: number): boolean => {
+    const fraction = glideFraction(seconds, settings.smoothSeconds);
+    const before = [centerX, centerZ, zoom, heading];
+    const zoomGap = Math.log(goal.zoom / zoom);
+    zoom =
+      Math.abs(zoomGap) < 1e-4 || fraction === 1 ? goal.zoom : zoom * Math.exp(zoomGap * fraction);
+    const turn = wrappedDelta(heading, goal.heading, 2 * Math.PI);
+    heading = Math.abs(turn) < 1e-4 || fraction === 1 ? goal.heading : heading + turn * fraction;
+    if (zoomAnchor) {
+      // Zooming with the wheel: the place under the mouse stays under the mouse.
+      applyView();
+      const ground = groundAt(zoomAnchor.screen.x, zoomAnchor.screen.y);
+      if (ground) {
+        centerX += wrappedDelta(ground.x, zoomAnchor.ground.x, worldWidth);
+        centerZ += zoomAnchor.ground.z - ground.z;
+      }
+      centerX = projection.wrapX(centerX);
+      centerZ = clampZ(centerZ, zoom);
+      goal.x = centerX;
+      goal.z = clampZ(centerZ, goal.zoom);
+      if (zoom === goal.zoom) zoomAnchor = null;
+    } else {
+      const east = wrappedDelta(centerX, goal.x, worldWidth);
+      const north = goal.z - centerZ;
+      const arrived = Math.hypot(east, north) < 1e-4 / zoom || fraction === 1;
+      centerX = arrived ? goal.x : centerX + east * fraction;
+      centerZ = arrived ? goal.z : centerZ + north * fraction;
+    }
+    if ([centerX, centerZ, zoom, heading].every((value, i) => value === before[i])) return false;
+    applyView();
+    return true;
+  };
+  const isMoving = () =>
+    zoomAnchor !== null ||
+    goal.zoom !== zoom ||
+    goal.heading !== heading ||
+    goal.x !== centerX ||
+    goal.z !== centerZ;
+
+  const fitCamera = () => {
+    const aspect = engine.getRenderWidth() / Math.max(1, engine.getRenderHeight());
+    if (aspect === fittedAspect) return;
+    const first = fittedAspect === 0;
+    fittedAspect = aspect;
+    fit = fitMapCamera({
+      halfWidth: worldWidth / 2,
+      minZ: projection.minZ,
+      maxZ: projection.maxZ,
+      aspect,
+      fieldOfView: camera.fov,
+      tilt: farTilt,
+      margin: settings.fitMargin,
+    });
+    for (const material of lineMaterials) material.updateResolution();
+    if (first) {
+      centerZ = fit.targetZ;
+      goal.z = fit.targetZ;
+    }
+    setGoal({});
+    applyView();
+  };
+
+  fitCamera();
+
+  // ── Mouse: hover and click ────────────────────────────────────────────────
   /** The province or sea zone at a map position (land wins: the sea zone shapes continue under it). */
   const targetAt = (x: number, z: number) => findTarget(lookup, seaLookup, x, z);
   const targetAtCanvasPoint = (x: number, y: number): MapTarget | null => {
@@ -503,36 +638,39 @@ export async function createMapView(
     if (before?.kind === 'seaZone' || target?.kind === 'seaZone') refreshSeaColors();
     events.onHover(target);
   };
-  // ── Moving the view: basic controls until the strategy camera (F03) ───────
-  /** Moves the view east (+x) and north (+z), in map units. */
-  const panBy = (dx: number, dz: number) => {
-    // Keeping the camera inside the main copy of the world is what makes the map endless.
-    centerX = projection.wrapX(centerX + dx);
-    if (dz !== 0) centerZ = (centerZ ?? fit.targetZ) + dz;
-    applyView();
-  };
-  const scrollBy = (degrees: number) => panBy(degrees, 0);
+
+  // ── Moving the view ───────────────────────────────────────────────────────
+  /** Moves the view right away by (dx, dz) map units (east, north): dragging. */
+  const panBy = (dx: number, dz: number) =>
+    jumpTo({ x: centerX + dx, z: centerZ + dz, zoom: goal.zoom, heading: goal.heading });
   /** Zooms by a factor (above 1 = closer), keeping the place under a point of the canvas where it is. */
   const zoomBy = (factor: number, around: { x: number; y: number } | null) => {
-    const next = Math.min(config.camera.maxZoom, Math.max(1, zoom * factor));
-    if (next === zoom) return;
-    const z = centerZ ?? fit.targetZ;
     const ground = around ? groundAt(around.x, around.y) : null;
-    if (ground) {
-      // The camera only moves closer or farther: a place's offset from the view's middle scales with the distance.
-      const scale = zoom / next;
-      centerX = projection.wrapX(ground.x - (ground.x - centerX) * scale);
-      centerZ = ground.z - (ground.z - z) * scale;
-    } else {
-      centerZ = z;
+    zoomAnchor = around && ground ? { screen: around, ground } : null;
+    setGoal({ zoom: goal.zoom * factor });
+  };
+  /** Turns the view by an angle in radians (clockwise seen from above); never with the whole world in view. */
+  const turnBy = (angle: number, immediately: boolean) => {
+    if (goal.zoom <= 1) return;
+    setGoal({ heading: goal.heading + angle });
+    if (immediately) {
+      heading = goal.heading;
+      applyView();
     }
-    zoom = next;
-    applyView();
+  };
+  const resetView = () => {
+    zoomAnchor = null;
+    setGoal({ zoom: 1, heading: 0 });
   };
 
   const onPointerMove = (event: PointerEvent) => {
     pointer = { x: event.offsetX, y: event.offsetY };
     pointerMoved = true;
+    if (rotateFrom !== null) {
+      turnBy(degrees((event.offsetX - rotateFrom) * settings.rotateDegreesPerPixel), true);
+      rotateFrom = event.offsetX;
+      return;
+    }
     if (!pressedAt) return;
     // Holding the button and moving drags the map: the place that was grabbed stays under the mouse.
     if (
@@ -550,72 +688,139 @@ export async function createMapView(
   };
   const endDrag = () => {
     pressedAt = null;
+    rotateFrom = null;
     if (!dragFrom) return;
     dragFrom = null;
     canvas.style.cursor = hovered === null ? 'default' : 'pointer';
   };
   const onPointerLeave = () => {
     pointer = null;
-    endDrag();
-    setHovered(null);
+    if (!dragFrom && rotateFrom === null) setHovered(null);
   };
   const onPointerDown = (event: PointerEvent) => {
+    if (event.button === 1) {
+      // The middle mouse button turns the map (and must not start the browser's auto-scroll).
+      event.preventDefault();
+      rotateFrom = event.offsetX;
+      canvas.setPointerCapture(event.pointerId);
+      return;
+    }
     if (event.button !== 0) return;
     pressedAt = { x: event.offsetX, y: event.offsetY };
     // Keep getting the mouse while it is dragged across a panel or out of the window.
     canvas.setPointerCapture(event.pointerId);
   };
   const onPointerUp = (event: PointerEvent) => {
+    if (event.button === 1) {
+      rotateFrom = null;
+      return;
+    }
     if (event.button !== 0 || !pressedAt) return;
     const dragged = dragFrom !== null;
     endDrag();
     if (!dragged) events.onClick(targetAtCanvasPoint(event.offsetX, event.offsetY));
+  };
+  const onMouseDown = (event: MouseEvent) => {
+    if (event.button === 1) event.preventDefault();
   };
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
     // One notch of a mouse wheel is about 100 pixels, or 3 lines; touchpads send many small steps.
     const notches = event.deltaY / (event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 3 : 100);
     const steps = Math.max(-3, Math.min(3, -notches));
-    zoomBy(config.camera.wheelZoomStep ** steps, { x: event.offsetX, y: event.offsetY });
+    zoomBy(settings.wheelZoomStep ** steps, { x: event.offsetX, y: event.offsetY });
   };
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
-  const ARROW_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+  // Keys by position on the keyboard (`code`), so WASD and Q/E sit in the same place on every layout.
+  const MOVE_KEYS: Readonly<Record<string, readonly [number, number]>> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, 1],
+    ArrowDown: [0, -1],
+    KeyA: [-1, 0],
+    KeyD: [1, 0],
+    KeyW: [0, 1],
+    KeyS: [0, -1],
+  };
+  const TURN_KEYS: Readonly<Record<string, number>> = { KeyQ: -1, KeyE: 1 };
   const heldKeys = new Set<string>();
   const onKeyDown = (event: KeyboardEvent) => {
-    // Typing in a text field, or a shortcut of the browser: not ours.
+    // A shortcut of the browser, or typing in a text field: not ours.
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
+    )
+      return;
     if (event.key === '+' || event.key === '=' || event.key === '-') {
-      const step = config.camera.wheelZoomStep;
+      const step = settings.wheelZoomStep;
       zoomBy(event.key === '-' ? 1 / step : step, null);
       event.preventDefault();
       return;
     }
-    if (!ARROW_KEYS.includes(event.key)) return;
-    heldKeys.add(event.key);
+    if (event.key === 'Home') {
+      resetView();
+      event.preventDefault();
+      return;
+    }
+    if (!(event.code in MOVE_KEYS) && !(event.code in TURN_KEYS)) return;
+    heldKeys.add(event.code);
     event.preventDefault();
   };
-  const onKeyUp = (event: KeyboardEvent) => heldKeys.delete(event.key);
-  const onBlur = () => heldKeys.clear();
+  const onKeyUp = (event: KeyboardEvent) => heldKeys.delete(event.code);
+  const onBlur = () => {
+    heldKeys.clear();
+    pointer = null;
+  };
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', onBlur);
 
   const beforeRender = scene.onBeforeRenderObservable.add(() => {
     fitCamera();
-    const east = (heldKeys.has('ArrowRight') ? 1 : 0) - (heldKeys.has('ArrowLeft') ? 1 : 0);
-    const north = (heldKeys.has('ArrowUp') ? 1 : 0) - (heldKeys.has('ArrowDown') ? 1 : 0);
-    if (east !== 0 || north !== 0) {
-      const seconds = Math.min(0.1, engine.getDeltaTime() / 1000);
-      // The same speed across the screen at every zoom level.
-      const distance = (config.camera.scrollDegreesPerSecond * seconds) / zoom;
-      panBy(east * distance, north * distance);
+    const seconds = Math.min(0.1, engine.getDeltaTime() / 1000);
+    // Scrolling: keys and the window's edge, in the screen's directions (the map may be turned).
+    let right = 0;
+    let up = 0;
+    let turn = 0;
+    for (const code of heldKeys) {
+      const move = MOVE_KEYS[code];
+      if (move) {
+        right += move[0];
+        up += move[1];
+      }
+      turn += TURN_KEYS[code] ?? 0;
     }
+    if (edgeScrolling && pointer && !dragFrom && rotateFrom === null) {
+      const { width, height } = cssSize();
+      const edge = edgeScrollDirection(pointer, width, height, settings.edgeScrollPx);
+      right += edge.right;
+      up += edge.up;
+    }
+    right = Math.sign(right);
+    up = Math.sign(up);
+    if (right !== 0 || up !== 0) {
+      // The same speed across the screen at every zoom level.
+      const distance = (settings.scrollDegreesPerSecond * seconds) / goal.zoom;
+      const axes = screenAxes(heading);
+      zoomAnchor = null;
+      setGoal({
+        x: goal.x + (axes.right.x * right + axes.up.x * up) * distance,
+        z: goal.z + (axes.right.z * right + axes.up.z * up) * distance,
+      });
+    }
+    if (turn !== 0)
+      turnBy(Math.sign(turn) * degrees(settings.rotateDegreesPerSecond) * seconds, false);
+    stepCamera(seconds);
     if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
       setHovered(targetAtCanvasPoint(pointer.x, pointer.y));
@@ -729,15 +934,22 @@ export async function createMapView(
         }
       );
     },
-    scrollBy,
+    scrollBy: (degrees) => jumpTo({ x: centerX + degrees, z: centerZ }),
     lookAt(longitude, latitude, nextZoom) {
-      zoom = Math.max(1, nextZoom);
-      centerX = projection.wrapX(projection.x(longitude));
-      centerZ = zoom > 1 ? projection.z(latitude) : null;
-      applyView();
+      jumpTo({ x: projection.x(longitude), z: projection.z(latitude), zoom: nextZoom });
     },
     centerLongitude: () => projection.longitude(centerX),
     zoom: () => zoom,
+    heading: () => heading,
+    tilt: () => camera.beta,
+    isMoving,
+    settle() {
+      stepCamera(Infinity);
+    },
+    resetView,
+    setEdgeScrolling(enabled) {
+      edgeScrolling = enabled && settings.edgeScrollPx > 0;
+    },
     focusProvince(province) {
       // The province's biggest piece (a province can have islands).
       let piece: MapPolygon | null = null;
@@ -749,19 +961,23 @@ export async function createMapView(
       if (!piece) return;
       // Zoom in if it would be too small to see; never zoom out.
       const widest = Math.max(piece.maxX - piece.minX, piece.maxZ - piece.minZ);
-      const cssHeight = engine.getRenderHeight() * engine.getHardwareScalingLevel();
-      const degreesPerPixelAtZoom1 = (2 * fit.radius * Math.tan(camera.fov / 2)) / cssHeight;
-      const needed = (config.camera.focusMinProvincePx * degreesPerPixelAtZoom1) / widest;
-      zoom = Math.max(zoom, Math.min(config.camera.maxZoom, needed));
-      centerX = projection.wrapX((piece.minX + piece.maxX) / 2);
-      centerZ = (piece.minZ + piece.maxZ) / 2;
-      applyView();
+      const degreesPerPixelAtZoom1 = (2 * fit.radius * Math.tan(camera.fov / 2)) / cssSize().height;
+      const needed = (settings.focusMinProvincePx * degreesPerPixelAtZoom1) / widest;
+      zoomAnchor = null;
+      // Glides there.
+      setGoal({
+        zoom: Math.max(goal.zoom, Math.min(settings.maxZoom, needed)),
+        x: (piece.minX + piece.maxX) / 2,
+        z: (piece.minZ + piece.maxZ) / 2,
+      });
     },
     focusSeaZone(seaZone) {
-      // Sea zones are big: centering on the label point is enough, no zooming.
-      centerX = projection.wrapX(projection.x(world.seaZoneCenter[seaZone * 2]));
-      centerZ = projection.z(world.seaZoneCenter[seaZone * 2 + 1]);
-      applyView();
+      // Sea zones are big: gliding to the label point is enough, no zooming.
+      zoomAnchor = null;
+      setGoal({
+        x: projection.x(world.seaZoneCenter[seaZone * 2]),
+        z: projection.z(world.seaZoneCenter[seaZone * 2 + 1]),
+      });
     },
     dispose() {
       scene.onBeforeRenderObservable.remove(beforeRender);
@@ -770,6 +986,7 @@ export async function createMapView(
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', endDrag);
+      canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);

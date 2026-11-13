@@ -62,6 +62,7 @@ function showMapWhenPossible(): void {
         };
         store.subscribe(sync);
         sync();
+        if (launch.scenario) map.setEdgeScrolling(launch.scenario.edgeScrolling);
         store.update({ map: 'ready' });
       },
       (error: unknown) => {
@@ -126,6 +127,7 @@ createRoot(requireElement('ui')).render(
       }}
       onSelectCountry={(country) => store.update({ selectedCountry: country })}
       onSetMapMode={(mapMode) => store.update({ mapMode })}
+      onResetView={() => renderer?.map?.resetView()}
     />
   </StrictMode>,
 );

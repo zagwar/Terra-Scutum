@@ -68,12 +68,17 @@ export function testMapView() {
     projection: { type: 'miller', southLatitude: -60, northLatitude: 85 },
     camera: {
       tiltDegrees: 20,
+      tiltNearDegrees: 40,
       fieldOfViewDegrees: 40,
       fitMargin: 0.02,
       scrollDegreesPerSecond: 90,
       maxZoom: 50,
       wheelZoomStep: 1.2,
       focusMinProvincePx: 60,
+      smoothSeconds: 0.1,
+      edgeScrollPx: 8,
+      rotateDegreesPerSecond: 90,
+      rotateDegreesPerPixel: 0.3,
     },
     detail: {
       farSimplifyDegrees: 0.1,

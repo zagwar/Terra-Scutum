@@ -267,6 +267,22 @@ body {
   background: #d9bb70;
 }
 
+.map-hint-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.map-hint-row .hint {
+  flex: 1;
+  margin: 0;
+}
+
+.map-hint-row .link-button {
+  flex: none;
+}
+
 .hint {
   margin: 10px 0 0;
   font-size: 12px;
