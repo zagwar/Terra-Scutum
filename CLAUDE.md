@@ -5,7 +5,7 @@ This is *Terra Scutum: The Last Line of Earth* (short form *Terra Scutum*): a 3D
 ## Where you're running
 - You run in **Claude Code cloud sessions** (claude.ai/code in the browser), on the designer's GitHub repository **terra-scutum**. The designer doesn't use Claude Code on his PC and has **nothing installed** except a web browser.
 - **Tools:** Node.js and npm are pre-installed. Dependencies come from `npm install` (run it at the start of a session if `node_modules` is missing). For Playwright's headless Chromium: use an existing Chrome if one is installed; otherwise install it with Playwright. If any download is blocked by the environment's network allowlist, tell the designer exactly which setting to change, step by step (environment selector under the message box → edit environment → network access or **Setup script**). Prefer a **setup script** for anything that should be ready in every session, kept under about five minutes so the environment is cached.
-- **Git and GitHub:** do each feature on its own branch, commit, and **push**. Then create the pull request if you can (otherwise tell the designer how: **Changes** panel → **Create PR**). Each new session starts from `main`, so the previous feature must be merged first; if it isn't on `main`, say so before doing anything else.
+- **Git and GitHub:** do each feature on its own branch, commit, and **push**. Then create the pull request if you can (otherwise tell the designer how: **Changes** panel → **Create PR**). **Always watch the pull request right after opening it, without asking** (subscribe to its activity): fix failing CI checks and answer review comments on it until it is merged or closed, and tell the designer you are watching it. Each new session starts from `main`, so the previous feature must be merged first; if it isn't on `main`, say so before doing anything else.
 - **Playing the game:** every pull request gets a **Cloudflare Pages preview link** (posted on the PR by Cloudflare). The designer plays that link in his browser **before** merging. After merging, the main link has the latest version.
 - **Models:** to use Claude Fable 5.2, the designer picks it as the model when starting a session.
 
@@ -51,7 +51,7 @@ The designer works **one feature per cloud session**, and a new session doesn't 
   - The next feature's id and name, its milestone, and the docs files to read (for example: "Build F02 (countries layer, M1). Read GAME_DESIGN.md, docs/02_world_and_characters.md, docs/12_feature_tracker.md and docs/13_technical.md.")
   - Anything left unfinished, or any decision the designer just made that the next session needs to know
   - "I'm a beginner, so walk me through anything I need to do myself step by step."
-  - "When the feature is done, push it, open the pull request, tell me how to test it on the preview link, then give me the next prompt."
+  - "When the feature is done, push it, open the pull request and watch it (fix failing checks), tell me how to test it on the preview link, then give me the next prompt."
 - **Before the code block,** tell the designer in one line:
   - to play the **preview link**, then **merge the pull request** (step by step: **Merge pull request** → **Confirm merge**), then start a **new session** on `terra-scutum` / `main` and paste the prompt
   - if the next feature is **⚑ Fable**: to choose **Claude Fable 5.2** as the model for that new session

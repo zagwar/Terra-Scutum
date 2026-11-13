@@ -18,7 +18,8 @@ jobs:
   check:
     name: Check, test and build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The browser tests draw the map in software and take most of the run (about 12 minutes in all).
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
