@@ -356,29 +356,25 @@ describe('map colors', () => {
     expect(shown).toEqual(base);
   });
 
-  it('shades sea zones by depth, and by coastal or open sea in the sea zones map mode', () => {
+  it('shows a calm sea, and coastal or open sea in the sea zones map mode (no random shades)', () => {
     const hex = (color: string) => [1, 3, 5].map((i) => Number.parseInt(color.slice(i, i + 2), 16));
-    const near = (a: number[], color: string) =>
-      a.every((value, i) => Math.abs(value - hex(color)[i]) <= 255 * colors.seaVariation + 1);
     const zone = (id: string) => world.seaZoneIndex.get(id)!;
-    const byDepth = seaZoneColors('political', world, colors);
+    const calm = seaZoneColors('political', world, colors);
     const byCoast = seaZoneColors('seaZones', world, colors);
     world.seaZoneIds.forEach((_, z) => {
-      expect(near(rgb(byDepth, z), world.seaZoneDeep[z] ? colors.seaDeep : colors.seaShallow)).toBe(
-        true,
+      expect(rgb(calm, z)).toEqual(hex(colors.sea));
+      expect(rgb(byCoast, z)).toEqual(
+        hex(isCoastalSeaZone(world, z) ? colors.seaCoastal : colors.seaOpen),
       );
-      expect(
-        near(rgb(byCoast, z), isCoastalSeaZone(world, z) ? colors.seaCoastal : colors.seaOpen),
-      ).toBe(true);
       // The sea stays blue in every map mode.
-      for (const table of [byDepth, byCoast]) {
+      for (const table of [calm, byCoast]) {
         const [r, g, b] = rgb(table, z);
         expect(b).toBeGreaterThan(Math.max(r, g));
       }
     });
-    // Every map mode but sea zones shows the same sea.
+    // Every map mode but sea zones shows the same calm sea.
     for (const mode of MAP_MODES)
-      if (mode !== 'seaZones') expect(seaZoneColors(mode, world, colors)).toEqual(byDepth);
+      if (mode !== 'seaZones') expect(seaZoneColors(mode, world, colors)).toEqual(calm);
     // The North Sea is coastal; the open North Atlantic is not.
     expect(isCoastalSeaZone(world, zone('north_sea'))).toBe(true);
     expect(isCoastalSeaZone(world, zone('north_atlantic'))).toBe(false);
@@ -448,5 +444,35 @@ describe('sea zone picking', () => {
     expect(ids).toEqual(
       expect.arrayContaining(['phl_bicol', 'phl_davao', 'jpn_okinawa', 'jpn_shikoku']),
     );
+  });
+});
+
+describe('sea zone borders', () => {
+  it('connect: every border line ends on another border, at the date line or at the map edge', () => {
+    const lines = buildInnerBorders(seaTopology, 'seaZones', projection);
+    const key = (x: number, z: number) => `${x.toFixed(3)},${z.toFixed(3)}`;
+    // How many lines pass through or end at each point.
+    const linesAt = new Map<string, Set<number>>();
+    lines.forEach(({ points }, line) => {
+      for (let i = 0; i < points.length; i += 2) {
+        const at = key(points[i], points[i + 1]);
+        const set = linesAt.get(at) ?? new Set<number>();
+        set.add(line);
+        linesAt.set(at, set);
+      }
+    });
+    const edge = 1e-3;
+    const loose: string[] = [];
+    for (const { points } of lines)
+      for (const i of [0, points.length - 2]) {
+        const [x, z] = [points[i], points[i + 1]];
+        const onEdge =
+          Math.abs(Math.abs(x) - projection.width / 2) < edge ||
+          z < projection.minZ + edge ||
+          z > projection.maxZ - edge;
+        if (!onEdge && linesAt.get(key(x, z))!.size < 2)
+          loose.push(`${projection.longitude(x).toFixed(2)}, ${projection.latitude(z).toFixed(2)}`);
+      }
+    expect(loose).toEqual([]);
   });
 });

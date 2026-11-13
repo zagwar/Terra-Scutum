@@ -91,13 +91,11 @@ export const mapViewSchema = z.strictObject({
     /** Land in the "provinces" map mode; each province is shaded slightly differently. */
     land: hexColor,
     landVariation: fraction,
-    /** The sea in every map mode except "sea zones": deep and shallow sea zones. */
-    seaDeep: hexColor,
-    seaShallow: hexColor,
-    seaVariation: fraction,
+    /** The sea in every map mode except "sea zones": one even color (a calm sea). */
+    sea: hexColor,
     /**
      * The sea in the "sea zones" map mode: coastal sea zones (bordering at least one
-     * province) and open-sea zones, so the coast stands out a little.
+     * province) and open-sea zones, so the coast stands out a little. Each is one even color.
      */
     seaCoastal: hexColor,
     seaOpen: hexColor,
