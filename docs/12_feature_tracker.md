@@ -131,7 +131,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F112 | Game setup options | M11 | Planned | Section 3.0 |
 | F113 | Tutorial scenario, advisors, encyclopedia | M11 | Planned | Section 12 |
 | F122 | UI shell: top bar, alerts row, outliner, lens bar, notifications and message settings | M1 | Planned | Section 12.1; grows with each milestone |
-| F138 | Country screen: a full Paradox-style screen for any country (replaces the simple country panel from F02) | M1 | Planned | Requested by the designer during F02. **Not designed yet: agree its contents with the designer before building** (section 17). Build after F71 (starting data) and F122 (UI shell) so it has something to show; it grows as systems arrive (government, economy, diplomacy, military) |
+| F138 | Country screen: a full Paradox-style screen for any country (replaces the simple country panel from F02) | M1 | Planned | Requested by the designer during F02. **Like HOI4** (designer decision): a Government view for your own country and a Diplomacy view for other countries; layout in section 12.4.1. Build after F71 (starting data) and F122 (UI shell) so it has something to show; it grows as systems arrive (government, economy, diplomacy, military) |
 | F123 | Nested tooltips system (every number explains itself) | M2 | Planned | Section 12.3 |
 | F124 | Ledger, statistics charts, search, pinning | M5 | Planned | Section 12.3 |
 | F95 | Event engine: data-driven events, triggers, options, chains, condition/effect library, AI choices | M2 | Planned | Section 3.1; needed early because many systems fire events |

@@ -15,7 +15,7 @@
 > designs for them. If a task depends on one, build the simplest placeholder,
 > mark it **[DEFAULT]**, and say so in your reply.
 
-- [ ] **Country screen (F138; asked for by the designer during F02):** a full country screen "similar to the one in Paradox games", in place of the simple country panel (name, capital, provinces, area, neighbors). To decide before building: which game's screen is the model (Hearts of Iron IV's country and diplomacy window, Victoria 3's country overview, Europa Universalis IV's country view…), what it shows for the player's own country and for other countries, and which parts open other screens. Most of what such a screen shows (leader, government, economy, relations, military strength) does not exist in the sim until F71 and later features.
+- [x] **Country screen (F138; asked for by the designer during F02):** decided: it works **like Hearts of Iron IV's**, with a Government view for your own country and a Diplomacy view for other countries. Layout in section 12.4.1 **[DEFAULT]**. Two details are still to confirm when it's built: panel over the map or full-screen, and flags.
 
 ### 17.1 Overlooked systems (need a design decision)
 All system design decisions have been made (2026-11-11). Resolved items are kept below for reference.
