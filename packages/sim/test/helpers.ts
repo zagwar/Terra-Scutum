@@ -54,8 +54,20 @@ export function testWorld() {
     },
     seaZones: {
       seaZones: [
-        { id: 'west_sea', depth: 'deep', center: [0, 5], adjacentSeaZones: ['east_sea'] },
-        { id: 'east_sea', depth: 'shallow', center: [2, 5], adjacentSeaZones: ['west_sea'] },
+        {
+          id: 'west_sea',
+          depth: 'deep',
+          kind: 'sea',
+          center: [0, 5],
+          adjacentSeaZones: ['east_sea'],
+        },
+        {
+          id: 'east_sea',
+          depth: 'shallow',
+          kind: 'coast',
+          center: [2, 5],
+          adjacentSeaZones: ['west_sea'],
+        },
       ],
     },
   };

@@ -37,6 +37,7 @@ import {
   touchingPairs,
   traceLabels,
 } from './raster';
+import { splitSeaZones, zoneLabelPoints } from './sea-zone-split';
 import { buildUnits } from './units';
 
 /**
@@ -175,20 +176,21 @@ export async function runMapImport(
   });
 
   log('Growing sea zones…');
-  const zones = config.seaZones.seaZones;
-  const sea = new Uint16Array(land.length);
-  const zoneIndex = new Map(zones.map((z, i) => [z.id, i + 1]));
-  if (zoneIndex.size !== zones.length) throw new Error('sea-zones.json: two sea zones share an id');
+  const configZones = config.seaZones.seaZones;
+  const grown = new Uint16Array(land.length);
+  const configIndex = new Map(configZones.map((z, i) => [z.id, i]));
+  if (configIndex.size !== configZones.length)
+    throw new Error('sea-zones.json: two sea zones share an id');
   const seedProblems: string[] = [];
-  zones.forEach((zone, i) => {
+  configZones.forEach((zone, i) => {
     for (const [lon, lat] of zone.seeds) {
       const pixel = pixelAt(grid, lon, lat);
       if (land[pixel] !== 0) seedProblems.push(`${zone.id} seed [${lon}, ${lat}] is on land`);
-      else if (sea[pixel] !== 0 && sea[pixel] !== i + 1)
+      else if (grown[pixel] !== 0 && grown[pixel] !== i + 1)
         seedProblems.push(
           `${zone.id} seed [${lon}, ${lat}] is the same pixel as another zone's seed`,
         );
-      else sea[pixel] = i + 1;
+      else grown[pixel] = i + 1;
     }
   });
   if (seedProblems.length > 0) {
@@ -196,7 +198,20 @@ export async function runMapImport(
       `sea-zones.json has seeds that need moving:\n  - ${seedProblems.join('\n  - ')}`,
     );
   }
-  growLabels(grid, sea, (pixel) => land[pixel] === 0);
+  growLabels(grid, grown, (pixel) => land[pixel] === 0);
+
+  // Coast zones and open-sea zones: each zone that touches a real coast is cut in two.
+  log('Splitting sea zones into coast and open sea…');
+  const split = splitSeaZones(
+    grid,
+    grown,
+    (pixel) => land[pixel] !== 0 && land[pixel] !== OUTSIDE,
+    configZones,
+    settings.seaZones,
+  );
+  const sea = split.labels;
+  const zones = split.zones;
+  const zoneCenters = zoneLabelPoints(grid, sea, zones.length);
 
   const zoneNeighbors = zones.map(() => new Set<number>());
   const provinceSeaZones = provinces.map(() => new Set<number>());
@@ -209,13 +224,20 @@ export async function runMapImport(
     const [p, z] = pair.split('|').map(Number) as [number, number];
     if (p !== OUTSIDE) provinceSeaZones[p - 1].add(z - 1);
   }
+  // Straits too narrow for the grid link the zones they join (their coast parts, where split).
+  const linkedZone = (id: string): number => {
+    const source = configIndex.get(id);
+    const parts = zones.flatMap((zone, i) => (zone.source === source ? [i] : []));
+    if (parts.length === 0) return -1;
+    return parts.find((i) => zones[i].kind === 'coast') ?? parts[0];
+  };
   for (const [a, b] of config.seaZones.connections) {
-    const ia = zoneIndex.get(a);
-    const ib = zoneIndex.get(b);
-    if (!ia || !ib)
+    const ia = linkedZone(a);
+    const ib = linkedZone(b);
+    if (ia < 0 || ib < 0)
       throw new Error(`sea-zones.json: connection ${a}–${b} names an unknown sea zone`);
-    zoneNeighbors[ia - 1].add(ib - 1);
-    zoneNeighbors[ib - 1].add(ia - 1);
+    zoneNeighbors[ia].add(ib);
+    zoneNeighbors[ib].add(ia);
   }
   const zonePixels = new Uint32Array(zones.length);
   for (const z of sea) if (z !== 0) zonePixels[z - 1] += 1;
@@ -477,7 +499,8 @@ export async function runMapImport(
     zones.map((zone, i) => ({
       id: zone.id,
       depth: zone.depth,
-      center: center(zone.seeds[0]),
+      kind: zone.kind,
+      center: center(zoneCenters[i]),
       adjacentSeaZones: [...zoneNeighbors[i]].map((j) => zones[j].id).sort(),
     })),
   );
@@ -548,7 +571,7 @@ export async function runMapImport(
       unitSet.droppedClusters,
       report,
       tinyReport,
-      zones.length,
+      `${zones.length} (${zones.filter((zone) => zone.kind === 'coast').length} coast zones within ${settings.seaZones.coastBandKm} km of land, ${zones.filter((zone) => zone.kind === 'sea').length} open-sea zones; ${split.tinyIslands} islands under ${settings.seaZones.minIslandKm2.toLocaleString('en')} km² don't count as a coast)`,
       warnings,
       [
         `every country has its traditional color from \`country-colors.json\`; ${adjustedColors.length} were shifted a little to stay apart from a neighbor. The two bordering countries with the most similar colors are ${closestColors.a} and ${closestColors.b} (difference ${closestColors.difference.toFixed(2)}; below ${MIN_BORDER_CONTRAST} would be hard to tell apart).`,
@@ -585,7 +608,7 @@ function buildReport(
   dropped: readonly { country: string; names: string[] }[],
   report: { merges: number },
   tiny: TinyProvinceReport,
-  seaZoneCount: number,
+  seaZoneCount: string,
   warnings: readonly string[],
   colorNote: string,
 ): string {

@@ -1,4 +1,10 @@
-import { type WorldMap, neighborsOf, provinceNameKey, seaZoneNameKey } from '@terra-scutum/sim';
+import {
+  type WorldMap,
+  isCoastZone,
+  neighborsOf,
+  provinceNameKey,
+  seaZoneNameKey,
+} from '@terra-scutum/sim';
 import { t, tKey } from './i18n';
 import { LinkList } from './link-list';
 
@@ -11,8 +17,8 @@ export interface SeaZonePanelProps {
 }
 
 /**
- * The sea zone panel (F70): name, depth, the sea zones it borders and its
- * coastal provinces. It takes the province panel's place: one of the two is
+ * The sea zone panel (F70): name, type (coast zone or open sea), depth, the
+ * sea zones it borders and its coastal provinces. It takes the province panel's place: one of the two is
  * shown at a time. Naval units, trade routes and seabed infestation join it
  * with their features.
  */
@@ -51,6 +57,10 @@ export function SeaZonePanel({
         </button>
       </div>
       <dl className="facts">
+        <dt>{t('SEA_ZONE_PANEL_TYPE')}</dt>
+        <dd data-testid="sea-zone-type">
+          {t(isCoastZone(world, seaZone) ? 'SEA_ZONE_TYPE_COAST' : 'SEA_ZONE_TYPE_SEA')}
+        </dd>
         <dt>{t('SEA_ZONE_PANEL_DEPTH')}</dt>
         <dd data-testid="sea-zone-depth">
           {t(world.seaZoneDeep[seaZone] ? 'SEA_ZONE_DEPTH_DEEP' : 'SEA_ZONE_DEPTH_SHALLOW')}

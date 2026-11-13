@@ -1,9 +1,4 @@
-import {
-  type MapViewConfig,
-  type WorldMap,
-  isCoastalSeaZone,
-  neighborsOf,
-} from '@terra-scutum/sim';
+import { type MapViewConfig, type WorldMap, isCoastZone, neighborsOf } from '@terra-scutum/sim';
 
 /**
  * Province and sea zone colors for each map mode. Pure code: the renderer
@@ -141,7 +136,7 @@ export function seaZoneColors(mode: MapMode, world: WorldMap, colors: Colors): U
   const open = parseHexColor(colors.seaOpen);
   world.seaZoneIds.forEach((_, zone) => {
     if (mode !== 'seaZones') write(result, zone, sea);
-    else write(result, zone, isCoastalSeaZone(world, zone) ? coastal : open);
+    else write(result, zone, isCoastZone(world, zone) ? coastal : open);
   });
   return result;
 }

@@ -54,7 +54,7 @@ test('the world map shows every province; clicking one opens its info panel', as
   await waitForFrames(page);
   const stats = await page.evaluate(() => window.__terraScutum!.map.stats()!);
   expect(stats.provinces).toBe(1294);
-  expect(stats.seaZones).toBe(126);
+  expect(stats.seaZones).toBe(221);
   expect(stats.detail).toBe('far');
   expect(stats.drawnTriangles).toBeGreaterThan(50_000);
   // The whole world from far away stays cheap: well under half a million triangles a frame.

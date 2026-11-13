@@ -1,4 +1,4 @@
-import { buildWorldMap, isCoastalSeaZone, neighborsOf, parseGameData } from '@terra-scutum/sim';
+import { buildWorldMap, isCoastZone, neighborsOf, parseGameData } from '@terra-scutum/sim';
 import type { Objects, Topology } from 'topojson-specification';
 import { describe, expect, it } from 'vitest';
 import provincesText from '../../../data/geometry/provinces.topo.json?raw';
@@ -364,7 +364,7 @@ describe('map colors', () => {
     world.seaZoneIds.forEach((_, z) => {
       expect(rgb(calm, z)).toEqual(hex(colors.sea));
       expect(rgb(byCoast, z)).toEqual(
-        hex(isCoastalSeaZone(world, z) ? colors.seaCoastal : colors.seaOpen),
+        hex(isCoastZone(world, z) ? colors.seaCoastal : colors.seaOpen),
       );
       // The sea stays blue in every map mode.
       for (const table of [calm, byCoast]) {
@@ -375,9 +375,11 @@ describe('map colors', () => {
     // Every map mode but sea zones shows the same calm sea.
     for (const mode of MAP_MODES)
       if (mode !== 'seaZones') expect(seaZoneColors(mode, world, colors)).toEqual(calm);
-    // The North Sea is coastal; the open North Atlantic is not.
-    expect(isCoastalSeaZone(world, zone('north_sea'))).toBe(true);
-    expect(isCoastalSeaZone(world, zone('north_atlantic'))).toBe(false);
+    // The North Sea is split into its open middle and the coast around it; the English Channel is coast.
+    expect(isCoastZone(world, zone('north_sea'))).toBe(false);
+    expect(isCoastZone(world, zone('north_sea_coast'))).toBe(true);
+    expect(isCoastZone(world, zone('english_channel'))).toBe(true);
+    expect(isCoastZone(world, zone('north_atlantic'))).toBe(false);
   });
 
   it('marks the selected and the hovered sea zone', () => {
@@ -438,29 +440,41 @@ describe('sea zone picking', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('lists coastal provinces that really face the sea zone (the Philippine Sea)', () => {
-    const coasts = neighborsOf(world.seaZoneProvinces, world.seaZoneIndex.get('philippine_sea')!);
+  it('lists coastal provinces that really face the sea zone (the Philippine Sea Coast)', () => {
+    const coasts = neighborsOf(
+      world.seaZoneProvinces,
+      world.seaZoneIndex.get('philippine_sea_coast')!,
+    );
     const ids = Array.from(coasts, (province) => world.provinceIds[province]);
     expect(ids).toEqual(
-      expect.arrayContaining(['phl_bicol', 'phl_davao', 'jpn_okinawa', 'jpn_shikoku']),
+      expect.arrayContaining(['phl_bicol', 'phl_davao', 'twn_eastern_taiwan_hualien']),
     );
+  });
+
+  it('puts every province on real land next to coast zones; only tiny islands touch open sea', () => {
+    // A province whose only sea zones are open sea must be a tiny island (or a group of them).
+    const onlyOpenSea = world.provinceIds.filter((_, province) => {
+      const zones = Array.from(neighborsOf(world.provinceSeaZones, province));
+      return zones.length > 0 && zones.every((z) => !isCoastZone(world, z));
+    });
+    for (const id of onlyOpenSea)
+      expect(world.provinceAreaKm2[world.provinceIndex.get(id)!], id).toBeLessThan(20_000);
+    for (const id of ['fra_ile_de_france', 'usa_california', 'jpn_tohoku', 'per_lima'])
+      expect(onlyOpenSea).not.toContain(id);
   });
 });
 
 describe('sea zone borders', () => {
-  it('connect: every border line ends on another border, at the date line or at the map edge', () => {
+  it('connect: every border line ends on another border, at the date line or at the map edge (or is a ring)', () => {
     const lines = buildInnerBorders(seaTopology, 'seaZones', projection);
     const key = (x: number, z: number) => `${x.toFixed(3)},${z.toFixed(3)}`;
-    // How many lines pass through or end at each point.
-    const linesAt = new Map<string, Set<number>>();
-    lines.forEach(({ points }, line) => {
+    // How many line points (of any line, the same one included) lie at each place.
+    const pointsAt = new Map<string, number>();
+    for (const { points } of lines)
       for (let i = 0; i < points.length; i += 2) {
         const at = key(points[i], points[i + 1]);
-        const set = linesAt.get(at) ?? new Set<number>();
-        set.add(line);
-        linesAt.set(at, set);
+        pointsAt.set(at, (pointsAt.get(at) ?? 0) + 1);
       }
-    });
     const edge = 1e-3;
     const loose: string[] = [];
     for (const { points } of lines)
@@ -470,7 +484,8 @@ describe('sea zone borders', () => {
           Math.abs(Math.abs(x) - projection.width / 2) < edge ||
           z < projection.minZ + edge ||
           z > projection.maxZ - edge;
-        if (!onEdge && linesAt.get(key(x, z))!.size < 2)
+        // Fine if another line point lies there: a junction, or a ring closing on itself.
+        if (!onEdge && pointsAt.get(key(x, z))! < 2)
           loose.push(`${projection.longitude(x).toFixed(2)}, ${projection.latitude(z).toFixed(2)}`);
       }
     expect(loose).toEqual([]);
