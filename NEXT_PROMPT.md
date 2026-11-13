@@ -3,7 +3,9 @@
 Paste this into a **new** Claude Code session on `terra-scutum` / `main`, after playing the F122 preview link and merging the F122 pull request. Your usual model is fine (F138 is not a ⚑ Fable task).
 
 ```
-Build F138 (country screen; M1, step 6 of the M1 build order, after F122). Read CLAUDE.md, GAME_DESIGN.md, docs/11_ui_art_audio.md (sections 12.1 and 12.4.1), docs/02_world_and_characters.md (section 4.7 characters, only what the screen needs), docs/12_feature_tracker.md, docs/13_technical.md (including "What F02 built", "What F71 built" and "What F122 built") and docs/14_decision_log.md.
+First, before F138: make the CI test run faster. Since F122 the "Check, test and build" run takes about 19 minutes, close to its 20-minute limit, and uses about 19 of the private repository's free Actions minutes per run. Decided (designer): on pull requests, run the browser tests on WebGL 2 only; run the WebGPU browser tests only after a merge to main (a push to main). Make the change in .github/workflows/, check it works, note it in docs/13_technical.md (Testing) and docs/14_decision_log.md, and tell me how long the run takes now. Commit it with F138 (no separate pull request).
+
+Then build F138 (country screen; M1, step 6 of the M1 build order, after F122). Read CLAUDE.md, GAME_DESIGN.md, docs/11_ui_art_audio.md (sections 12.1 and 12.4.1), docs/02_world_and_characters.md (section 4.7 characters, only what the screen needs), docs/12_feature_tracker.md, docs/13_technical.md (including "What F02 built", "What F71 built" and "What F122 built") and docs/14_decision_log.md.
 
 Where we are: F132, F64, F01, F02, F70, F03, F04, F71 and F122 are merged. The game has the UI shell: a top bar (my country, the United States until F05, as its map color and name; every key number as "—" with a "comes with F…" tooltip; date and speed), an alerts row, the outliner, the lens bar with empty screens, toasts, pop-ups, a message log and message settings, and one information panel on the left (province, sea zone, country, region) with Back. ?debug=ui-demo fills the shell with sample content.
 
