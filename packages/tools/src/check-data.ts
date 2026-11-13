@@ -62,7 +62,7 @@ for (const file of localeFiles) {
 }
 
 if (data) {
-  console.log('Checking map names and shapes…');
+  console.log('Checking names and map shapes…');
   const before = problemCount;
   for (const problem of checkMapNames(data, englishTexts)) fail(problem);
   const shapes: [string, string, string[]][] = [
@@ -79,7 +79,8 @@ if (data) {
     }
     for (const problem of checkGeometry(`data/${file}`, content, objectName, ids)) fail(problem);
   }
-  if (problemCount === before) console.log('  ✓ every map item has a name and a shape');
+  if (problemCount === before)
+    console.log('  ✓ every map item and government type has a name, every map item a shape');
 }
 
 if (problemCount > 0) {

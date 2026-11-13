@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseLaunchOptions } from '../src/debug/scenarios';
-import { formatDate, t, tKey } from '../src/ui/i18n';
+import {
+  formatDate,
+  formatMoney,
+  formatMoneyMillions,
+  formatPopulation,
+  t,
+  tKey,
+} from '../src/ui/i18n';
 
 describe('i18n', () => {
   it('returns texts and fills in placeholders', () => {
@@ -22,6 +29,25 @@ describe('i18n', () => {
   it('formats dates with month names', () => {
     expect(formatDate({ year: 2025, month: 1, day: 1 })).toBe('1 January 2025');
     expect(formatDate({ year: 2027, month: 12, day: 31 })).toBe('31 December 2027');
+  });
+});
+
+describe('numbers', () => {
+  it('formats populations: billions, millions, then exact numbers', () => {
+    expect(formatPopulation(1_463_865_525)).toBe('1.46 billion');
+    expect(formatPopulation(285_721_236)).toBe('286 million');
+    expect(formatPopulation(83_491_249)).toBe('83.5 million');
+    expect(formatPopulation(5_484_367)).toBe('5.48 million');
+    expect(formatPopulation(41_024)).toBe('41,024');
+  });
+
+  it('formats money given in millions of dollars', () => {
+    expect(formatMoneyMillions(30_861_300)).toBe('$30.9 trillion');
+    expect(formatMoneyMillions(5_115_594)).toBe('$5.12 trillion');
+    expect(formatMoneyMillions(920_585)).toBe('$921 billion');
+    expect(formatMoneyMillions(2_253)).toBe('$2.25 billion');
+    expect(formatMoneyMillions(300)).toBe('$300 million');
+    expect(formatMoney(61_270.6)).toBe('$61,271');
   });
 });
 

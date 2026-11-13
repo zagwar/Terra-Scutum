@@ -1,0 +1,14 @@
+{
+  "governmentTypes": [
+    { "id": "parliamentary_democracy", "kind": "democracy" },
+    { "id": "presidential_democracy", "kind": "democracy" },
+    { "id": "constitutional_monarchy", "kind": "democracy" },
+    { "id": "authoritarian", "kind": "autocracy" },
+    { "id": "military_junta", "kind": "autocracy" },
+    { "id": "absolute_monarchy", "kind": "autocracy" },
+    { "id": "corporate_republic", "kind": "corporate" },
+    { "id": "corporate_directorate", "kind": "corporate" },
+    { "id": "company_state", "kind": "corporate" },
+    { "id": "technocratic_consortium", "kind": "corporate" }
+  ]
+}

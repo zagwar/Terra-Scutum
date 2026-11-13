@@ -75,6 +75,8 @@ describe('game data validation', () => {
       'data/provinces.json: file is missing',
       'data/regions.json: file is missing',
       'data/sea_zones.json: file is missing',
+      'data/government_types.json: file is missing',
+      'data/country_start.json: file is missing',
       'data/map_view.json: file is missing',
     ]);
   });

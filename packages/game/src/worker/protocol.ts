@@ -1,5 +1,6 @@
 import type {
   CommandResult,
+  CountryStartTable,
   MapViewConfig,
   SimCommand,
   SimEvent,
@@ -55,6 +56,8 @@ export type FromSimWorker =
       readonly world: WorldMap;
       /** How the map is drawn (validated `data/map_view.json`). */
       readonly mapView: MapViewConfig;
+      /** Each country's real-world starting data (population, GDP, government type), by country index. */
+      readonly countryStart: CountryStartTable;
       /** The game speed at the start: paused. */
       readonly time: TimeState;
       /** Days per second at speeds 1–5 (`data/game_config.json`). */

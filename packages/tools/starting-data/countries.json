@@ -1,0 +1,373 @@
+{
+  "year": 2025,
+  "sourceCodes": {
+    "KOS": { "imf": "UVK", "worldBank": "XKX" },
+    "PSE": { "imf": "WBG" },
+    "GGY": { "imf": "CHI", "worldBank": "CHI" },
+    "JEY": { "imf": "CHI", "worldBank": "CHI" }
+  },
+  "territoryEstimates": {
+    "SAH": {
+      "population": 600000,
+      "note": "Western Sahara: about 600,000 people (UN World Population Prospects 2024, rounded); its economy is counted in Morocco's GDP"
+    }
+  },
+  "countries": {
+    "AFG": {
+      "government": "authoritarian",
+      "note": "Taliban emirate: a theocracy, closest to the authoritarian type"
+    },
+    "AGO": { "government": "authoritarian", "note": "MPLA has ruled since independence" },
+    "ALB": { "government": "parliamentary_democracy" },
+    "AND": {
+      "government": "constitutional_monarchy",
+      "note": "parliamentary co-principality (the French president and the Bishop of Urgell)"
+    },
+    "ARE": {
+      "government": "absolute_monarchy",
+      "note": "a federation of seven absolute monarchies"
+    },
+    "ARG": { "government": "presidential_democracy" },
+    "ARM": { "government": "parliamentary_democracy" },
+    "AUS": { "government": "constitutional_monarchy" },
+    "AUT": { "government": "parliamentary_democracy" },
+    "AZE": { "government": "authoritarian" },
+    "BDI": { "government": "authoritarian" },
+    "BEL": { "government": "constitutional_monarchy" },
+    "BEN": {
+      "government": "presidential_democracy",
+      "note": "borderline: elections are held but the main opposition has been kept out of them"
+    },
+    "BFA": { "government": "military_junta", "note": "military rule since the 2022 coups" },
+    "BGD": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: an interim government (Muhammad Yunus) ruled after the 2024 uprising, with no parliament, until the February 2026 election"
+    },
+    "BGR": { "government": "parliamentary_democracy" },
+    "BHR": {
+      "government": "absolute_monarchy",
+      "note": "has an elected lower house, but the king holds the real power"
+    },
+    "BIH": {
+      "government": "parliamentary_democracy",
+      "note": "power shared between three peoples"
+    },
+    "BLR": { "government": "authoritarian" },
+    "BLZ": { "government": "constitutional_monarchy" },
+    "BOL": { "government": "presidential_democracy" },
+    "BRA": { "government": "presidential_democracy" },
+    "BRN": { "government": "absolute_monarchy" },
+    "BTN": { "government": "constitutional_monarchy" },
+    "BWA": {
+      "government": "parliamentary_democracy",
+      "note": "the president is elected by parliament"
+    },
+    "CAF": { "government": "authoritarian" },
+    "CAN": { "government": "constitutional_monarchy" },
+    "CHE": {
+      "government": "parliamentary_democracy",
+      "note": "a federal council of seven ruling together, with direct democracy (referendums)"
+    },
+    "CHL": { "government": "presidential_democracy" },
+    "CHN": { "government": "authoritarian", "note": "one-party state" },
+    "CIV": {
+      "government": "presidential_democracy",
+      "note": "borderline: one dominant party; main rivals kept out of the 2025 election"
+    },
+    "CMR": { "government": "authoritarian" },
+    "COD": { "government": "authoritarian", "note": "flawed elections; war in the east" },
+    "COG": { "government": "authoritarian" },
+    "COL": { "government": "presidential_democracy" },
+    "CRI": { "government": "presidential_democracy" },
+    "CUB": {
+      "government": "authoritarian",
+      "note": "one-party state",
+      "gdp": "worldBank",
+      "gdpNote": "the latest figure is from 2020 and uses the official exchange rate, so it is probably far too high"
+    },
+    "CYP": {
+      "government": "presidential_democracy",
+      "populationNote": "counts the whole island, Northern Cyprus included",
+      "gdpNote": "leaves out Northern Cyprus (a few billion US$)"
+    },
+    "CZE": { "government": "parliamentary_democracy" },
+    "DEU": { "government": "parliamentary_democracy" },
+    "DJI": { "government": "authoritarian" },
+    "DNK": { "government": "constitutional_monarchy" },
+    "DOM": { "government": "presidential_democracy" },
+    "DZA": { "government": "authoritarian" },
+    "ECU": { "government": "presidential_democracy" },
+    "EGY": { "government": "authoritarian" },
+    "ERI": {
+      "government": "authoritarian",
+      "note": "one-party state with no elections",
+      "gdpNote": "the latest figure is from 2011"
+    },
+    "ESP": { "government": "constitutional_monarchy" },
+    "EST": { "government": "parliamentary_democracy" },
+    "ETH": { "government": "authoritarian" },
+    "FIN": { "government": "parliamentary_democracy" },
+    "FRA": {
+      "government": "presidential_democracy",
+      "note": "semi-presidential: a strong president and a prime minister"
+    },
+    "GAB": {
+      "government": "military_junta",
+      "note": "military rule after the 2023 coup; the coup leader was elected president in April 2025"
+    },
+    "GBR": { "government": "constitutional_monarchy" },
+    "GEO": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: disputed 2024 election and mass protests against the ruling party"
+    },
+    "GHA": { "government": "presidential_democracy" },
+    "GIN": { "government": "military_junta", "note": "military rule since the 2021 coup" },
+    "GMB": { "government": "presidential_democracy" },
+    "GNB": {
+      "government": "authoritarian",
+      "note": "president ruling without parliament (dissolved in 2023); a coup followed in November 2025"
+    },
+    "GNQ": { "government": "authoritarian" },
+    "GRC": { "government": "parliamentary_democracy" },
+    "GTM": { "government": "presidential_democracy" },
+    "GUY": { "government": "presidential_democracy" },
+    "HND": { "government": "presidential_democracy" },
+    "HRV": { "government": "parliamentary_democracy" },
+    "HTI": {
+      "government": "authoritarian",
+      "note": "borderline: an unelected transitional council; gangs control much of the country"
+    },
+    "HUN": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: one dominant party (Fidesz) since 2010"
+    },
+    "IDN": { "government": "presidential_democracy" },
+    "IND": { "government": "parliamentary_democracy" },
+    "IRL": { "government": "parliamentary_democracy" },
+    "IRN": {
+      "government": "authoritarian",
+      "note": "theocracy: the Supreme Leader rules above an elected president and parliament"
+    },
+    "IRQ": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: coalition governments, strong militias"
+    },
+    "ISL": { "government": "parliamentary_democracy" },
+    "ISR": { "government": "parliamentary_democracy" },
+    "ITA": { "government": "parliamentary_democracy" },
+    "JAM": { "government": "constitutional_monarchy" },
+    "JOR": {
+      "government": "constitutional_monarchy",
+      "note": "borderline: the king appoints the government and holds most of the power"
+    },
+    "JPN": { "government": "constitutional_monarchy" },
+    "KAZ": { "government": "authoritarian" },
+    "KEN": { "government": "presidential_democracy" },
+    "KGZ": { "government": "authoritarian" },
+    "KHM": {
+      "government": "authoritarian",
+      "note": "a constitutional monarchy in name; in practice one party (CPP) rules"
+    },
+    "KOR": {
+      "government": "presidential_democracy",
+      "note": "in January 2025 the president was impeached after declaring martial law; an acting president governed"
+    },
+    "KOS": { "government": "parliamentary_democracy" },
+    "KWT": {
+      "government": "absolute_monarchy",
+      "note": "the emir suspended parliament in May 2024"
+    },
+    "LAO": { "government": "authoritarian", "note": "one-party state" },
+    "LBN": {
+      "government": "parliamentary_democracy",
+      "note": "power shared between religious communities"
+    },
+    "LBR": { "government": "presidential_democracy" },
+    "LBY": {
+      "government": "authoritarian",
+      "note": "borderline: split between rival governments in Tripoli and the east (Haftar)"
+    },
+    "LIE": {
+      "government": "constitutional_monarchy",
+      "note": "the prince holds more power than most constitutional monarchs"
+    },
+    "LKA": { "government": "presidential_democracy" },
+    "LSO": { "government": "constitutional_monarchy" },
+    "LTU": { "government": "parliamentary_democracy" },
+    "LUX": { "government": "constitutional_monarchy" },
+    "LVA": { "government": "parliamentary_democracy" },
+    "MAR": {
+      "government": "constitutional_monarchy",
+      "note": "borderline: the king holds most of the power"
+    },
+    "MCO": {
+      "government": "constitutional_monarchy",
+      "note": "the prince holds more power than most constitutional monarchs"
+    },
+    "MDA": { "government": "parliamentary_democracy" },
+    "MDG": {
+      "government": "presidential_democracy",
+      "note": "a military takeover followed in October 2025"
+    },
+    "MEX": { "government": "presidential_democracy" },
+    "MKD": { "government": "parliamentary_democracy" },
+    "MLI": {
+      "government": "military_junta",
+      "note": "military rule since the 2020 and 2021 coups"
+    },
+    "MMR": {
+      "government": "military_junta",
+      "note": "military rule since the 2021 coup; civil war"
+    },
+    "MNE": { "government": "parliamentary_democracy" },
+    "MNG": { "government": "parliamentary_democracy" },
+    "MOZ": {
+      "government": "authoritarian",
+      "note": "FRELIMO has ruled since independence; disputed 2024 election"
+    },
+    "MRT": { "government": "presidential_democracy", "note": "borderline: strong army influence" },
+    "MUS": { "government": "parliamentary_democracy" },
+    "MWI": { "government": "presidential_democracy" },
+    "MYS": {
+      "government": "constitutional_monarchy",
+      "note": "an elective federal monarchy (the king is chosen among nine sultans)"
+    },
+    "NAM": { "government": "presidential_democracy" },
+    "NER": { "government": "military_junta", "note": "military rule since the 2023 coup" },
+    "NGA": { "government": "presidential_democracy" },
+    "NIC": { "government": "authoritarian" },
+    "NLD": { "government": "constitutional_monarchy" },
+    "NOR": { "government": "constitutional_monarchy" },
+    "NPL": { "government": "parliamentary_democracy" },
+    "NZL": { "government": "constitutional_monarchy" },
+    "OMN": { "government": "absolute_monarchy" },
+    "PAK": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: the army holds great power behind the elected government"
+    },
+    "PAN": { "government": "presidential_democracy" },
+    "PER": { "government": "presidential_democracy" },
+    "PHL": { "government": "presidential_democracy" },
+    "PNG": { "government": "constitutional_monarchy" },
+    "POL": { "government": "parliamentary_democracy" },
+    "PRK": {
+      "government": "authoritarian",
+      "note": "one-party state ruled by the Kim family",
+      "gdpMillionUsd": 30000,
+      "gdpNote": "estimate: the Bank of Korea put North Korea's 2023 income at about 40 trillion won (about US$30 billion); no official figure exists"
+    },
+    "PRT": { "government": "parliamentary_democracy" },
+    "PRY": { "government": "presidential_democracy" },
+    "PSE": {
+      "government": "authoritarian",
+      "note": "borderline: the Palestinian Authority has held no elections since 2006; war in Gaza"
+    },
+    "QAT": { "government": "absolute_monarchy" },
+    "ROU": {
+      "government": "presidential_democracy",
+      "note": "semi-presidential; the 2024 presidential election was annulled and rerun in May 2025"
+    },
+    "RUS": {
+      "government": "authoritarian",
+      "note": "elections without real opposition; war with Ukraine"
+    },
+    "RWA": { "government": "authoritarian" },
+    "SAU": { "government": "absolute_monarchy" },
+    "SDN": {
+      "government": "military_junta",
+      "note": "civil war between the army and the Rapid Support Forces since 2023"
+    },
+    "SEN": { "government": "presidential_democracy" },
+    "SGP": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: one party (PAP) has governed since independence"
+    },
+    "SLE": { "government": "presidential_democracy" },
+    "SLV": {
+      "government": "presidential_democracy",
+      "note": "borderline: President Bukele concentrated power and was re-elected in 2024 despite a term limit"
+    },
+    "SMR": {
+      "government": "parliamentary_democracy",
+      "note": "two Captains Regent lead the state"
+    },
+    "SOM": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: indirect elections; a weak federal state at war with al-Shabaab; includes Somaliland"
+    },
+    "SRB": {
+      "government": "parliamentary_democracy",
+      "note": "borderline: one dominant party (SNS); mass protests in 2025"
+    },
+    "SSD": { "government": "authoritarian" },
+    "SUR": { "government": "presidential_democracy" },
+    "SVK": { "government": "parliamentary_democracy" },
+    "SVN": { "government": "parliamentary_democracy" },
+    "SWE": { "government": "constitutional_monarchy" },
+    "SWZ": { "government": "absolute_monarchy" },
+    "SYR": {
+      "government": "authoritarian",
+      "note": "a transitional government (Ahmed al-Sharaa) took over after Assad fell in December 2024",
+      "gdpNote": "the latest figure is from 2022"
+    },
+    "TCD": {
+      "government": "authoritarian",
+      "note": "the military leader since 2021 was elected president in 2024"
+    },
+    "TGO": { "government": "authoritarian", "note": "the Gnassingbé family has ruled since 1967" },
+    "THA": {
+      "government": "constitutional_monarchy",
+      "note": "the army and the palace have strong influence"
+    },
+    "TJK": { "government": "authoritarian" },
+    "TKM": { "government": "authoritarian" },
+    "TLS": { "government": "parliamentary_democracy" },
+    "TTO": { "government": "parliamentary_democracy" },
+    "TUN": {
+      "government": "authoritarian",
+      "note": "the president took over most powers in 2021"
+    },
+    "TUR": {
+      "government": "presidential_democracy",
+      "note": "borderline: competitive but unfair elections; the main opposition leader was arrested in 2025"
+    },
+    "TWN": {
+      "government": "presidential_democracy",
+      "populationNote": "from the IMF (the World Bank has no figure for Taiwan)"
+    },
+    "TZA": {
+      "government": "authoritarian",
+      "note": "borderline: one party (CCM) has ruled since independence"
+    },
+    "UGA": { "government": "authoritarian" },
+    "UKR": {
+      "government": "presidential_democracy",
+      "note": "elections suspended under martial law (war with Russia since 2022)"
+    },
+    "URY": { "government": "presidential_democracy" },
+    "USA": { "government": "presidential_democracy" },
+    "UZB": { "government": "authoritarian" },
+    "VAT": {
+      "government": "absolute_monarchy",
+      "note": "an elective absolute monarchy (the Pope)",
+      "population": 900,
+      "populationNote": "about 900 people (Vatican figures); no World Bank or IMF figure",
+      "gdpMillionUsd": 300,
+      "gdpNote": "placeholder [DEFAULT]: the Vatican has no official GDP"
+    },
+    "VEN": { "government": "authoritarian" },
+    "VNM": { "government": "authoritarian", "note": "one-party state" },
+    "YEM": {
+      "government": "authoritarian",
+      "note": "civil war: the recognized government (Presidential Leadership Council) holds the south, the Houthis the north",
+      "gdp": "worldBank",
+      "gdpNote": "the World Bank's 2018 figure; the IMF's covers only the government-held areas"
+    },
+    "ZAF": {
+      "government": "parliamentary_democracy",
+      "note": "the president is elected by parliament"
+    },
+    "ZMB": { "government": "presidential_democracy" },
+    "ZWE": { "government": "authoritarian" }
+  }
+}

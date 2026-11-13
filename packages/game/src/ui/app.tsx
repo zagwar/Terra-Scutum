@@ -37,7 +37,7 @@ export function App({
   onResetView,
 }: AppProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
-  const { world, provinceOwner } = state;
+  const { world, provinceOwner, countryStart } = state;
 
   return (
     <div className="ui-layer">
@@ -57,9 +57,10 @@ export function App({
         />
       )}
 
-      {world && provinceOwner && state.selectedCountry !== null && (
+      {world && provinceOwner && countryStart && state.selectedCountry !== null && (
         <CountryPanel
           world={world}
+          countryStart={countryStart}
           provinceOwner={provinceOwner}
           country={state.selectedCountry}
           onSelectCountry={onSelectCountry}

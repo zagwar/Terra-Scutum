@@ -445,6 +445,19 @@ body {
   color: var(--color-text-dim);
 }
 
+.facts dt[title] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* A small line under a panel's facts, for example where the numbers come from. */
+.panel-note {
+  margin: -6px 0 14px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
 .facts dd {
   margin: 0;
   text-align: right;

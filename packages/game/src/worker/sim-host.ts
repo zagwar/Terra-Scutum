@@ -162,6 +162,7 @@ export function createSimHost(
           saveFormatVersion: SAVE_FORMAT_VERSION,
           world: state.world,
           mapView: data.mapView,
+          countryStart: state.countryStart,
           time,
           daysPerSecond,
         });

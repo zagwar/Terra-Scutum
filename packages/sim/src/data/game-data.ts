@@ -10,6 +10,16 @@ import {
   seaZonesFileSchema,
 } from '../world/world-data';
 import { checkWorldData } from '../world/world-checks';
+import {
+  type CountryStartFile,
+  checkCountryStart,
+  countryStartFileSchema,
+} from '../world/country-start';
+import {
+  type GovernmentTypesFile,
+  governmentTypesFileSchema,
+  checkGovernmentTypes,
+} from '../politics/government-types';
 import { type GameConfig, gameConfigSchema } from './game-config';
 import { type MapViewConfig, mapViewSchema } from './map-view-config';
 
@@ -28,6 +38,8 @@ export const DATA_FILES = {
   provinces: { file: 'provinces.json', schema: provincesFileSchema },
   regions: { file: 'regions.json', schema: regionsFileSchema },
   seaZones: { file: 'sea_zones.json', schema: seaZonesFileSchema },
+  governmentTypes: { file: 'government_types.json', schema: governmentTypesFileSchema },
+  countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
@@ -43,6 +55,9 @@ export interface GameData {
   readonly provinces: ProvincesFile;
   readonly regions: RegionsFile;
   readonly seaZones: SeaZonesFile;
+  readonly governmentTypes: GovernmentTypesFile;
+  /** Each country's real-world starting data (F71). */
+  readonly countryStart: CountryStartFile;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
 }
@@ -80,7 +95,11 @@ export class DataValidationError extends Error {
 export type DataCrossCheck = (data: GameData, report: (issue: DataIssue) => void) => void;
 
 /** Cross-file checks. Features add theirs as their data files arrive. */
-const CROSS_CHECKS: readonly DataCrossCheck[] = [checkWorldData];
+const CROSS_CHECKS: readonly DataCrossCheck[] = [
+  checkWorldData,
+  checkGovernmentTypes,
+  checkCountryStart,
+];
 
 /**
  * Validates the raw content of all data files and returns typed game data.

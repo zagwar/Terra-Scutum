@@ -22,7 +22,8 @@
     "typecheck": "tsc -p packages/sim/tsconfig.src.json && tsc -p packages/sim && tsc -p packages/game && tsc -p packages/game/tsconfig.node.json && tsc -p packages/game/e2e && tsc -p packages/runner && tsc -p packages/tools",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "import:map": "tsx packages/tools/src/import-map.ts"
+    "import:map": "tsx packages/tools/src/import-map.ts",
+    "import:starting-data": "tsx packages/tools/src/import-starting-data.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

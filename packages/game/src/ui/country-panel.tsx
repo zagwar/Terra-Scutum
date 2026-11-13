@@ -1,13 +1,17 @@
 import {
+  type CountryStartTable,
   type WorldMap,
   countryNameKey,
+  governmentTypeNameKey,
   provinceNameKey,
   summarizeCountry,
 } from '@terra-scutum/sim';
-import { formatArea, t, tKey } from './i18n';
+import { formatArea, formatMoney, formatMoneyMillions, formatPopulation, t, tKey } from './i18n';
 
 export interface CountryPanelProps {
   readonly world: WorldMap;
+  /** Each country's real-world starting data (F71). */
+  readonly countryStart: CountryStartTable;
   /** The country (index) that owns each province right now. */
   readonly provinceOwner: Uint16Array;
   /** Index of the country to show. */
@@ -17,12 +21,14 @@ export interface CountryPanelProps {
 }
 
 /**
- * The country panel (F02): name, map color, capital, and what the country
+ * The country panel (F02): name, map color, government type, capital,
+ * population and GDP (real-world starting data, F71), and what the country
  * holds right now (provinces, area, neighbors), worked out from the current
- * owners. Government, economy and diplomacy join it with their features.
+ * owners. The full country screen (F138) replaces it.
  */
 export function CountryPanel({
   world,
+  countryStart,
   provinceOwner,
   country,
   onSelectCountry,
@@ -34,6 +40,8 @@ export function CountryPanel({
     .map((index) => ({ index, name: countryName(index) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const capital = world.countryCapital[country];
+  const population = countryStart.population[country];
+  const gdpMillionUsd = countryStart.gdpMillionUsd[country];
 
   return (
     <section className="panel country-panel" data-testid="country-panel">
@@ -58,6 +66,10 @@ export function CountryPanel({
         </button>
       </div>
       <dl className="facts">
+        <dt>{t('COUNTRY_PANEL_GOVERNMENT')}</dt>
+        <dd data-testid="country-government">
+          {tKey(governmentTypeNameKey(countryStart.governmentType[country]))}
+        </dd>
         <dt>{t('COUNTRY_PANEL_CAPITAL')}</dt>
         <dd>
           <button
@@ -69,11 +81,20 @@ export function CountryPanel({
             {tKey(provinceNameKey(world.provinceIds[capital]))}
           </button>
         </dd>
+        <dt>{t('COUNTRY_PANEL_POPULATION')}</dt>
+        <dd data-testid="country-population">{formatPopulation(population)}</dd>
+        <dt title={t('COUNTRY_PANEL_GDP_TOOLTIP')}>{t('COUNTRY_PANEL_GDP')}</dt>
+        <dd data-testid="country-gdp">{formatMoneyMillions(gdpMillionUsd)}</dd>
+        <dt>{t('COUNTRY_PANEL_GDP_PER_PERSON')}</dt>
+        <dd data-testid="country-gdp-per-person">
+          {formatMoney((gdpMillionUsd * 1e6) / population)}
+        </dd>
         <dt>{t('COUNTRY_PANEL_PROVINCES')}</dt>
         <dd data-testid="country-provinces">{summary.provinces.length.toLocaleString('en')}</dd>
         <dt>{t('COUNTRY_PANEL_AREA')}</dt>
         <dd data-testid="country-area">{formatArea(summary.areaKm2)}</dd>
       </dl>
+      <p className="panel-note">{t('COUNTRY_PANEL_SOURCE', { year: countryStart.year })}</p>
 
       <h3 className="list-title">{t('COUNTRY_PANEL_NEIGHBORS', { count: neighbors.length })}</h3>
       {neighbors.length === 0 ? (
