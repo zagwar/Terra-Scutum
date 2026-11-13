@@ -5,6 +5,7 @@ import { testMapView, testWorld } from './helpers';
 const validConfig = {
   startDate: '2025-01-01',
   performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
+  gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
 };
 
 const world = { ...testWorld(), mapView: testMapView() };
@@ -32,6 +33,7 @@ describe('game data validation', () => {
       gameConfig: {
         startDate: '2025-02-30',
         performanceBudget: { dailyTickAverageMs: 'fast', weeklyTickAverageMs: -1 },
+        gameSpeed: validConfig.gameSpeed,
       },
     });
     expect(issues).toHaveLength(3);
@@ -46,6 +48,24 @@ describe('game data validation', () => {
     expect(typo.join('\n')).toContain('startDay');
     const missing = issuesOf({ ...world, gameConfig: { startDate: '2025-01-01' } });
     expect(missing.join('\n')).toContain('performanceBudget');
+  });
+
+  it('checks the game speeds: five of them, each faster than the last', () => {
+    const tooFew = issuesOf({
+      ...world,
+      gameConfig: { ...validConfig, gameSpeed: { daysPerSecond: [1, 2, 3], startSpeed: 2 } },
+    });
+    expect(tooFew.join('\n')).toContain('gameSpeed.daysPerSecond');
+    const outOfOrder = issuesOf({
+      ...world,
+      gameConfig: { ...validConfig, gameSpeed: { daysPerSecond: [1, 2, 2, 5, 10], startSpeed: 2 } },
+    });
+    expect(outOfOrder.join('\n')).toContain('faster than the one before');
+    const badStart = issuesOf({
+      ...world,
+      gameConfig: { ...validConfig, gameSpeed: { daysPerSecond: [1, 2, 3, 4, 5], startSpeed: 6 } },
+    });
+    expect(badStart.join('\n')).toContain('gameSpeed.startSpeed');
   });
 
   it('reports a missing file', () => {

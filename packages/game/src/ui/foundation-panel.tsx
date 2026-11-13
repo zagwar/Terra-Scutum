@@ -1,5 +1,5 @@
 import type { AppState } from '../app-store';
-import { type TranslationKey, formatDate, t } from './i18n';
+import { type TranslationKey, t } from './i18n';
 
 const RENDERER_TEXT: Record<AppState['renderer'], TranslationKey> = {
   starting: 'FOUNDATION_RENDERER_STARTING',
@@ -22,15 +22,15 @@ const SIM_TEXT: Record<AppState['sim'], TranslationKey> = {
 
 export interface FoundationPanelProps {
   readonly state: AppState;
-  readonly onAdvanceDay: () => void;
 }
 
 /**
  * A temporary panel that shows the game's foundations are alive: the 3D
  * renderer, the sim worker, the round trip between them, and the world map.
+ * (The date and the game speed have their own control since F04.)
  * The real UI shell (top bar, outliner, lenses) replaces it in F122.
  */
-export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
+export function FoundationPanel({ state }: FoundationPanelProps) {
   const { snapshot } = state;
   const status = (value: AppState['renderer'] | AppState['sim']) =>
     value === 'failed' ? 'bad' : value === 'starting' ? 'pending' : 'good';
@@ -55,8 +55,6 @@ export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
               })
             : t(state.map === 'failed' ? 'FOUNDATION_FAILED' : 'FOUNDATION_MAP_LOADING')}
         </dd>
-        <dt>{t('FOUNDATION_DATE')}</dt>
-        <dd data-testid="sim-date">{snapshot ? formatDate(snapshot.date) : '—'}</dd>
         <dt>{t('FOUNDATION_DAYS_SIMULATED')}</dt>
         <dd data-testid="sim-day">{snapshot ? snapshot.day : '—'}</dd>
         <dt>{t('FOUNDATION_SAVE_FORMAT')}</dt>
@@ -68,15 +66,6 @@ export function FoundationPanel({ state, onAdvanceDay }: FoundationPanelProps) {
         <dt>{t('FOUNDATION_BUILD')}</dt>
         <dd data-testid="build-commit">{__BUILD_COMMIT__}</dd>
       </dl>
-      <button
-        type="button"
-        className="button"
-        data-testid="advance-day"
-        disabled={state.sim !== 'running'}
-        onClick={onAdvanceDay}
-      >
-        {t('FOUNDATION_ADVANCE_DAY')}
-      </button>
     </section>
   );
 }
