@@ -828,9 +828,17 @@ body {
 
 /* ── Lens bar ──────────────────────────────────────────────────────────── */
 .lens-bar {
+  /* Eight 74 px buttons with 4 px gaps, 6 px padding and a 1 px border. */
+  --lens-bar-width: 634px;
   position: absolute;
-  left: var(--shell-gap);
   bottom: var(--shell-gap);
+  /* In the middle of the screen (designer decision), but never under the map mode box on a narrow window. */
+  left: clamp(
+    var(--shell-gap),
+    calc(50% - var(--lens-bar-width) / 2),
+    calc(100% - var(--side-width) - 2 * var(--shell-gap) - var(--lens-bar-width))
+  );
+  width: var(--lens-bar-width);
   pointer-events: none;
 }
 
@@ -882,7 +890,8 @@ body {
 
 .lens-menu {
   position: absolute;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: calc(100% + 6px);
   width: 320px;
   padding: 12px 12px 10px;
@@ -1199,10 +1208,11 @@ body {
 }
 
 .demo-controls {
+  /* Bottom-left, under the information panel and beside the lens bar. */
   position: absolute;
-  left: 50%;
-  bottom: 100px;
-  transform: translateX(-50%);
+  left: var(--shell-gap);
+  bottom: var(--shell-gap);
+  width: 300px;
   padding: 8px 10px 10px;
   border-top-color: #9b7ad8;
 }
@@ -1210,6 +1220,11 @@ body {
 .demo-controls .panel-title {
   margin-bottom: 6px;
   color: #b9a0e8;
+}
+
+.demo-controls .button-row {
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .demo-controls .button {

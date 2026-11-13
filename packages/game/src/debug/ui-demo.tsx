@@ -94,7 +94,7 @@ function randomBorderChange(world: WorldMap, owners: Uint16Array) {
   return null;
 }
 
-/** The demo's buttons, bottom-center. */
+/** The demo's buttons, bottom-left. */
 export function DemoControls({
   store,
   actions,

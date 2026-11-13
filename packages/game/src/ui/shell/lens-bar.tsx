@@ -18,7 +18,7 @@ export interface LensBarProps {
 }
 
 /**
- * The lens bar (F122, section 12.1, like Victoria 3), bottom-left: the main
+ * The lens bar (F122, section 12.1, like Victoria 3), bottom-center: the main
  * screens grouped into eight lenses. Clicking a lens lists its screens above
  * the bar; clicking a screen opens it. The screens are empty until their
  * features are built and say which feature fills them.
