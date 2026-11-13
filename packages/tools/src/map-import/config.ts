@@ -26,6 +26,12 @@ export const settingsSchema = z.strictObject({
     populationUnit: z.number().positive(),
     /** Only provinces lighter than this (in "average province" units) are merged into a neighbor. */
     mergeBelowLoad: z.number().positive(),
+    /**
+     * The most provinces a country (each separate piece of land: one cluster) may have, as a
+     * multiple of its target. Above it, provinces are merged further, even real regions and named
+     * groups (except those marked `keep`), so small countries aren't cut finer than big ones.
+     */
+    maxProvincesFactor: z.number().min(1),
     /** A province with no land neighbor of its country (an island) only merges across the sea if lighter than this. */
     seaMergeBelowLoad: z.number().min(0),
     /**
@@ -43,6 +49,15 @@ export const settingsSchema = z.strictObject({
     minClusterPopulation: z.number().min(0),
     /** Islets smaller than this are dropped from a province (its largest piece is always kept). */
     minIsletAreaKm2: z.number().min(0),
+  }),
+  colors: z.strictObject({
+    /**
+     * Countries without a shared border still get clearly different map colors when their
+     * land is closer together than this (across a strait or a narrow sea).
+     */
+    nearCountryKm: z.number().min(0),
+    /** …counting only provinces at least this big (a big country's far-away specks don't count). */
+    nearMinProvinceKm2: z.number().min(0),
   }),
   raster: z.strictObject({
     /** Size of one pixel of the grid used to find sea zones and coastlines. */
@@ -136,6 +151,11 @@ export const provinceGroupsSchema = z.strictObject({
       names: z.array(z.string().min(1)).optional(),
       /** Whole Natural Earth territories (e.g. "HKG" for Hong Kong). */
       territories: z.array(z.string().regex(countryIdPattern)).optional(),
+      /**
+       * Never merged with another province, even when the country has more provinces than its
+       * budget: for areas that matter on their own (a breakaway or autonomous region).
+       */
+      keep: z.boolean().optional(),
     }),
   ),
 });
@@ -147,6 +167,35 @@ export const provinceNamesSchema = z.strictObject({
 });
 export type ProvinceNamesConfig = z.infer<typeof provinceNamesSchema>;
 
+export const tinyProvincesSchema = z.strictObject({
+  /** Radius of the disc an enlarged province is drawn as [DEFAULT]. */
+  radiusKm: z.number().positive(),
+  /** Corners of that disc. */
+  discPoints: z.number().int().min(8).max(128),
+  /** Provinces too small for the map data, drawn as a disc so they can be seen and clicked. */
+  enlarge: z.array(
+    z.strictObject({
+      id: z.string().regex(idPattern),
+      /** Where the disc is drawn: [longitude, latitude]. */
+      center: lonLat,
+      /** The real area, written to the data (the disc is only how it is drawn). */
+      areaKm2: z.number().positive(),
+    }),
+  ),
+  /** Provinces too small for the map data that are not part of the game. */
+  leaveOut: z.array(z.string().regex(idPattern)),
+});
+export type TinyProvincesConfig = z.infer<typeof tinyProvincesSchema>;
+
+export const countryColorsSchema = z.strictObject({
+  /**
+   * The color commonly associated with each country, by country id, as #rrggbb. A country keeps
+   * it on the map unless a neighbor's color is too much alike (then the smaller one is shifted a little).
+   */
+  colors: z.record(z.string().regex(countryIdPattern), z.string().regex(/^#[0-9a-f]{6}$/)),
+});
+export type CountryColorsConfig = z.infer<typeof countryColorsSchema>;
+
 export interface MapConfig {
   readonly settings: MapSettings;
   readonly countries: CountriesConfig;
@@ -154,6 +203,8 @@ export interface MapConfig {
   readonly seaZones: SeaZonesConfig;
   readonly provinceGroups: ProvinceGroupsConfig;
   readonly provinceNames: ProvinceNamesConfig;
+  readonly tinyProvinces: TinyProvincesConfig;
+  readonly countryColors: CountryColorsConfig;
 }
 
 function readConfigFile<T>(dir: string, file: string, schema: z.ZodType<T>): T {
@@ -182,5 +233,7 @@ export function loadMapConfig(dir: string = MAP_CONFIG_DIR): MapConfig {
     seaZones: readConfigFile(dir, 'sea-zones.json', seaZonesConfigSchema),
     provinceGroups: readConfigFile(dir, 'province-groups.json', provinceGroupsSchema),
     provinceNames: readConfigFile(dir, 'province-names.json', provinceNamesSchema),
+    tinyProvinces: readConfigFile(dir, 'tiny-provinces.json', tinyProvincesSchema),
+    countryColors: readConfigFile(dir, 'country-colors.json', countryColorsSchema),
   };
 }

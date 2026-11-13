@@ -50,10 +50,10 @@ test('the world map shows every province; clicking one opens its info panel', as
   const shot = (name: string) =>
     page.screenshot({ path: join(SCREENSHOT_DIR, `map-${name}-${testInfo.project.name}.png`) });
 
-  await expect(page.getByTestId('map-status')).toHaveText('1,423 provinces');
+  await expect(page.getByTestId('map-status')).toHaveText('1,294 provinces');
   await waitForFrames(page);
   const stats = await page.evaluate(() => window.__terraScutum!.map.stats()!);
-  expect(stats.provinces).toBe(1423);
+  expect(stats.provinces).toBe(1294);
   expect(stats.seaZones).toBe(126);
   expect(stats.detail).toBe('far');
   expect(stats.drawnTriangles).toBeGreaterThan(50_000);
@@ -93,6 +93,9 @@ test('the world map shows every province; clicking one opens its info panel', as
   await neighbors.filter({ hasText: 'Normandie' }).click();
   await expect(page.getByTestId('province-name')).toHaveText('Normandie');
   await expect(page.getByTestId('province-sea-zones')).not.toHaveText('None');
+  // A province picked from a list is brought into view (zoomed in, because it was small on screen).
+  expect(await page.evaluate(() => window.__terraScutum!.map.zoom()!)).toBeGreaterThan(1);
+  await page.evaluate(() => window.__terraScutum!.map.lookAt(0, 0, 1));
 
   // Clicking the sea clears the selection, and so does the close button.
   const sea = await screenPosition(page, ...MID_ATLANTIC);

@@ -6,21 +6,32 @@ import {
   regionNameKey,
   seaZoneNameKey,
 } from '@terra-scutum/sim';
-import { t, tKey } from './i18n';
+import { formatArea, t, tKey } from './i18n';
 
 export interface ProvincePanelProps {
   readonly world: WorldMap;
+  /** The country (index) that owns each province right now. */
+  readonly provinceOwner: Uint16Array;
   /** Index of the province to show. */
   readonly province: number;
   readonly onSelectProvince: (province: number | null) => void;
+  /** Opens a country's panel. */
+  readonly onSelectCountry: (country: number) => void;
 }
 
 /**
  * The province info panel (F01): name, country, region and what the province
  * borders. Population, buildings and construction join it with their features.
- * The country shown is the starting owner until ownership arrives with F02.
+ * The country is the province's current owner (F02); clicking it opens the country panel.
  */
-export function ProvincePanel({ world, province, onSelectProvince }: ProvincePanelProps) {
+export function ProvincePanel({
+  world,
+  provinceOwner,
+  province,
+  onSelectProvince,
+  onSelectCountry,
+}: ProvincePanelProps) {
+  const owner = provinceOwner[province];
   const provinceName = (index: number) => tKey(provinceNameKey(world.provinceIds[index]));
   const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
   const neighbors = Array.from(neighborsOf(world.provinceNeighbors, province), (index) => ({
@@ -40,8 +51,8 @@ export function ProvincePanel({ world, province, onSelectProvince }: ProvincePan
         <button
           type="button"
           className="icon-button"
-          aria-label={t('PROVINCE_PANEL_CLOSE')}
-          title={t('PROVINCE_PANEL_CLOSE')}
+          aria-label={t('PANEL_CLOSE')}
+          title={t('PANEL_CLOSE')}
           data-testid="province-close"
           onClick={() => onSelectProvince(null)}
         >
@@ -50,24 +61,28 @@ export function ProvincePanel({ world, province, onSelectProvince }: ProvincePan
       </div>
       <dl className="facts">
         <dt>{t('PROVINCE_PANEL_COUNTRY')}</dt>
-        <dd data-testid="province-country">
-          {tKey(countryNameKey(world.countryIds[world.provinceCountry[province]]))}
+        <dd>
+          <button
+            type="button"
+            className="link-button"
+            title={t('PROVINCE_PANEL_COUNTRY_HINT')}
+            data-testid="province-country"
+            onClick={() => onSelectCountry(owner)}
+          >
+            {tKey(countryNameKey(world.countryIds[owner]))}
+          </button>
         </dd>
         <dt>{t('PROVINCE_PANEL_REGION')}</dt>
         <dd data-testid="province-region">
           {tKey(regionNameKey(world.regionIds[world.provinceRegion[province]]))}
         </dd>
         <dt>{t('PROVINCE_PANEL_AREA')}</dt>
-        <dd>
-          {t('PROVINCE_PANEL_AREA_VALUE', {
-            area: Math.round(world.provinceAreaKm2[province]).toLocaleString('en'),
-          })}
-        </dd>
+        <dd data-testid="province-area">{formatArea(world.provinceAreaKm2[province])}</dd>
       </dl>
 
       <h3 className="list-title">{t('PROVINCE_PANEL_NEIGHBORS', { count: neighbors.length })}</h3>
       {neighbors.length === 0 ? (
-        <p className="list-empty">{t('PROVINCE_PANEL_NONE')}</p>
+        <p className="list-empty">{t('PANEL_NONE')}</p>
       ) : (
         <ul className="link-list" data-testid="province-neighbors">
           {neighbors.map(({ index, name }) => (
@@ -85,7 +100,7 @@ export function ProvincePanel({ world, province, onSelectProvince }: ProvincePan
         className={seaZones.length === 0 ? 'list-empty' : 'list-text'}
         data-testid="province-sea-zones"
       >
-        {seaZones.length === 0 ? t('PROVINCE_PANEL_NONE') : seaZones.join(', ')}
+        {seaZones.length === 0 ? t('PANEL_NONE') : seaZones.join(', ')}
       </p>
     </section>
   );

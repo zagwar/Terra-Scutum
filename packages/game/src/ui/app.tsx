@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { AppStore } from '../app-store';
 import type { MapMode } from '../render/map/map-colors';
+import { CountryPanel } from './country-panel';
 import { FoundationPanel } from './foundation-panel';
 import { t } from './i18n';
 import { MapModeBar } from './map-mode-bar';
@@ -12,13 +13,21 @@ export interface AppProps {
   readonly onAdvanceDay: () => void;
   /** Select a province by its index, or null to clear the selection. */
   readonly onSelectProvince: (province: number | null) => void;
+  /** Open a country's panel by its index, or null to close it. */
+  readonly onSelectCountry: (country: number | null) => void;
   readonly onSetMapMode: (mode: MapMode) => void;
 }
 
 /** The root of the React UI: an HTML layer drawn on top of the 3D view. */
-export function App({ store, onAdvanceDay, onSelectProvince, onSetMapMode }: AppProps) {
+export function App({
+  store,
+  onAdvanceDay,
+  onSelectProvince,
+  onSelectCountry,
+  onSetMapMode,
+}: AppProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
-  const { world } = state;
+  const { world, provinceOwner } = state;
 
   return (
     <div className="ui-layer">
@@ -29,16 +38,27 @@ export function App({ store, onAdvanceDay, onSelectProvince, onSetMapMode }: App
 
       <FoundationPanel state={state} onAdvanceDay={onAdvanceDay} />
 
-      {world && state.selectedProvince !== null && (
-        <ProvincePanel
+      {world && provinceOwner && state.selectedCountry !== null && (
+        <CountryPanel
           world={world}
-          province={state.selectedProvince}
+          provinceOwner={provinceOwner}
+          country={state.selectedCountry}
+          onSelectCountry={onSelectCountry}
           onSelectProvince={onSelectProvince}
         />
       )}
+      {world && provinceOwner && state.selectedProvince !== null && (
+        <ProvincePanel
+          world={world}
+          provinceOwner={provinceOwner}
+          province={state.selectedProvince}
+          onSelectProvince={onSelectProvince}
+          onSelectCountry={onSelectCountry}
+        />
+      )}
       {state.map === 'ready' && <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} />}
-      {world && state.hoveredProvince !== null && (
-        <MapTooltip world={world} province={state.hoveredProvince} />
+      {world && provinceOwner && state.hoveredProvince !== null && (
+        <MapTooltip world={world} provinceOwner={provinceOwner} province={state.hoveredProvince} />
       )}
 
       {state.error && (

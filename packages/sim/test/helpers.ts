@@ -48,8 +48,8 @@ export function testWorld() {
     },
     regions: {
       regions: [
-        { id: 'north', climate: 'temperate', center: [0, 10] },
-        { id: 'south', climate: 'arid', center: [2, 10] },
+        { id: 'north', climate: 'temperate', center: [0, 10], mapColor: '#778899' },
+        { id: 'south', climate: 'arid', center: [2, 10], mapColor: '#aa8844' },
       ],
     },
     seaZones: {
@@ -71,6 +71,9 @@ export function testMapView() {
       fieldOfViewDegrees: 40,
       fitMargin: 0.02,
       scrollDegreesPerSecond: 90,
+      maxZoom: 50,
+      wheelZoomStep: 1.2,
+      focusMinProvincePx: 60,
     },
     detail: {
       farSimplifyDegrees: 0.1,
@@ -82,10 +85,10 @@ export function testMapView() {
       background: '#000000',
       land: '#808080',
       landVariation: 0.1,
+      politicalVariation: 0.05,
       seaDeep: '#000040',
       seaShallow: '#000080',
       seaVariation: 0.05,
-      regionPalette: ['#800000', '#008000', '#000080', '#808000'],
       regionVariation: 0.1,
       selected: '#ffff00',
       neighbor: '#c0c000',

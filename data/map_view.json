@@ -8,7 +8,10 @@
     "tiltDegrees": 22,
     "fieldOfViewDegrees": 36,
     "fitMargin": 0.02,
-    "scrollDegreesPerSecond": 90
+    "scrollDegreesPerSecond": 90,
+    "maxZoom": 80,
+    "wheelZoomStep": 1.25,
+    "focusMinProvincePx": 60
   },
   "detail": {
     "farSimplifyDegrees": 0.08,
@@ -20,23 +23,10 @@
     "background": "#05080d",
     "land": "#737a5e",
     "landVariation": 0.1,
+    "politicalVariation": 0.07,
     "seaDeep": "#15283c",
     "seaShallow": "#1d3a54",
     "seaVariation": 0.05,
-    "regionPalette": [
-      "#8c6d4f",
-      "#5f7f5a",
-      "#7a5c7e",
-      "#4f6f8f",
-      "#9a7b3c",
-      "#6b8e8a",
-      "#a0614f",
-      "#5b6b9a",
-      "#7f8f4f",
-      "#8f5f6f",
-      "#4f8a6f",
-      "#9a8a6a"
-    ],
     "regionVariation": 0.08,
     "selected": "#e8c86a",
     "neighbor": "#c8a85a",

@@ -34,6 +34,15 @@ export function tKey(key: string, params?: TextParams): string {
   return Object.hasOwn(texts, key) ? fill(texts[key], params) : key;
 }
 
+/** An area as the player sees it, for example "17,033 km²" (one decimal below 10 km²: "0.5 km²"). */
+export function formatArea(areaKm2: number): string {
+  const area =
+    areaKm2 < 10
+      ? areaKm2.toLocaleString('en', { maximumFractionDigits: 1 })
+      : Math.round(areaKm2).toLocaleString('en');
+  return t('AREA_VALUE', { area });
+}
+
 /** A date as the player sees it, for example "1 January 2025". */
 export function formatDate(date: CalendarDate): string {
   return t('DATE_FORMAT', {

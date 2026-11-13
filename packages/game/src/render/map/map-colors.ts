@@ -9,7 +9,7 @@ import { type MapViewConfig, type WorldMap, neighborsOf } from '@terra-scutum/si
  */
 
 /** The map modes that exist so far (section 12.2); more come with their features. */
-export const MAP_MODES = ['provinces', 'regions'] as const;
+export const MAP_MODES = ['political', 'provinces', 'regions'] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 type Rgb = readonly [number, number, number];
@@ -50,41 +50,36 @@ function write(target: Uint8Array, index: number, color: Rgb): void {
 }
 
 /**
- * Picks a palette entry for every region so that regions sharing a border
- * get different colors (as long as the palette is big enough).
+ * The color of every province in a map mode, before any highlighting.
+ * `provinceOwner` is the country (index) that owns each province right now;
+ * the political map mode colors each province by its owner.
  */
-export function assignRegionPalette(world: WorldMap, paletteSize: number): Uint16Array {
-  const regionCount = world.regionIds.length;
-  const touching: Set<number>[] = world.regionIds.map(() => new Set<number>());
-  for (let province = 0; province < world.provinceIds.length; province++) {
-    const region = world.provinceRegion[province];
-    for (const neighbor of neighborsOf(world.provinceNeighbors, province)) {
-      const other = world.provinceRegion[neighbor];
-      if (other !== region) touching[region].add(other);
-    }
-  }
-  const choice = new Uint16Array(regionCount).fill(0xffff);
-  for (let region = 0; region < regionCount; region++) {
-    const taken = new Set<number>();
-    for (const other of touching[region]) if (choice[other] !== 0xffff) taken.add(choice[other]);
-    let pick = region % paletteSize;
-    for (let attempt = 0; attempt < paletteSize && taken.has(pick); attempt++)
-      pick = (pick + 1) % paletteSize;
-    choice[region] = pick;
-  }
-  return choice;
-}
-
-/** The color of every province in a map mode, before any highlighting. */
-export function provinceBaseColors(mode: MapMode, world: WorldMap, colors: Colors): Uint8Array {
+export function provinceBaseColors(
+  mode: MapMode,
+  world: WorldMap,
+  colors: Colors,
+  provinceOwner: ArrayLike<number>,
+): Uint8Array {
   const result = new Uint8Array(world.provinceIds.length * 4);
-  if (mode === 'regions') {
-    const palette = colors.regionPalette.map(parseHexColor);
-    const choice = assignRegionPalette(world, palette.length);
-    world.provinceIds.forEach((id, province) => {
-      const region = world.provinceRegion[province];
-      write(result, province, vary(palette[choice[region]], id, colors.regionVariation));
-    });
+  if (mode === 'political') {
+    const countryColors = world.countryMapColor.map(parseHexColor);
+    const unowned = parseHexColor(colors.land);
+    world.provinceIds.forEach((id, province) =>
+      write(
+        result,
+        province,
+        vary(countryColors[provinceOwner[province]] ?? unowned, id, colors.politicalVariation),
+      ),
+    );
+  } else if (mode === 'regions') {
+    const regionColors = world.regionMapColor.map(parseHexColor);
+    world.provinceIds.forEach((id, province) =>
+      write(
+        result,
+        province,
+        vary(regionColors[world.provinceRegion[province]], id, colors.regionVariation),
+      ),
+    );
   } else {
     const land = parseHexColor(colors.land);
     world.provinceIds.forEach((id, province) =>

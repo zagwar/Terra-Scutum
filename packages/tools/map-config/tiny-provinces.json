@@ -1,0 +1,10 @@
+{
+  "radiusKm": 10,
+  "discPoints": 32,
+  "enlarge": [
+    { "id": "vat_vatican_city", "center": [12.4534, 41.9033], "areaKm2": 0.49 },
+    { "id": "gbr_gibraltar", "center": [-5.3536, 36.1408], "areaKm2": 6.8 },
+    { "id": "gbr_british_indian_ocean_territory", "center": [72.43, -7.33], "areaKm2": 60 }
+  ],
+  "leaveOut": ["usa_rose_atoll"]
+}

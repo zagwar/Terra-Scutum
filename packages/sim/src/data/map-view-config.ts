@@ -43,8 +43,14 @@ export const mapViewSchema = z.strictObject({
     fieldOfViewDegrees: z.number().min(10).max(90),
     /** Empty space kept around the map when it's fitted to the window (0.02 = 2 %). */
     fitMargin: z.number().min(0).max(0.4),
-    /** Speed of the temporary arrow-key scrolling (until the strategy camera, F03), in degrees of longitude per second. */
+    /** Speed of arrow-key scrolling with the whole world in view, in degrees of longitude per second (slower when zoomed in). */
     scrollDegreesPerSecond: z.number().positive(),
+    /** How far the player can zoom in: 1 shows the whole world, 50 is fifty times closer. */
+    maxZoom: z.number().min(1).max(1000),
+    /** How much one notch of the mouse wheel zooms (1.2 = 20 % closer or farther). */
+    wheelZoomStep: z.number().min(1.01).max(4),
+    /** A province picked from a list is brought into view at least this many pixels wide. */
+    focusMinProvincePx: z.number().min(1).max(2000),
   }),
   /**
    * Level of detail. From far away the land is drawn from simplified shapes
@@ -70,8 +76,15 @@ export const mapViewSchema = z.strictObject({
     seaDeep: hexColor,
     seaShallow: hexColor,
     seaVariation: fraction,
-    /** Colors for the "regions" map mode; neighboring regions get different ones. */
-    regionPalette: z.array(hexColor).min(4),
+    /**
+     * The "political" map mode colors provinces by their owner's map color
+     * (`data/countries.json`); each province is shaded slightly differently.
+     */
+    politicalVariation: fraction,
+    /**
+     * The "regions" map mode colors provinces by their region's map color (`data/regions.json`,
+     * chosen by the map import); each province is shaded slightly differently.
+     */
     regionVariation: fraction,
     /** The selected province, and how strongly its neighbors are tinted with `neighbor`. */
     selected: hexColor,

@@ -13,6 +13,13 @@ import type { City, UnitSet } from './units';
  * 2. Light source groupings become one province each ("Greater London", "Bretagne").
  * 3. While the cluster has more provinces than its target ([DEFAULT] settings),
  *    the lightest one merges with a neighbor.
+ * 4. Budget: if the cluster still has more than `maxProvincesFactor` × its
+ *    target (a small country made of many small real regions), merging goes
+ *    on, now also across real regions and named groups (except groups marked
+ *    `keep`): the lightest province joins the neighbor that makes the most
+ *    compact, balanced province, preferring one from the same source grouping.
+ *    This is how strategy games size provinces: by the country's weight, not
+ *    by how finely its administration happens to be divided.
  *
  * Combined provinces get an area name: the named group's name, the source
  * grouping's name, or a direction within the country ("Northern Algeria").
@@ -42,11 +49,18 @@ interface Work {
   readonly cluster: number;
   readonly country: string;
   readonly units: number[];
-  /** Set for named groups: the name is fixed and the province is never merged further. */
+  /** Set for named groups: the name is fixed and the province is only merged further to meet the budget (step 4). */
   readonly fixedName: string | null;
+  /** A named group marked `keep`: never merged with anything. */
+  readonly keep?: boolean;
   readonly areaKm2: number;
   readonly population: number;
   readonly cities: City[];
+  /**
+   * The real names of the regions this province is made of (a named group, a source grouping),
+   * when it is made only of such regions; empty otherwise. Used to name budget merges.
+   */
+  readonly labels: readonly string[];
 }
 
 export interface ProvinceBuildReport {
@@ -54,6 +68,9 @@ export interface ProvinceBuildReport {
   /** Codes in province-groups.json that match no source unit. */
   readonly unknownGroupCodes: string[];
 }
+
+/** A province made of two real regions is called "A and B" if that is at most this long. */
+const MAX_PAIR_NAME_LENGTH = 36;
 
 const COMPASS_ONLY =
   /^(central|centre|north|south|east|west|northern|southern|eastern|western|north[ -]?(east|west)(ern)?|south[ -]?(east|west)(ern)?)$/i;
@@ -121,6 +138,12 @@ export function buildProvinces(
     areaKm2: parts.reduce((sum, w) => sum + w.areaKm2, 0),
     population: parts.reduce((sum, w) => sum + w.population, 0),
     cities: parts.flatMap((w) => w.cities).sort((a, b) => b.population - a.population),
+    labels:
+      fixedName !== null
+        ? [fixedName]
+        : parts.every((w) => w.labels.length > 0)
+          ? parts.flatMap((w) => w.labels)
+          : [],
   });
 
   const finished: { work: Work; name: string; nameSource: NameSource }[] = [];
@@ -138,9 +161,12 @@ export function buildProvinces(
         areaKm2: unit.areaKm2,
         population: unit.population,
         cities: [...unit.cities],
+        labels: [],
       };
     });
-    const target = Math.max(1, Math.round(works.reduce((sum, w) => sum + load(w), 0)));
+    const totalLoad = works.reduce((sum, w) => sum + load(w), 0);
+    const target = Math.max(1, Math.round(totalLoad));
+    const budget = Math.max(1, Math.round(totalLoad * s.maxProvincesFactor));
 
     // 1. Named groups.
     const keys = groupKeys.get(country);
@@ -165,9 +191,10 @@ export function buildProvinces(
       }
       for (const [group, parts] of [...byGroup].sort((a, b) => a[0] - b[0])) {
         const removed = new Set(parts);
+        const named = combine(parts, groups.groups[group].name);
         works = works
           .filter((w) => !removed.has(w))
-          .concat(combine(parts, groups.groups[group].name));
+          .concat(groups.groups[group].keep ? { ...named, keep: true } : named);
         merges += parts.length - 1;
       }
     }
@@ -191,7 +218,9 @@ export function buildProvinces(
           if (g && !taken.has(g)) byGrouping.set(g, [...(byGrouping.get(g) ?? []), i]);
         }
       }
-      for (const [, members] of [...byGrouping].sort((a, b) => a[0].localeCompare(b[0]))) {
+      for (const [groupingName, members] of [...byGrouping].sort((a, b) =>
+        a[0].localeCompare(b[0]),
+      )) {
         const memberSet = new Set(members);
         const seen = new Set<number>();
         for (const start of members) {
@@ -211,7 +240,7 @@ export function buildProvinces(
           }
           if (component.length < 2) continue;
           const parts = component.map((i) => byUnit.get(i)!);
-          const merged = combine(parts, null);
+          const merged = { ...combine(parts, null), labels: [groupingName] };
           if (load(merged) >= s.wholeGroupingBelowLoad) continue;
           wholeGroupings.add(merged);
           const removed = new Set(parts);
@@ -286,6 +315,61 @@ export function buildProvinces(
       if (!merged) break;
     }
 
+    // 4. Budget: merge further (across real regions and named groups too) until the cluster has
+    //    no more provinces than its budget. Countries whose states are kept separate are exempt.
+    while (works.length > budget && !keepSeparate.has(country)) {
+      const ownerOfUnit = new Map<number, Work>();
+      for (const w of works) for (const i of w.units) ownerOfUnit.set(i, w);
+      const loads = new Map(works.map((w) => [w, load(w)]));
+      const candidates = works
+        .filter((w) => !w.keep)
+        .sort((a, b) => loads.get(a)! - loads.get(b)! || a.key - b.key);
+      let merged = false;
+      for (const small of candidates) {
+        const adjacent = new Set<Work>();
+        for (const i of small.units) {
+          for (const j of set.neighbors[i] ?? []) {
+            const other = ownerOfUnit.get(j);
+            if (other && other !== small && !other.keep) adjacent.add(other);
+          }
+        }
+        let partners = [...adjacent];
+        if (partners.length === 0) {
+          // An island: it only joins the nearest province across the sea if it is light.
+          if (loads.get(small)! >= s.seaMergeBelowLoad) continue;
+          const here = center(small);
+          const others = works.filter((w) => w !== small && !w.keep);
+          if (others.length === 0) continue;
+          const distances = new Map(others.map((w) => [w, distanceKm(here, center(w))]));
+          others.sort((a, b) => distances.get(a)! - distances.get(b)! || a.key - b.key);
+          partners = [others[0]];
+        }
+        const mine = groupingsOf(small);
+        // Smaller is better: a light result (balanced provinces), from the same source grouping,
+        // and compact (the two middles close together compared with the size of the result).
+        const score = (w: Work) => {
+          const shared = [...groupingsOf(w)].some((g) => g !== null && mine.has(g));
+          const spread =
+            distanceKm(center(small), center(w)) /
+            Math.max(1, Math.sqrt(small.areaKm2 + w.areaKm2));
+          return (
+            (loads.get(small)! + loads.get(w)!) *
+            (shared ? 1 : s.groupingMergePenalty) *
+            (1 + spread)
+          );
+        };
+        partners.sort((a, b) => score(a) - score(b) || a.key - b.key);
+        const partner = partners[0];
+        works = works
+          .filter((w) => w !== small && w !== partner)
+          .concat(combine([partner, small], null));
+        merges += 1;
+        merged = true;
+        break;
+      }
+      if (!merged) break;
+    }
+
     // Names for this cluster's provinces.
     const clusterName = (() => {
       const codesInCluster = new Set(clusterMembers.map((i) => units[i].sourceCode));
@@ -344,11 +428,22 @@ export function buildProvinces(
       const parts = members
         .map((i) => ({ unit: units[i], share: unitLoad(i) / Math.max(total, 1e-9) }))
         .sort((a, b) => b.share - a.share);
+      // Made of two real regions (a budget merge): "A and B", or the main one's name if the
+      // other is tiny.
+      if (w.labels.length === 2) {
+        const [a, b] = [...w.labels].sort((p, q) => p.localeCompare(q));
+        const joined = a === b ? a : `${a} and ${b}`;
+        // Long pairs ("Autonomous Region in Muslim Mindanao (ARMM) and …") read badly: use a direction.
+        if (joined.length <= MAX_PAIR_NAME_LENGTH) return [joined, 'pair'];
+      }
       if (parts[0].share >= s.dominantShare) return [parts[0].unit.name, 'absorbed'];
       if (members.length === 2) {
         const [a, b] = [parts[0].unit.name, parts[1].unit.name].sort((p, q) => p.localeCompare(q));
         return [a === b ? a : `${a} and ${b}`, 'pair'];
       }
+      // A country of very few provinces, most of it in this one: the country's name.
+      const clusterArea = works.reduce((sum, other) => sum + other.areaKm2, 0);
+      if (works.length <= 3 && w.areaKm2 >= 0.6 * clusterArea) return [clusterName, 'direction'];
       const d = direction(w);
       return [d === 'Central' ? `Central ${clusterName}` : `${d} ${clusterName}`, 'direction'];
     }

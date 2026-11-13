@@ -8,6 +8,13 @@
  */
 export type SimEvent =
   /** Answer to the `debugPing` command; proves the command → event path works. */
-  { readonly type: 'debugPong'; readonly token: number };
+  | { readonly type: 'debugPong'; readonly token: number }
+  /** A province has a new owner (ids of the province, the old owner and the new owner). */
+  | {
+      readonly type: 'provinceOwnerChanged';
+      readonly province: string;
+      readonly from: string;
+      readonly to: string;
+    };
 
 export type SimEventType = SimEvent['type'];

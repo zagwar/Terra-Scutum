@@ -2,6 +2,7 @@ import { MAP_MODES, type MapMode } from '../render/map/map-colors';
 import { type TranslationKey, t } from './i18n';
 
 const MODE_TEXT: Record<MapMode, TranslationKey> = {
+  political: 'MAP_MODE_POLITICAL',
   provinces: 'MAP_MODE_PROVINCES',
   regions: 'MAP_MODE_REGIONS',
 };

@@ -10,6 +10,7 @@ import { type CommandResult, type SimCommand, applyCommand } from './commands';
 import type { SimEvent } from './events';
 import { Rng, type RngState } from './rng';
 import { SYSTEMS, type SimSystem, type SystemId, type SystemRegistry, TICK_ORDER } from './systems';
+import { startingOwners } from '../world/ownership';
 import { type WorldMap, buildWorldMap } from '../world/world-map';
 
 export interface GameStateOptions {
@@ -20,7 +21,12 @@ export interface GameStateOptions {
   /** Which systems to run; defaults to the game's systems. Tests pass their own. */
   readonly systems?: SystemRegistry;
   /** Used by the save system to continue a saved game. */
-  readonly restore?: { readonly day: number; readonly rngState: RngState };
+  readonly restore?: {
+    readonly day: number;
+    readonly rngState: RngState;
+    /** Owner (country index) of every province. */
+    readonly provinceOwner: Uint16Array;
+  };
 }
 
 interface PipelineStep {
@@ -42,6 +48,13 @@ export class GameState {
   readonly rng: Rng;
   /** Whole days since the campaign's start date. Day 0 is the start date itself. */
   day: number;
+  /**
+   * The country (index, see `world.countryIds`) that owns each province right
+   * now. Read it freely; change it only through `setProvinceOwner`.
+   */
+  readonly provinceOwner: Uint16Array;
+  /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
+  ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
   readonly events: SimEvent[] = [];
 
@@ -59,9 +72,13 @@ export class GameState {
     if (options.restore) {
       this.day = options.restore.day;
       this.rng = Rng.fromState(options.restore.rngState);
+      if (options.restore.provinceOwner.length !== this.world.provinceIds.length)
+        throw new Error('GameState: the restored owners do not match the number of provinces');
+      this.provinceOwner = options.restore.provinceOwner.slice();
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);
+      this.provinceOwner = startingOwners(this.world);
     }
 
     const systems = options.systems ?? SYSTEMS;
@@ -107,6 +124,29 @@ export class GameState {
   /** Applies a command from the player or an AI. See `SimCommand`. */
   applyCommand(command: SimCommand): CommandResult {
     return applyCommand(this, command);
+  }
+
+  /**
+   * Gives a province (index) to a country (index) and reports it with a
+   * `provinceOwnerChanged` event. Does nothing if that country already owns it.
+   * Wars, the Swarm and collapsing countries all move provinces through here.
+   */
+  setProvinceOwner(province: number, country: number): void {
+    const world = this.world;
+    if (!Number.isInteger(province) || province < 0 || province >= world.provinceIds.length)
+      throw new Error(`setProvinceOwner: no province with index ${province}`);
+    if (!Number.isInteger(country) || country < 0 || country >= world.countryIds.length)
+      throw new Error(`setProvinceOwner: no country with index ${country}`);
+    const previous = this.provinceOwner[province];
+    if (previous === country) return;
+    this.provinceOwner[province] = country;
+    this.ownershipVersion += 1;
+    this.emit({
+      type: 'provinceOwnerChanged',
+      province: world.provinceIds[province],
+      from: world.countryIds[previous],
+      to: world.countryIds[country],
+    });
   }
 
   /** Called by systems and command handlers to report something that happened. */

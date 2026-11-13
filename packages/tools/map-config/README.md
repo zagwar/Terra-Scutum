@@ -29,7 +29,8 @@ and always gives the same result for the same inputs.
 - **`province-groups.json`**: states/provinces that are always combined into one province with a
   real name ("New England", "Transylvania", "Tōhoku"). A group lists its members by ISO 3166-2 code
   (`units`, e.g. `"US-CT"`), by source grouping (`groupings`, e.g. `"East Wales"`), by name
-  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). `keepSeparate` lists countries whose
+  (`names`) or by whole territory (`territories`, e.g. `"HKG"`). A group with `"keep": true` is never
+  merged with another province (for areas that matter on their own, such as Transnistria). `keepSeparate` lists countries whose
   states are never combined automatically (only by their groups).
 - **`regions.json`**: the ~60 regions, as real geographic areas. A region lists its territories
   (`countries`, Natural Earth codes: `"GBR"` is Great Britain itself, overseas territories have
@@ -41,14 +42,31 @@ and always gives the same result for the same inputs.
   grid (for example the Bosporus).
 - **`province-names.json`**: better display names for generated provinces, by province id. Ids never
   change when a name does.
+- **`tiny-provinces.json`**: provinces that are too small for the map data's precision (their
+  shape would have no area, so they could not be seen or clicked). `enlarge` lists the ones drawn as
+  a small disc (`radiusKm` [DEFAULT], with `discPoints` corners) around `center`, as Paradox games do
+  with microstates; the disc is cut out of whatever province lies under it, and `areaKm2` (the real
+  area) is what goes into the data. `leaveOut` lists the ones that are not part of the game. The
+  import warns if any other province comes out without a visible shape.
+- **`country-colors.json`**: each country's traditional map color (the one commonly associated with
+  it), by country id, as `#rrggbb`. A country keeps it unless a country that borders it (or faces it
+  across a narrow sea) looks too much alike; then the one with fewer provinces is shifted to the
+  nearest shade that can be told apart. The report lists every shifted country.
 - **`settings.json`**: the [DEFAULT] numbers:
   - `areaPerProvinceKm2` and `populationUnit`: each country aims for about
     `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
   - `mergeBelowLoad`, `seaMergeBelowLoad`, `wholeGroupingBelowLoad`, `groupingMergePenalty`:
     which small states are combined, and how.
+  - `maxProvincesFactor`: the province budget. A country (each separate piece of land) may have at
+    most this many times its target number of provinces; above it, provinces are merged further,
+    even real regions and named groups (except groups marked `keep`), so small countries are not cut
+    finer than big ones.
   - `dominantShare`: a combined province keeps its main member's name when the other members are
     tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
+  - `colors.nearCountryKm`, `colors.nearMinProvinceKm2`: countries whose land is closer together
+    than this (across a strait or a narrow sea, counting only provinces at least this big) get
+    clearly different map colors, as countries sharing a border always do.
 
 ## How provinces are made
 
@@ -60,10 +78,14 @@ Provinces always follow **real borders**: states and provinces are only ever com
 3. In each cluster: the named groups are combined first; then small source groupings that are still
    complete become single provinces with their real name ("Greater London", "Bretagne"); then, unless
    the country is in `keepSeparate`, the lightest provinces merge with a neighbor until the cluster
-   reaches its target.
+   reaches its target. If a cluster still has more provinces than its budget (`maxProvincesFactor`
+   × target), merging goes on across real regions and named groups too (never `keep` groups),
+   always joining the lightest province with the neighbor that gives the most compact result.
 4. Combined provinces are named: the group's name, the source grouping's name, the main member's name
    (a tiny piece was added), "A and B" for two members, or a direction in the country ("Northern
    Algeria"). The report lists every combined province and how it got its name; better names go in
    `province-groups.json` or `province-names.json`.
-5. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
+5. The tiny provinces in `tiny-provinces.json` are enlarged or left out, and every province gets its
+   label point (`center`): the point of its shape farthest from its outline.
+6. Borders between provinces come from the shared shapes; coasts and sea zones come from a world grid
    (`raster.degreesPerPixel`). The world wraps east–west: sea zones grow across the date line.

@@ -48,6 +48,7 @@ function showMapWhenPossible(): void {
         const sync = () => {
           const state = store.getState();
           map.setMode(state.mapMode);
+          if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
           map.setSelectedProvince(state.selectedProvince);
         };
         store.subscribe(sync);
@@ -70,13 +71,17 @@ const sim = createSimClient({
     store.update({
       sim: 'running',
       snapshot: message.snapshot,
+      provinceOwner: message.snapshot.provinceOwner ?? null,
       world: message.world,
       saveFormatVersion: message.saveFormatVersion,
     });
     showMapWhenPossible();
   },
   onUpdate(snapshot, events) {
-    store.update({ snapshot });
+    // The owners only come along when they changed; otherwise the ones we have still hold.
+    store.update(
+      snapshot.provinceOwner ? { snapshot, provinceOwner: snapshot.provinceOwner } : { snapshot },
+    );
     debugHooks?.recordEvents(events);
   },
   onError(key, detail) {
@@ -92,7 +97,12 @@ createRoot(requireElement('ui')).render(
     <App
       store={store}
       onAdvanceDay={() => void sim.step(1)}
-      onSelectProvince={(province) => store.update({ selectedProvince: province })}
+      onSelectProvince={(province) => {
+        store.update({ selectedProvince: province });
+        // A province picked from a list (not on the map) is brought into view.
+        if (province !== null) renderer?.map?.focusProvince(province);
+      }}
+      onSelectCountry={(country) => store.update({ selectedCountry: country })}
       onSetMapMode={(mapMode) => store.update({ mapMode })}
     />
   </StrictMode>,

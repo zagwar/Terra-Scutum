@@ -54,7 +54,7 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   await expect(page.getByTestId('map-status')).toHaveText(/^[\d,]+ provinces$/);
   await expect(page.getByTestId('sim-date')).toHaveText('1 January 2025');
   await expect(page.getByTestId('sim-day')).toHaveText('0');
-  await expect(page.getByTestId('save-format')).toHaveText('Version 1');
+  await expect(page.getByTestId('save-format')).toHaveText('Version 2');
   await expect(page.getByTestId('build-commit')).toHaveText(/^[0-9a-f]{7}$|^dev$/);
   await expect(page.getByTestId('error-overlay')).toHaveCount(0);
 
@@ -83,7 +83,7 @@ test('the UI drives the sim through the worker: advancing days changes the date'
 
   // Jump two years ahead through the debug hook: landfall is around January 2027.
   const snapshot = await page.evaluate(() => window.__terraScutum!.step(730));
-  expect(snapshot).toEqual({ day: 731, date: { year: 2027, month: 1, day: 2 } });
+  expect(snapshot).toMatchObject({ day: 731, date: { year: 2027, month: 1, day: 2 } });
   await expect(page.getByTestId('sim-date')).toHaveText('2 January 2027');
 
   await page.screenshot({
