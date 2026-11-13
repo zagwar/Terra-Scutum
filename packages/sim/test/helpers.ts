@@ -84,6 +84,7 @@ export function testMapView() {
       fieldOfViewDegrees: 40,
       fitMargin: 0.02,
       scrollDegreesPerSecond: 90,
+      fastScrollFactor: 3,
       maxZoom: 50,
       wheelZoomStep: 1.2,
       focusMinProvincePx: 60,

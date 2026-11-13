@@ -48,6 +48,8 @@ export const mapViewSchema = z.strictObject({
       fitMargin: z.number().min(0).max(0.4),
       /** Speed of arrow-key scrolling with the whole world in view, in degrees of longitude per second (slower when zoomed in). */
       scrollDegreesPerSecond: z.number().positive(),
+      /** How many times faster WASD and the arrow keys scroll while Shift is held. */
+      fastScrollFactor: z.number().min(1).max(20),
       /** How far the player can zoom in: 1 shows the whole world, 50 is fifty times closer. */
       maxZoom: z.number().min(1).max(1000),
       /** How much one notch of the mouse wheel zooms (1.2 = 20 % closer or farther). */

@@ -64,7 +64,7 @@ export type { MapTarget } from './shape-lookup';
  * - The camera glides (zoom, scrolling, turning) towards where the input
  *   sends it. Mouse wheel and +/-: zoom (towards the mouse); dragging: move,
  *   exactly with the mouse; WASD, the arrow keys and the window's edge:
- *   scroll; middle mouse button or Q/E: turn; Home: the whole world, north
+ *   scroll (faster with Shift held); middle mouse button or Q/E: turn; Home: the whole world, north
  *   up. The camera leans back more the closer it zooms in. The math is in
  *   `camera-motion.ts`.
  *
@@ -751,7 +751,10 @@ export async function createMapView(
   };
   const TURN_KEYS: Readonly<Record<string, number>> = { KeyQ: -1, KeyE: 1 };
   const heldKeys = new Set<string>();
+  /** Shift held: the keys scroll faster. */
+  let shiftHeld = false;
   const onKeyDown = (event: KeyboardEvent) => {
+    shiftHeld = event.shiftKey;
     // A shortcut of the browser, or typing in a text field: not ours.
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target;
@@ -776,9 +779,13 @@ export async function createMapView(
     heldKeys.add(event.code);
     event.preventDefault();
   };
-  const onKeyUp = (event: KeyboardEvent) => heldKeys.delete(event.code);
+  const onKeyUp = (event: KeyboardEvent) => {
+    shiftHeld = event.shiftKey;
+    heldKeys.delete(event.code);
+  };
   const onBlur = () => {
     heldKeys.clear();
+    shiftHeld = false;
     pointer = null;
   };
   window.addEventListener('keydown', onKeyDown);
@@ -792,11 +799,13 @@ export async function createMapView(
     let right = 0;
     let up = 0;
     let turn = 0;
+    let keyScroll = false;
     for (const code of heldKeys) {
       const move = MOVE_KEYS[code];
       if (move) {
         right += move[0];
         up += move[1];
+        keyScroll = true;
       }
       turn += TURN_KEYS[code] ?? 0;
     }
@@ -809,8 +818,9 @@ export async function createMapView(
     right = Math.sign(right);
     up = Math.sign(up);
     if (right !== 0 || up !== 0) {
-      // The same speed across the screen at every zoom level.
-      const distance = (settings.scrollDegreesPerSecond * seconds) / goal.zoom;
+      // The same speed across the screen at every zoom level; faster with Shift and a key.
+      const fast = keyScroll && shiftHeld ? settings.fastScrollFactor : 1;
+      const distance = (settings.scrollDegreesPerSecond * fast * seconds) / goal.zoom;
       const axes = screenAxes(heading);
       zoomAnchor = null;
       setGoal({

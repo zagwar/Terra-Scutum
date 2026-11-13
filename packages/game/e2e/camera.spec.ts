@@ -108,6 +108,20 @@ test('the camera glides, leans back as it zooms in, and moves with WASD', async 
   await hold(page, 'KeyS');
   await camera.settle();
 
+  // Holding Shift scrolls faster (3× by default): compare the same number of frames.
+  const scrolled = async (shift: boolean) => {
+    const start = (await camera.middle()).longitude;
+    if (shift) await page.keyboard.down('Shift');
+    await hold(page, 'KeyD', 10);
+    if (shift) await page.keyboard.up('Shift');
+    await camera.settle();
+    return (await camera.middle()).longitude - start;
+  };
+  const normal = await scrolled(false);
+  const fast = await scrolled(true);
+  expect(normal).toBeGreaterThan(0);
+  expect(fast).toBeGreaterThan(normal * 1.8);
+
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `camera-tilted-${testInfo.project.name}.png`),
   });
