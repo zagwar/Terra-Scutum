@@ -132,6 +132,8 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F113 | Tutorial scenario, advisors, encyclopedia | M11 | Planned | Section 12 |
 | F122 | UI shell: top bar, alerts row, outliner, lens bar, notifications and message settings | M1 | Planned | Section 12.1; grows with each milestone |
 | F138 | Country screen: a full Paradox-style screen for any country (replaces the simple country panel from F02) | M1 | Planned | Requested by the designer during F02. **Like HOI4** (designer decision): a Government view for your own country and a Diplomacy view for other countries; layout in section 12.4.1. Build after F71 (starting data) and F122 (UI shell) so it has something to show; it grows as systems arrive (government, economy, diplomacy, military) |
+| F139 | Performance stress tests (sim and render, ?debug=stress) and engine checkpoint 1: report vs budgets, recommendation, designer decides | M1 | Planned | Section 14; last feature of M1 |
+| F140 | Extend stress tests with the real economy and buildings; engine checkpoint 2: report, recommendation, designer decides | M2 | Planned | Section 14; last feature of M2 |
 | F123 | Nested tooltips system (every number explains itself) | M2 | Planned | Section 12.3 |
 | F124 | Ledger, statistics charts, search, pinning | M5 | Planned | Section 12.3 |
 | F95 | Event engine: data-driven events, triggers, options, chains, condition/effect library, AI choices | M2 | Planned | Section 3.1; needed early because many systems fire events |
@@ -150,8 +152,8 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F43 | ~~Hive assault tactical mission~~ | — | Cut | Replaced by the Hive assault tactic (5.7) |
 
 **Milestones:**
-- **M1: Map prototype.** A 3D world with all three layers (regions, countries, provinces), a camera, and time controls.
-- **M2: A living country.** Population, buildings, food, budget and stability. The country runs on its own.
+- **M1: Map prototype.** A 3D world with all three layers (regions, countries, provinces), a camera, and time controls. Ends with engine checkpoint 1.
+- **M2: A living country.** Population, buildings, food, budget and stability. The country runs on its own. Ends with engine checkpoint 2.
 - **M3: Industry and military.** Construction, resources, equipment production, manpower, laws, countdown.
 - **M4: Trade and business.** Trade between countries, corporations, business confidence.
 - **M5: Public opinion.** Influence and the world's reaction to the object.
@@ -175,4 +177,4 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 5. **F71** 2025 starting data (first pass: population, economy size, government type per country)
 6. **F122** UI shell (top bar, alerts row, outliner, lens bar, empty screens) → **F138** country screen (design to agree with the designer first) → **F05** country selection
 7. **F125** Realistic terrain (⚑ Fable) → **F133** asset generator framework
-8. Run the campaign runner over a few years of empty ticks to check the performance budget (section 17.3)
+8. **F139** Performance stress tests and engine checkpoint 1 (section 14, Performance plan and engine checkpoints). Report to the designer and wait for his decision before M2.

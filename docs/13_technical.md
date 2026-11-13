@@ -110,6 +110,46 @@ terra-scutum/
 ### Scope for release
 Single-player only. **No multiplayer, modding support or extra languages for now**; they may be added after release. To keep that door open cheaply: content in data files, all text through translation keys, and a deterministic sim separate from the UI.
 
+### Performance plan and engine checkpoints
+**Performance is the designer's biggest concern, so it's measured early, before most of the game is built, while switching engines is still cheap.**
+
+**Where the risk is:**
+| Area | Risk in the browser | Why |
+|---|---|---|
+| **Simulation** (daily tick) | **Low to medium** | Modern browser JavaScript is fast for number-crunching on typed arrays, and the sim runs in a Web Worker so it never stutters the graphics. Hot spots can move to Rust/WebAssembly for near-native speed |
+| **Rendering** (cities, units, bugs, terrain) | **Medium to high** | Browser 3D has more overhead per draw call and fewer graphics features than a native engine. Huge numbers of visible objects with realistic lighting are the hardest part |
+| **Memory** | **Medium** | Browser tabs have tighter memory limits than native apps, so the map, terrain and data must stay compact |
+
+A desktop wrapper (Electron/Tauri) does **not** fix performance, since it uses the same browser engine inside.
+
+**Performance budgets [DEFAULT]**, measured on a **mid-range PC** (not just the designer's own PC):
+- **Simulation:** daily tick ≤ 30 ms average, worst-case day ≤ 100 ms, weekly calculations ≤ 150 ms, with ~1,000 provinces and every country simulated. Top game speed runs several days per second.
+- **Rendering:** ≥ 60 FPS at strategic zoom and ≥ 30 FPS in the busiest close-up and battle views.
+- **Memory:** total tab memory ≤ 2 GB in a late-game save.
+- **Loading:** a new game loads in ≤ 20 seconds on a normal connection.
+
+**Stress tests** (built in M1, extended in M2, rerun at every milestone):
+- **Sim stress test** (campaign runner): the full map, every country, 10+ years of game time, many seeds. Reports average and worst tick times and memory.
+- **Render stress test** (a debug scene opened with `?debug=stress`): the full map with **late-game load**: about 20,000 building instances, 5,000 unit models, a battle with 2,000+ bugs, full infrastructure lines, weather and effects. It reports FPS, frame time, draw calls and memory, and Playwright records the numbers. The numbers from the headless cloud browser aren't real-world numbers, so the designer also opens the stress test on the preview link and reads the on-screen counter.
+
+**What to do when a budget is missed (in this order):**
+1. Optimize the TypeScript: typed arrays, no allocation in hot loops, fewer messages between worker and game.
+2. Rendering: more instancing, lower detail at distance, fewer shadows and effects, merged meshes, WebGPU.
+3. Split the sim across **several workers** (for example per region or per system).
+4. Move the hottest sim code to **Rust compiled to WebAssembly**.
+5. Lower visual ambition where it doesn't hurt the game (for example aggregated buildings at mid zoom).
+6. **Switch engines** (to Godot), only if the budgets still can't be met. This is what the checkpoints are for.
+
+**Engine checkpoints:**
+- **Checkpoint 1, end of M1 (F139):** the full map, terrain and the render stress test, plus a sim stress test with placeholder load. It answers: can the browser draw this world fast enough?
+- **Checkpoint 2, end of M2 (F140):** the real economy simulation across every country, and buildings on the map. It answers: can the browser run this simulation and show a living world fast enough?
+- At each checkpoint Claude Code gives the designer a **plain-language report**: the numbers vs the budgets, what was tried, and a clear recommendation (**continue in the browser**, or **switch to Godot now**). **Work doesn't continue to the next milestone until the designer decides.** Switching at checkpoint 2 costs only M1–M2's code; the design and data carry over.
+
+**Keep the project portable** (so a switch, now or later, stays cheap):
+- The sim stays pure TypeScript with no browser shortcuts, and all content stays in engine-neutral **JSON** data.
+- 3D generators work from **engine-neutral specs** in data (parts, sizes, colors, seeds), so only the code that turns specs into meshes would change.
+- **Reference runs:** the campaign runner saves a short summary and checksum of the game state for a few fixed seeds (`packages/runner/reference/`). A port to another engine can be checked by running the same seeds and comparing.
+
 ### Save system
 The sim serializes `GameState` (with a **save format version**) to compressed JSON. The game stores saves in **IndexedDB** and offers **Export save / Import save** as files. Saves from older versions are migrated or rejected with a clear message (M10).
 
