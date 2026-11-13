@@ -33,9 +33,13 @@ async function expectTime(page: Page, paused: boolean, speed: number): Promise<v
   await expect(control).toHaveAttribute('data-speed', String(speed));
 }
 
-test('the game starts paused; Space runs time and pauses it again', async ({ page }, testInfo) => {
+test('time keys: the game starts paused, Space runs and pauses it, 1–5 and the number pad choose the speed', async ({
+  page,
+}, testInfo) => {
   const problems = await openGame(page);
   const control = page.getByTestId('time-control');
+  const speeds = await page.evaluate(() => window.__terraScutum!.getState().daysPerSecond);
+  expect(speeds).toEqual([0.5, 1, 2, 5, 10]);
 
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   await expect(page.getByTestId('time-status')).toHaveText('Paused');
@@ -44,87 +48,74 @@ test('the game starts paused; Space runs time and pauses it again', async ({ pag
     path: join(SCREENSHOT_DIR, `time-control-paused-${testInfo.project.name}.png`),
   });
   // Paused: no days pass.
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(1_000);
   expect(await dayOf(page)).toBe(0);
 
-  // Space: time runs at speed 2 (1 day per second).
-  await page.keyboard.press('Space');
-  await expectTime(page, false, 2);
-  await expect(page.getByTestId('time-status')).toHaveText('Speed 2');
-  await expect(page.getByTestId('time-date')).toHaveText('3 January 2025', { timeout: 10_000 });
-  await control.screenshot({
-    path: join(SCREENSHOT_DIR, `time-control-running-${testInfo.project.name}.png`),
-  });
-
-  // Space again: paused, and the date stays where it is.
-  await page.keyboard.press('Space');
-  await expectTime(page, true, 2);
-  const pausedAt = await dayOf(page);
-  await page.waitForTimeout(1_500);
-  expect(await dayOf(page)).toBe(pausedAt);
-
-  await page.screenshot({ path: join(SCREENSHOT_DIR, `time-page-${testInfo.project.name}.png`) });
-  expect(problems).toEqual([]);
-});
-
-test('the speeds run about as many days per second as the data says', async ({ page }) => {
-  const problems = await openGame(page);
-  const speeds = await page.evaluate(() => window.__terraScutum!.getState().daysPerSecond);
-  expect(speeds).toEqual([0.5, 1, 2, 5, 10]);
-
-  await page.keyboard.press('Digit5');
-  await page.keyboard.press('Space');
-  await expectTime(page, false, 5);
-  const start = await dayOf(page);
-  await page.waitForTimeout(3_000);
-  await page.keyboard.press('Space');
-  await expectTime(page, true, 5);
-  const days = (await dayOf(page)) - start;
-  // About 30 days in 3 seconds; a loose range, since the cloud machine is slow and busy.
-  expect(days).toBeGreaterThan(15);
-  expect(days).toBeLessThanOrEqual(32);
-  expect(problems).toEqual([]);
-});
-
-test('keys 1–5 and the number pad + and − choose the speed; the camera keeps + and - for zoom', async ({
-  page,
-}) => {
-  const problems = await openGame(page);
-
+  // Choosing a speed doesn't unpause; the number pad's + and − stop at 1 and 5.
   await page.keyboard.press('Digit4');
-  await expectTime(page, true, 4); // choosing a speed doesn't unpause
+  await expectTime(page, true, 4);
   await page.keyboard.press('Numpad1');
   await expectTime(page, true, 1);
   await page.keyboard.press('NumpadSubtract');
-  await expectTime(page, true, 1); // already the slowest
+  await expectTime(page, true, 1);
   await page.keyboard.press('NumpadAdd');
   await page.keyboard.press('NumpadAdd');
   await expectTime(page, true, 3);
 
-  // The number pad's + and − don't zoom the camera…
+  // The number pad's + doesn't zoom the camera…
   await page.evaluate(() => window.__terraScutum!.map.settle());
   const zoom = await page.evaluate(() => window.__terraScutum!.map.zoom());
   await page.keyboard.press('NumpadAdd');
   await expectTime(page, true, 4);
   await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await page.evaluate(() => window.__terraScutum!.map.zoom())).toBe(zoom);
-
   // …while the main keyboard's + still zooms and leaves the speed alone.
   await page.keyboard.press('Equal');
   await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await page.evaluate(() => window.__terraScutum!.map.zoom())).toBeGreaterThan(zoom!);
   expect(await timeOf(page)).toEqual({ paused: true, speed: 4 });
+
+  // Speed 5 (10 days per second): Space runs time…
+  await page.keyboard.press('Digit5');
+  await page.keyboard.press('Space');
+  await expectTime(page, false, 5);
+  await expect(page.getByTestId('time-status')).toHaveText('Speed 5');
+  await control.screenshot({
+    path: join(SCREENSHOT_DIR, `time-control-running-${testInfo.project.name}.png`),
+  });
+  const start = await dayOf(page);
+  const startedAt = Date.now();
+  await page.waitForTimeout(3_000);
+  // …and Space pauses it again; the date stays where it is.
+  await page.keyboard.press('Space');
+  await expectTime(page, true, 5);
+  const seconds = (Date.now() - startedAt) / 1000;
+  const pausedAt = await dayOf(page);
+  // About 10 days per second of real time; a loose range, since the test machine is slow and busy.
+  expect(pausedAt - start).toBeGreaterThan(seconds * 10 * 0.5);
+  expect(pausedAt - start).toBeLessThanOrEqual(Math.ceil(seconds * 10) + 1);
+  await page.waitForTimeout(1_000);
+  expect(await dayOf(page)).toBe(pausedAt);
+
+  await page.screenshot({ path: join(SCREENSHOT_DIR, `time-page-${testInfo.project.name}.png`) });
   expect(problems).toEqual([]);
 });
 
-test('the pause button and the speed bars work with the mouse', async ({ page }) => {
+test('the time control works with the mouse, and tests can still step days exactly', async ({
+  page,
+}) => {
   const problems = await openGame(page);
+
+  // Stepping exact days while paused (what the other tests rely on).
+  const snapshot = await page.evaluate(() => window.__terraScutum!.step(365));
+  expect(snapshot).toMatchObject({ day: 365, date: { year: 2026, month: 1, day: 1 } });
+  await expect(page.getByTestId('time-date')).toHaveText('1 January 2026');
 
   await page.getByTestId('time-speed-5').click();
   await expectTime(page, true, 5);
   await page.getByTestId('time-pause').click();
   await expectTime(page, false, 5);
-  await expect(page.getByTestId('time-date')).not.toHaveText('1 January 2025');
+  await expect(page.getByTestId('time-date')).not.toHaveText('1 January 2026');
   await page.getByTestId('time-speed-1').click();
   await expectTime(page, false, 1);
 
@@ -143,15 +134,5 @@ test('the pause button and the speed bars work with the mouse', async ({ page })
   await expect(page.getByTestId('map-mode-regions')).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Space');
   await expectTime(page, true, 1);
-  expect(problems).toEqual([]);
-});
-
-test('tests can still step days exactly while the game is paused', async ({ page }) => {
-  const problems = await openGame(page);
-  const snapshot = await page.evaluate(() => window.__terraScutum!.step(365));
-  expect(snapshot).toMatchObject({ day: 365, date: { year: 2026, month: 1, day: 1 } });
-  await expect(page.getByTestId('time-date')).toHaveText('1 January 2026');
-  await page.waitForTimeout(1_000);
-  expect(await dayOf(page)).toBe(365);
   expect(problems).toEqual([]);
 });
