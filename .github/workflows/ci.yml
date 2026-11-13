@@ -18,8 +18,7 @@ jobs:
   check:
     name: Check, test and build
     runs-on: ubuntu-latest
-    # The browser tests alone take about 9–10 minutes on GitHub's runner (44 tests, software
-    # rendering, one worker); 10 minutes in all cut them off (F04, F71). 20 leaves room to grow.
+    # The browser tests draw the map in software and take most of the run (about 12 minutes in all).
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
