@@ -80,7 +80,9 @@ if (data) {
     for (const problem of checkGeometry(`data/${file}`, content, objectName, ids)) fail(problem);
   }
   if (problemCount === before)
-    console.log('  ✓ every map item and government type has a name, every map item a shape');
+    console.log(
+      '  ✓ every map item, government type, message type and alert type has a name, every map item a shape',
+    );
 }
 
 if (problemCount > 0) {

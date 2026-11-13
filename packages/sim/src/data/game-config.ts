@@ -19,6 +19,12 @@ export const gameConfigSchema = z.strictObject({
     return date;
   }),
   /**
+   * The country the player leads (a country id from `countries.json`) until
+   * the country selection screen (F05) lets the player choose. Used by the
+   * game's top bar; not part of `GameState` or the save yet.
+   */
+  playerCountry: z.string(),
+  /**
    * Performance budget (section 17.3). The campaign runner reports tick times
    * against these targets.
    */

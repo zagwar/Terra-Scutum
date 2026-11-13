@@ -1,5 +1,5 @@
-import type { AppState } from '../app-store';
-import { type TranslationKey, t } from './i18n';
+import type { AppState } from '../../app-store';
+import { type TranslationKey, t } from '../i18n';
 
 const RENDERER_TEXT: Record<AppState['renderer'], TranslationKey> = {
   starting: 'FOUNDATION_RENDERER_STARTING',
@@ -20,24 +20,19 @@ const SIM_TEXT: Record<AppState['sim'], TranslationKey> = {
   failed: 'FOUNDATION_FAILED',
 };
 
-export interface FoundationPanelProps {
-  readonly state: AppState;
-}
-
 /**
- * A temporary panel that shows the game's foundations are alive: the 3D
- * renderer, the sim worker, the round trip between them, and the world map.
- * (The date and the game speed have their own control since F04.)
- * The real UI shell (top bar, outliner, lenses) replaces it in F122.
+ * "About this build" in the settings (F122; until then the temporary
+ * Foundation check panel): the 3D renderer, the sim worker, the world map,
+ * the days simulated, the save format and the build. Useful for bug reports.
  */
-export function FoundationPanel({ state }: FoundationPanelProps) {
+export function AboutBuild({ state }: { readonly state: AppState }) {
   const { snapshot } = state;
   const status = (value: AppState['renderer'] | AppState['sim']) =>
     value === 'failed' ? 'bad' : value === 'starting' ? 'pending' : 'good';
 
   return (
-    <section className="panel foundation-panel" data-testid="foundation-panel">
-      <h2 className="panel-title">{t('FOUNDATION_PANEL_TITLE')}</h2>
+    <section data-testid="about-build">
+      <p className="hint">{t('SETTINGS_ABOUT_HINT')}</p>
       <dl className="facts">
         <dt>{t('FOUNDATION_RENDERER')}</dt>
         <dd data-testid="renderer-status" data-status={status(state.renderer)}>

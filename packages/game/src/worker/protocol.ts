@@ -2,6 +2,7 @@ import type {
   CommandResult,
   CountryStartTable,
   MapViewConfig,
+  NotificationsConfig,
   SimCommand,
   SimEvent,
   SimSnapshot,
@@ -62,6 +63,13 @@ export type FromSimWorker =
       readonly time: TimeState;
       /** Days per second at speeds 1–5 (`data/game_config.json`). */
       readonly daysPerSecond: readonly number[];
+      /**
+       * The country (index) the player leads: `playerCountry` in
+       * `data/game_config.json` until the country selection (F05).
+       */
+      readonly playerCountry: number;
+      /** Message types and alert types (validated `data/notifications.json`). */
+      readonly notifications: NotificationsConfig;
     }
   | {
       readonly type: 'update';

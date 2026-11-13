@@ -4,6 +4,7 @@ import countryStart from '../../../../data/country_start.json';
 import gameConfig from '../../../../data/game_config.json';
 import governmentTypes from '../../../../data/government_types.json';
 import mapView from '../../../../data/map_view.json';
+import notifications from '../../../../data/notifications.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
 import seaZones from '../../../../data/sea_zones.json';
@@ -22,4 +23,5 @@ export const RAW_GAME_DATA: RawGameData = {
   governmentTypes,
   countryStart,
   mapView,
+  notifications,
 };

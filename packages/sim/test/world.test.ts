@@ -152,6 +152,7 @@ describe('world map lookups', () => {
     expect(world.provinceIds[world.countryCapital[c('BBB')]]).toBe('beta_main');
     expect(world.countryMapColor).toEqual(['#112233', '#445566']);
     expect(world.regionMapColor).toEqual(['#778899', '#aa8844']);
+    expect(world.regionClimate).toEqual(['temperate', 'arid']);
   });
 
   it("knows each sea zone's label point and whether it is a coast zone", () => {

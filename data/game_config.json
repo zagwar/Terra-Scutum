@@ -1,5 +1,6 @@
 {
   "startDate": "2025-01-01",
+  "playerCountry": "USA",
   "performanceBudget": {
     "dailyTickAverageMs": 30,
     "weeklyTickAverageMs": 150

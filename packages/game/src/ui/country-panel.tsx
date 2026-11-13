@@ -7,6 +7,7 @@ import {
   summarizeCountry,
 } from '@terra-scutum/sim';
 import { formatArea, formatMoney, formatMoneyMillions, formatPopulation, t, tKey } from './i18n';
+import { PanelHeader, type PanelNav } from './shell/panel-header';
 
 export interface CountryPanelProps {
   readonly world: WorldMap;
@@ -16,7 +17,8 @@ export interface CountryPanelProps {
   readonly provinceOwner: Uint16Array;
   /** Index of the country to show. */
   readonly country: number;
-  readonly onSelectCountry: (country: number | null) => void;
+  readonly nav: PanelNav;
+  readonly onSelectCountry: (country: number) => void;
   readonly onSelectProvince: (province: number) => void;
 }
 
@@ -31,6 +33,7 @@ export function CountryPanel({
   countryStart,
   provinceOwner,
   country,
+  nav,
   onSelectCountry,
   onSelectProvince,
 }: CountryPanelProps) {
@@ -44,27 +47,22 @@ export function CountryPanel({
   const gdpMillionUsd = countryStart.gdpMillionUsd[country];
 
   return (
-    <section className="panel country-panel" data-testid="country-panel">
-      <div className="province-panel-header">
-        <h2 className="province-panel-name" data-testid="country-name">
-          <span
-            className="country-color"
-            style={{ backgroundColor: world.countryMapColor[country] }}
-            aria-hidden="true"
-          />
-          {countryName(country)}
-        </h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('PANEL_CLOSE')}
-          title={t('PANEL_CLOSE')}
-          data-testid="country-close"
-          onClick={() => onSelectCountry(null)}
-        >
-          ×
-        </button>
-      </div>
+    <section className="panel info-panel" data-testid="country-panel">
+      <PanelHeader
+        nav={nav}
+        title={
+          <>
+            <span
+              className="country-color"
+              style={{ backgroundColor: world.countryMapColor[country] }}
+              aria-hidden="true"
+            />
+            {countryName(country)}
+          </>
+        }
+        titleTestId="country-name"
+        closeTestId="country-close"
+      />
       <dl className="facts">
         <dt>{t('COUNTRY_PANEL_GOVERNMENT')}</dt>
         <dd data-testid="country-government">

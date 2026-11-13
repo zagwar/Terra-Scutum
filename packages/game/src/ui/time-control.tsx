@@ -25,9 +25,9 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 /**
- * The date and the game speed controls (F04), top-right where the top bar
- * will be (section 12.1; the full top bar comes with F122): the date, pause /
- * play, and speeds 1–5. Also listens for the time keys (see `time-keys.ts`).
+ * The date and the game speed controls (F04), at the right end of the top bar
+ * (section 12.1, since F122): the date, pause / play, and speeds 1–5. Also
+ * listens for the time keys (see `time-keys.ts`).
  */
 export function TimeControl({ date, time, daysPerSecond, onChangeTime }: TimeControlProps) {
   useEffect(() => {
@@ -56,7 +56,7 @@ export function TimeControl({ date, time, daysPerSecond, onChangeTime }: TimeCon
   const { paused, speed } = time;
   return (
     <section
-      className={paused ? 'panel time-control is-paused' : 'panel time-control'}
+      className={paused ? 'time-control is-paused' : 'time-control'}
       data-testid="time-control"
       data-paused={paused}
       data-speed={speed}

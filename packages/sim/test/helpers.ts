@@ -163,11 +163,21 @@ export function testRawData(
   return {
     gameConfig: {
       startDate: overrides.startDate ?? '2025-01-01',
+      playerCountry: 'AAA',
       performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
       gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
     },
     ...testWorld(),
     mapView: testMapView(),
+    notifications: testNotifications(),
+  };
+}
+
+/** A valid `notifications.json`: one message type and one alert type. */
+export function testNotifications() {
+  return {
+    messageTypes: [{ id: 'province_owner_changed', defaultDelivery: 'toast', pauses: false }],
+    alertTypes: [{ id: 'blackout', kind: 'problem', feature: 'F74' }],
   };
 }
 

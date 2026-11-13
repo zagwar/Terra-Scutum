@@ -1,5 +1,7 @@
 import {
   type GameData,
+  alertTypeNameKey,
+  messageTypeNameKey,
   countryNameKey,
   governmentTypeNameKey,
   provinceNameKey,
@@ -23,6 +25,9 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const s of data.seaZones.seaZones) need(seaZoneNameKey(s.id), `sea zone ${s.id}`);
   for (const g of data.governmentTypes.governmentTypes)
     need(governmentTypeNameKey(g.id), `government type ${g.id}`);
+  for (const m of data.notifications.messageTypes)
+    need(messageTypeNameKey(m.id), `message type ${m.id}`);
+  for (const a of data.notifications.alertTypes) need(alertTypeNameKey(a.id), `alert type ${a.id}`);
   return problems;
 }
 
