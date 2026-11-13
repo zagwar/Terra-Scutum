@@ -14,6 +14,8 @@ export * from './core/systems';
 export * from './data/game-config';
 export * from './data/game-data';
 export * from './data/map-view-config';
+export * from './politics/government-types';
+export * from './world/country-start';
 export * from './world/ownership';
 export * from './world/world-data';
 export * from './world/world-map';

@@ -80,6 +80,12 @@ test('the political map is the default; a province opens its country panel', asy
   await expect(page.getByTestId('country-capital')).toHaveText('Île-de-France');
   await expect(page.getByTestId('country-provinces')).toHaveText('24');
   await expect(page.getByTestId('country-area')).toHaveText('657,414 km²');
+  // Real-world starting data (F71): France with its overseas collectivities.
+  await expect(page.getByTestId('country-government')).toHaveText('Presidential democracy');
+  await expect(page.getByTestId('country-population')).toHaveText('69.3 million');
+  await expect(page.getByTestId('country-gdp')).toHaveText('$3.4 trillion');
+  await expect(page.getByTestId('country-gdp-per-person')).toHaveText('$49,019');
+  await expect(page.getByTestId('country-panel')).toContainText('real-world figures for 2025');
   const neighbors = page.getByTestId('country-neighbors').getByRole('button');
   await expect(neighbors).toHaveText([
     'Andorra',

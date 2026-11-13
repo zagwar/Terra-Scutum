@@ -11,6 +11,7 @@ import type { SimEvent } from './events';
 import { Rng, type RngState } from './rng';
 import { SYSTEMS, type SimSystem, type SystemId, type SystemRegistry, TICK_ORDER } from './systems';
 import { startingOwners } from '../world/ownership';
+import { type CountryStartTable, buildCountryStartTable } from '../world/country-start';
 import { type WorldMap, buildWorldMap } from '../world/world-map';
 
 export interface GameStateOptions {
@@ -43,6 +44,12 @@ export class GameState {
   readonly data: GameData;
   /** Fast numeric lookups over the map (provinces, countries, regions, sea zones). */
   readonly world: WorldMap;
+  /**
+   * Each country's real-world starting data (population, GDP, government
+   * type), by country index. Fixed for now: it becomes the starting point of
+   * living values once population, the economy and politics are simulated.
+   */
+  readonly countryStart: CountryStartTable;
   readonly seed: number;
   /** The single source of randomness for the sim. */
   readonly rng: Rng;
@@ -66,6 +73,7 @@ export class GameState {
   constructor(options: GameStateOptions) {
     this.data = options.data;
     this.world = buildWorldMap(options.data);
+    this.countryStart = buildCountryStartTable(options.data.countryStart, this.world);
     this.seed = options.seed >>> 0;
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
 

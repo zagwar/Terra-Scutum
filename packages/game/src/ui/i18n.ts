@@ -51,3 +51,32 @@ export function formatDate(date: CalendarDate): string {
     year: date.year,
   });
 }
+
+/** Three significant digits, for example 83.5, 286 or 1.46. */
+const threeDigits = (value: number) => value.toLocaleString('en', { maximumSignificantDigits: 3 });
+
+/**
+ * A number of people as the player sees it: "1.46 billion", "83.5 million",
+ * or the exact number below a million ("41,024").
+ */
+export function formatPopulation(people: number): string {
+  if (people >= 1e9) return t('NUMBER_BILLION', { value: threeDigits(people / 1e9) });
+  if (people >= 1e6) return t('NUMBER_MILLION', { value: threeDigits(people / 1e6) });
+  return Math.round(people).toLocaleString('en');
+}
+
+/** An amount of money given in millions of dollars: "$30.9 trillion", "$921 billion", "$300 million". */
+export function formatMoneyMillions(millions: number): string {
+  const amount =
+    millions >= 1e6
+      ? t('NUMBER_TRILLION', { value: threeDigits(millions / 1e6) })
+      : millions >= 1e3
+        ? t('NUMBER_BILLION', { value: threeDigits(millions / 1e3) })
+        : t('NUMBER_MILLION', { value: threeDigits(millions) });
+  return t('MONEY_VALUE', { amount });
+}
+
+/** An amount of money in dollars, to the dollar: "$61,271". */
+export function formatMoney(dollars: number): string {
+  return t('MONEY_VALUE', { amount: Math.round(dollars).toLocaleString('en') });
+}

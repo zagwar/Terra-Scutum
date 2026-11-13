@@ -1,4 +1,4 @@
-import type { SimSnapshot, WorldMap } from '@terra-scutum/sim';
+import type { CountryStartTable, SimSnapshot, WorldMap } from '@terra-scutum/sim';
 import type { RendererType } from './render/create-engine';
 import type { MapMode } from './render/map/map-colors';
 import type { TranslationKey } from './ui/i18n';
@@ -20,6 +20,8 @@ export interface AppState {
   readonly provinceOwner: Uint16Array | null;
   /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
   readonly world: WorldMap | null;
+  /** Each country's real-world starting data (F71); null until the sim is ready. */
+  readonly countryStart: CountryStartTable | null;
   readonly saveFormatVersion: number | null;
   /** The game speed, as the sim worker last reported it; null until the sim is ready. */
   readonly time: TimeState | null;
@@ -55,6 +57,7 @@ export function createAppStore(): AppStore {
     snapshot: null,
     provinceOwner: null,
     world: null,
+    countryStart: null,
     saveFormatVersion: null,
     time: null,
     daysPerSecond: [],

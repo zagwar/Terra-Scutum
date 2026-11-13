@@ -49,7 +49,7 @@ All system design decisions have been made (2026-11-11). Resolved items are kept
 - [x] **Scope:** no multiplayer, modding or extra languages for now (section 14).
 
 ### 17.2 Content to write (data and lists)
-- [ ] **Curated country list**, with each country's starting data: population, economy, provinces, government, interest groups, ideology mix, opinion split, nuclear status, AI personality. *(F64: the country list itself is approved: 172 countries in `packages/tools/map-config/countries.json`. Starting data comes with F71.)*
+- [ ] **Curated country list**, with each country's starting data: population, economy, provinces, government, interest groups, ideology mix, opinion split, nuclear status, AI personality. *(F64: the country list itself is approved: 172 countries in `packages/tools/map-config/countries.json`. Starting data comes with F71.)* *(F71 first pass: population, economy (GDP) and government type for every country, from the IMF and the World Bank, in `data/country_start.json`. Still to come as their systems arrive: interest groups, ideology mix, opinion split, nuclear status, AI personality, militaries, space programs.)*
 - [x] **About 1,000 provinces**, generated from map data, plus **about 50 named regions** with climate. *(F64: 1,294 provinces on real borders, 62 regions, 126 sea zones, all [DEFAULT] and adjustable in `packages/tools/map-config/`. Some combined provinces still have direction names ("Northern Algeria") that can be replaced with real names over time.)*
 - [ ] **Building catalog stats** (section 8.3) with costs, workers, inputs, outputs and slots.
 - [ ] **Goods list** (about 30) and the **pop groups**, final.

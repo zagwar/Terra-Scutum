@@ -70,6 +70,35 @@ export function testWorld() {
         },
       ],
     },
+    governmentTypes: {
+      governmentTypes: [
+        { id: 'parliamentary_democracy', kind: 'democracy' },
+        { id: 'military_junta', kind: 'autocracy' },
+      ],
+    },
+    countryStart: {
+      year: 2025,
+      sources: { worldBank: { title: 'World Bank' }, imfWeo: { title: 'IMF' } },
+      countries: [
+        {
+          id: 'AAA',
+          population: 2_000_000,
+          gdpMillionUsd: 50_000,
+          governmentType: 'parliamentary_democracy',
+          populationSource: 'worldBank',
+          gdpSource: 'imfWeo',
+        },
+        {
+          id: 'BBB',
+          population: 500_000,
+          gdpMillionUsd: 1_000,
+          governmentType: 'military_junta',
+          populationSource: 'worldBank',
+          gdpSource: 'worldBank',
+          gdpYear: 2022,
+        },
+      ],
+    },
   };
 }
 

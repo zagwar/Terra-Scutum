@@ -84,6 +84,7 @@ const sim = createSimClient({
       snapshot: message.snapshot,
       provinceOwner: message.snapshot.provinceOwner ?? null,
       world: message.world,
+      countryStart: message.countryStart,
       saveFormatVersion: message.saveFormatVersion,
       time: message.time,
       daysPerSecond: message.daysPerSecond,

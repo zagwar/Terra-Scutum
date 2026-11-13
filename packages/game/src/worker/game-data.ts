@@ -1,6 +1,8 @@
 import type { RawGameData } from '@terra-scutum/sim';
 import countries from '../../../../data/countries.json';
+import countryStart from '../../../../data/country_start.json';
 import gameConfig from '../../../../data/game_config.json';
+import governmentTypes from '../../../../data/government_types.json';
 import mapView from '../../../../data/map_view.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
@@ -17,5 +19,7 @@ export const RAW_GAME_DATA: RawGameData = {
   provinces,
   regions,
   seaZones,
+  governmentTypes,
+  countryStart,
   mapView,
 };
