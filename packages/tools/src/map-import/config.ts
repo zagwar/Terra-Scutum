@@ -50,6 +50,8 @@ export const settingsSchema = z.strictObject({
      * land is closer together than this (across a strait or a narrow sea).
      */
     nearCountryKm: z.number().min(0),
+    /** …counting only provinces at least this big (a big country's far-away specks don't count). */
+    nearMinProvinceKm2: z.number().min(0),
   }),
   raster: z.strictObject({
     /** Size of one pixel of the grid used to find sea zones and coastlines. */
@@ -174,6 +176,15 @@ export const tinyProvincesSchema = z.strictObject({
 });
 export type TinyProvincesConfig = z.infer<typeof tinyProvincesSchema>;
 
+export const countryColorsSchema = z.strictObject({
+  /**
+   * The color commonly associated with each country, by country id, as #rrggbb. A country keeps
+   * it on the map unless a neighbor's color is too much alike (then the smaller one is shifted a little).
+   */
+  colors: z.record(z.string().regex(countryIdPattern), z.string().regex(/^#[0-9a-f]{6}$/)),
+});
+export type CountryColorsConfig = z.infer<typeof countryColorsSchema>;
+
 export interface MapConfig {
   readonly settings: MapSettings;
   readonly countries: CountriesConfig;
@@ -182,6 +193,7 @@ export interface MapConfig {
   readonly provinceGroups: ProvinceGroupsConfig;
   readonly provinceNames: ProvinceNamesConfig;
   readonly tinyProvinces: TinyProvincesConfig;
+  readonly countryColors: CountryColorsConfig;
 }
 
 function readConfigFile<T>(dir: string, file: string, schema: z.ZodType<T>): T {
@@ -211,5 +223,6 @@ export function loadMapConfig(dir: string = MAP_CONFIG_DIR): MapConfig {
     provinceGroups: readConfigFile(dir, 'province-groups.json', provinceGroupsSchema),
     provinceNames: readConfigFile(dir, 'province-names.json', provinceNamesSchema),
     tinyProvinces: readConfigFile(dir, 'tiny-provinces.json', tinyProvincesSchema),
+    countryColors: readConfigFile(dir, 'country-colors.json', countryColorsSchema),
   };
 }

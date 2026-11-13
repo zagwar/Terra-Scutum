@@ -47,6 +47,10 @@ and always gives the same result for the same inputs.
   with microstates; the disc is cut out of whatever province lies under it, and `areaKm2` (the real
   area) is what goes into the data. `leaveOut` lists the ones that are not part of the game. The
   import warns if any other province comes out without a visible shape.
+- **`country-colors.json`**: each country's traditional map color (the one commonly associated with
+  it), by country id, as `#rrggbb`. A country keeps it unless a country that borders it (or faces it
+  across a narrow sea) looks too much alike; then the one with fewer provinces is shifted to the
+  nearest shade that can be told apart. The report lists every shifted country.
 - **`settings.json`**: the [DEFAULT] numbers:
   - `areaPerProvinceKm2` and `populationUnit`: each country aims for about
     `area ÷ areaPerProvinceKm2 + √(population ÷ populationUnit)` provinces.
@@ -55,9 +59,9 @@ and always gives the same result for the same inputs.
   - `dominantShare`: a combined province keeps its main member's name when the other members are
     tiny (Bremen added to Lower Saxony is still "Lower Saxony").
   - `clusterDistanceKm`, `minClusterPopulation`, `minIsletAreaKm2`: islands and islets.
-  - `colors.nearCountryKm`: countries whose land is closer together than this (across a strait or
-    a narrow sea) get clearly different map colors, as countries sharing a border always do. The
-    report names the two bordering countries whose colors are most alike.
+  - `colors.nearCountryKm`, `colors.nearMinProvinceKm2`: countries whose land is closer together
+    than this (across a strait or a narrow sea, counting only provinces at least this big) get
+    clearly different map colors, as countries sharing a border always do.
 
 ## How provinces are made
 

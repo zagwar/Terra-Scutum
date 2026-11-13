@@ -4,7 +4,9 @@ import { buildWorldMap, summarizeCountry } from '@terra-scutum/sim';
 import { loadGameDataFromDisk } from '../src';
 import {
   COUNTRY_PALETTE,
+  MIN_BORDER_CONTRAST,
   assignCountryColors,
+  assignTraditionalColors,
   colorDifference,
   mapColorContrast,
 } from '../src/map-import/colors';
@@ -357,6 +359,55 @@ describe('countries', () => {
     expect([...assignCountryColors(ids, neighbors, near)]).toEqual([...colors]);
   });
 
+  it('keeps traditional colors, and shifts the smaller of two look-alike neighbors', () => {
+    // A (big, red) borders B (small, nearly the same red) and C (small, blue). D has no color.
+    const ids = ['A', 'B', 'C', 'D'];
+    const neighbors = new Map([
+      ['A', new Set(['B', 'C', 'D'])],
+      ['B', new Set(['A'])],
+      ['C', new Set(['A'])],
+      ['D', new Set(['A'])],
+    ]);
+    const preferred = new Map([
+      ['A', '#c8403a'],
+      ['B', '#c0403a'],
+      ['C', '#3f6fc4'],
+    ]);
+    const importance = new Map([
+      ['A', 50],
+      ['B', 2],
+      ['C', 3],
+      ['D', 1],
+    ]);
+    const { colors, adjusted } = assignTraditionalColors(
+      ids,
+      neighbors,
+      new Map(),
+      preferred,
+      importance,
+    );
+    expect(colors.get('A')).toBe('#c8403a'); // the big country keeps its exact color
+    expect(colors.get('C')).toBe('#3f6fc4'); // already different enough
+    expect(colors.get('B')).not.toBe('#c0403a'); // shifted…
+    expect(colorDifference(colors.get('B')!, '#c0403a')).toBeLessThan(0.15); // …but still reddish
+    expect(mapColorContrast(colors.get('A')!, colors.get('B')!)).toBeGreaterThanOrEqual(
+      MIN_BORDER_CONTRAST * 0.999,
+    );
+    expect(colors.get('D')).toMatch(/^#[0-9a-f]{6}$/); // a spare palette color
+    expect(adjusted.map((entry) => entry.id)).toEqual(['B']);
+  });
+
+  it('the real map: big countries keep their traditional colors', () => {
+    const data = loadGameDataFromDisk();
+    const world = buildWorldMap(data);
+    const traditional = loadMapConfig().countryColors.colors;
+    for (const id of ['USA', 'GBR', 'FRA', 'DEU', 'RUS', 'CHN', 'ITA', 'ESP', 'NLD', 'BRA']) {
+      expect(world.countryMapColor[world.countryIndex.get(id)!], id).toBe(traditional[id]);
+    }
+    // Every country in the game has a traditional color.
+    expect(world.countryIds.filter((id) => !(id in traditional))).toEqual([]);
+  });
+
   it('the real map: countries that share a border have clearly different colors', () => {
     const data = loadGameDataFromDisk();
     const world = buildWorldMap(data);
@@ -367,12 +418,12 @@ describe('countries', () => {
           world.countryMapColor[country],
           world.countryMapColor[other],
         );
-        if (other > country && difference < 0.1)
+        if (other > country && difference < MIN_BORDER_CONTRAST * 0.999)
           alike.push(`${id} and ${world.countryIds[other]}: ${difference.toFixed(3)}`);
       }
     });
     expect(alike).toEqual([]);
-    expect(new Set(world.countryMapColor).size).toBeGreaterThanOrEqual(30);
+    expect(new Set(world.countryMapColor).size).toBeGreaterThanOrEqual(100);
   });
 
   it('the map-config files are valid', () => {

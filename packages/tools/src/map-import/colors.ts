@@ -1,8 +1,11 @@
 /**
- * Map colors for countries [DEFAULT]. Every country gets a color from a
- * palette of clearly different colors, chosen so that countries that touch
- * (or face each other across a narrow sea, or share a neighbor) look as
- * different from each other as possible.
+ * Map colors for countries [DEFAULT]. Every country has a traditional color
+ * (the one commonly associated with it, from `country-colors.json`). It keeps
+ * that color unless a country that touches it (or faces it across a narrow
+ * sea, or shares a neighbor with it) would look too much alike: then the
+ * less important of the two gets the nearest shade that can be told apart
+ * (`assignTraditionalColors`). A country without a traditional color gets
+ * one from a palette of clearly different colors (`assignCountryColors`).
  *
  * "How different two colors look" is measured in OKLab, a color space built
  * so that equal distances look like equal differences to the eye. Colors are
@@ -116,7 +119,7 @@ export const COUNTRY_PALETTE: readonly string[] = buildPalette();
 
 /** How much each kind of link counts when keeping two countries' colors apart. */
 const WEIGHT_BORDER = 1;
-const WEIGHT_NEAR = 0.75;
+const WEIGHT_NEAR = 0.6;
 const WEIGHT_SHARED_NEIGHBOR = 0.45;
 
 function hash(text: string): number {
@@ -143,22 +146,7 @@ export function assignCountryColors(
   near: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ): Map<string, string> {
   const palette = COUNTRY_PALETTE;
-  const index = new Map(countries.map((id, i) => [id, i]));
-  // links[i]: country index → weight (the strongest link wins).
-  const links: Map<number, number>[] = countries.map(() => new Map<number, number>());
-  const link = (a: string, b: string, weight: number) => {
-    const i = index.get(a);
-    const j = index.get(b);
-    if (i === undefined || j === undefined || i === j) return;
-    if ((links[i].get(j) ?? 0) < weight) links[i].set(j, weight);
-    if ((links[j].get(i) ?? 0) < weight) links[j].set(i, weight);
-  };
-  for (const [a, list] of neighbors) for (const b of list) link(a, b, WEIGHT_BORDER);
-  for (const [a, list] of near) for (const b of list) link(a, b, WEIGHT_NEAR);
-  for (const list of neighbors.values()) {
-    const sorted = [...list].sort();
-    for (const a of sorted) for (const b of sorted) if (a < b) link(a, b, WEIGHT_SHARED_NEIGHBOR);
-  }
+  const links = buildLinks(countries, neighbors, near);
 
   const difference = palette.map((a) => palette.map((b) => mapColorContrast(a, b)));
   const choice = new Int32Array(countries.length).fill(-1);
@@ -212,6 +200,147 @@ export function assignCountryColors(
   }
 
   return new Map(countries.map((id, i) => [id, palette[choice[i]]]));
+}
+
+/**
+ * Which countries' colors must be kept apart, and how strongly: for each
+ * country (by position in `countries`), the linked countries and a weight
+ * (land border 1, nearly touching less, sharing a neighbor less still).
+ */
+function buildLinks(
+  countries: readonly string[],
+  neighbors: ReadonlyMap<string, ReadonlySet<string>>,
+  near: ReadonlyMap<string, ReadonlySet<string>>,
+  sharedNeighbors = true,
+): Map<number, number>[] {
+  const index = new Map(countries.map((id, i) => [id, i]));
+  const links: Map<number, number>[] = countries.map(() => new Map<number, number>());
+  // The strongest link between two countries wins.
+  const link = (a: string, b: string, weight: number) => {
+    const i = index.get(a);
+    const j = index.get(b);
+    if (i === undefined || j === undefined || i === j) return;
+    if ((links[i].get(j) ?? 0) < weight) links[i].set(j, weight);
+    if ((links[j].get(i) ?? 0) < weight) links[j].set(i, weight);
+  };
+  for (const [a, list] of neighbors) for (const b of list) link(a, b, WEIGHT_BORDER);
+  for (const [a, list] of near) for (const b of list) link(a, b, WEIGHT_NEAR);
+  if (sharedNeighbors) {
+    for (const list of neighbors.values()) {
+      const sorted = [...list].sort();
+      for (const a of sorted) for (const b of sorted) if (a < b) link(a, b, WEIGHT_SHARED_NEIGHBOR);
+    }
+  }
+  return links;
+}
+
+/** Bordering countries' colors must be at least this far apart (see `mapColorContrast`). */
+export const MIN_BORDER_CONTRAST = 0.09;
+/** Colors stay light enough to stand out from the dark sea, and are never blown out. */
+const MIN_LIGHTNESS = 0.38;
+const MAX_LIGHTNESS = 0.93;
+
+/**
+ * Shades close to a color: a little lighter or darker, a little more or less
+ * colorful, the hue turned a little; for near-greys also a slight tint. The
+ * color itself comes first; the rest are sorted by how far they are from it.
+ */
+function shadesOf(color: string): string[] {
+  const [l0, a, b] = rgbToOklab(parseHex(color));
+  const chroma = Math.hypot(a, b);
+  const hue = (Math.atan2(b, a) * 180) / Math.PI;
+  const lightness = Math.min(MAX_LIGHTNESS, Math.max(MIN_LIGHTNESS, l0));
+  const shades = new Set<string>();
+  const add = (l: number, c: number, h: number) => {
+    const clamped = Math.min(MAX_LIGHTNESS, Math.max(MIN_LIGHTNESS, l));
+    for (let reduced = c; reduced >= 0; reduced -= 0.005) {
+      const rgb = oklchToRgb(clamped, reduced, h);
+      if (rgb) {
+        shades.add(toHex(rgb));
+        return;
+      }
+    }
+  };
+  for (const dl of [0, -0.05, 0.05, -0.1, 0.1, -0.15, 0.15]) {
+    for (const dh of [0, -12, 12, -24, 24, -36, 36, -48, 48])
+      for (const scale of [1, 0.8, 1.15]) add(lightness + dl, chroma * scale, hue + dh);
+    // A grey or a white has no hue to turn: give it a slight tint instead.
+    if (chroma < 0.04) for (let h = 0; h < 360; h += 30) add(lightness + dl, 0.045, h);
+  }
+  const start = lightness === l0 ? color : [...shades][0];
+  return [start, ...[...shades].filter((shade) => shade !== start)]
+    .map((shade, order) => ({ shade, order, cost: colorDifference(shade, color) }))
+    .sort((p, q) => p.cost - q.cost || p.order - q.order)
+    .map((entry) => entry.shade);
+}
+
+export interface TraditionalColors {
+  readonly colors: Map<string, string>;
+  /** Countries that could not keep their traditional color exactly (id, wanted, got), most changed first. */
+  readonly adjusted: { id: string; wanted: string; got: string; change: number }[];
+}
+
+/**
+ * Gives every country its traditional color (`preferred`), or the nearest
+ * shade of it that can still be told apart from the countries around it.
+ * Countries are handled from the most to the least important (`importance`,
+ * higher first), so the important ones keep their exact colors and smaller
+ * neighbors give way. A country missing from `preferred` gets a palette color.
+ * The result is always the same for the same input.
+ */
+export function assignTraditionalColors(
+  countries: readonly string[],
+  neighbors: ReadonlyMap<string, ReadonlySet<string>>,
+  near: ReadonlyMap<string, ReadonlySet<string>>,
+  preferred: ReadonlyMap<string, string>,
+  importance: ReadonlyMap<string, number>,
+): TraditionalColors {
+  // Traditional colors only give way to countries that touch or nearly touch (not to ones that
+  // merely share a neighbor): keeping the colors people expect matters more here.
+  const links = buildLinks(countries, neighbors, near, false);
+  const fallback = assignCountryColors(countries, neighbors, near);
+  const wanted = countries.map((id) => preferred.get(id) ?? fallback.get(id)!);
+  const chosen: (string | null)[] = countries.map(() => null);
+  const order = countries
+    .map((_, i) => i)
+    .sort(
+      (a, b) =>
+        (importance.get(countries[b]) ?? 0) - (importance.get(countries[a]) ?? 0) ||
+        countries[a].localeCompare(countries[b]),
+    );
+  for (const country of order) {
+    let best: string | null = null;
+    let bestScore = -Infinity;
+    for (const shade of shadesOf(wanted[country])) {
+      // The score: how well the shade stands apart from the linked countries colored so far (1 = enough).
+      let score = Infinity;
+      for (const [other, weight] of links[country]) {
+        const color = chosen[other];
+        if (color !== null)
+          score = Math.min(score, mapColorContrast(shade, color) / (MIN_BORDER_CONTRAST * weight));
+      }
+      if (score >= 1) {
+        best = shade; // shades come nearest first: this is the closest one that works
+        break;
+      }
+      if (score > bestScore) {
+        best = shade;
+        bestScore = score;
+      }
+    }
+    chosen[country] = best ?? wanted[country];
+  }
+  const colors = new Map(countries.map((id, i) => [id, chosen[i]!]));
+  const adjusted = countries
+    .map((id, i) => ({
+      id,
+      wanted: wanted[i],
+      got: chosen[i]!,
+      change: colorDifference(wanted[i], chosen[i]!),
+    }))
+    .filter((entry) => entry.got !== entry.wanted)
+    .sort((a, b) => b.change - a.change || a.id.localeCompare(b.id));
+  return { colors, adjusted };
 }
 
 /** A slightly lighter or darker version of a color, different for each key (to tell provinces apart). */

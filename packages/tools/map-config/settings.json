@@ -15,7 +15,8 @@
     "minIsletAreaKm2": 25
   },
   "colors": {
-    "nearCountryKm": 300
+    "nearCountryKm": 300,
+    "nearMinProvinceKm2": 1000
   },
   "raster": {
     "degreesPerPixel": 0.05

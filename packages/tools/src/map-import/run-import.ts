@@ -6,7 +6,12 @@ import { topology } from 'topojson-server';
 import { presimplify, simplify } from 'topojson-simplify';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { DATA_DIR, LOCALES_DIR, REPO_ROOT } from '../load-data';
-import { assignCountryColors, mapColorContrast, varyColor } from './colors';
+import {
+  MIN_BORDER_CONTRAST,
+  assignTraditionalColors,
+  mapColorContrast,
+  varyColor,
+} from './colors';
 import { type MapConfig, loadMapConfig } from './config';
 import {
   type Polygons,
@@ -48,8 +53,6 @@ export const REPORT_DIR = join(REPO_ROOT, 'packages/tools/map-config/report');
 export const MAP_LOCALE_FILE = join(LOCALES_DIR, 'en.map.json');
 
 const OUTSIDE = 0xffff;
-/** Bordering countries whose map colors differ by less than this (see `mapColorContrast`) are hard to tell apart: the import warns. */
-export const MIN_BORDER_COLOR_DIFFERENCE = 0.1;
 /** A province whose final shape is smaller than this can't be seen or clicked: the import warns. */
 const MIN_VISIBLE_AREA_KM2 = 0.5;
 
@@ -332,11 +335,17 @@ export async function runMapImport(
   // is estimated from their label points and areas, as if they were round.
   const nearCountries = new Map<string, Set<string>>();
   const reach = provinces.map((p) => Math.sqrt(p.areaKm2 / Math.PI));
+  const provinceCount = new Map<string, number>();
+  for (const p of provinces) provinceCount.set(p.country, (provinceCount.get(p.country) ?? 0) + 1);
+  // A big country's specks far from home (a base, an islet) don't make it "near" anyone.
+  const countsAsNear = (p: ProvinceDraft) =>
+    p.areaKm2 >= settings.colors.nearMinProvinceKm2 || (provinceCount.get(p.country) ?? 0) <= 3;
   for (let i = 0; i < provinces.length; i++) {
+    if (!countsAsNear(provinces[i])) continue;
     for (let j = i + 1; j < provinces.length; j++) {
       const a = provinces[i].country;
       const b = provinces[j].country;
-      if (a === b || nearCountries.get(a)?.has(b)) continue;
+      if (a === b || nearCountries.get(a)?.has(b) || !countsAsNear(provinces[j])) continue;
       const gap = distanceKm(centers[i], centers[j]) - reach[i] - reach[j];
       if (gap > settings.colors.nearCountryKm) continue;
       if (!nearCountries.has(a)) nearCountries.set(a, new Set());
@@ -345,7 +354,24 @@ export async function runMapImport(
       nearCountries.get(b)!.add(a);
     }
   }
-  const colors = assignCountryColors(countryIds, countryNeighbors, nearCountries);
+  // Every country's traditional color (country-colors.json), shifted a little only where a
+  // neighbor's color would be too much alike; bigger countries (more provinces) keep theirs.
+  const traditional = new Map(Object.entries(config.countryColors.colors));
+  for (const id of traditional.keys())
+    if (!countryIds.includes(id))
+      warn(`country-colors.json has a color for ${id}, which is not a country in the game`);
+  const withoutColor = countryIds.filter((id) => !traditional.has(id));
+  if (withoutColor.length > 0)
+    warn(
+      `country-colors.json has no color for ${withoutColor.join(', ')}: they got a color from the spare palette`,
+    );
+  const { colors, adjusted: adjustedColors } = assignTraditionalColors(
+    countryIds,
+    countryNeighbors,
+    nearCountries,
+    traditional,
+    provinceCount,
+  );
   // How well it worked: the two bordering countries whose colors are most alike.
   let closestColors = { difference: Infinity, a: '', b: '' };
   for (const [a, list] of countryNeighbors) {
@@ -354,7 +380,7 @@ export async function runMapImport(
       if (a < b && difference < closestColors.difference) closestColors = { difference, a, b };
     }
   }
-  if (closestColors.difference < MIN_BORDER_COLOR_DIFFERENCE)
+  if (closestColors.difference < MIN_BORDER_CONTRAST * 0.999)
     warn(
       `the map colors of ${closestColors.a} and ${closestColors.b}, which share a border, are hard to tell apart (difference ${closestColors.difference.toFixed(3)})`,
     );
@@ -477,7 +503,20 @@ export async function runMapImport(
       tinyReport,
       zones.length,
       warnings,
-      `${new Set(colors.values()).size} map colors in use; the two bordering countries with the most similar colors are ${closestColors.a} and ${closestColors.b} (difference ${closestColors.difference.toFixed(2)}; below ${MIN_BORDER_COLOR_DIFFERENCE} would be hard to tell apart).`,
+      [
+        `every country has its traditional color from \`country-colors.json\`; ${adjustedColors.length} were shifted a little to stay apart from a neighbor. The two bordering countries with the most similar colors are ${closestColors.a} and ${closestColors.b} (difference ${closestColors.difference.toFixed(2)}; below ${MIN_BORDER_CONTRAST} would be hard to tell apart).`,
+        '',
+        '## Country colors that were shifted',
+        '',
+        'A country keeps its traditional color unless a country around it looks too much alike; then the one with fewer provinces is shifted to the nearest shade that can be told apart (most changed first). To give a country another color, change `country-colors.json`.',
+        '',
+        '| Country | Traditional | On the map | Change |',
+        '|---|---|---|---|',
+        ...adjustedColors.map(
+          (c) =>
+            `| ${countryNames.get(c.id) ?? c.id} | \`${c.wanted}\` | \`${c.got}\` | ${c.change.toFixed(2)} |`,
+        ),
+      ].join('\n'),
     ),
   );
 
