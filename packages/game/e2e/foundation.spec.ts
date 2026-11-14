@@ -62,7 +62,7 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   await expect(page.getByTestId('map-status')).toHaveText(/^[\d,]+ provinces$/);
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   await expect(page.getByTestId('sim-day')).toHaveText('0');
-  await expect(page.getByTestId('save-format')).toHaveText('Version 2');
+  await expect(page.getByTestId('save-format')).toHaveText('Version 3');
   await expect(page.getByTestId('build-commit')).toHaveText(/^[0-9a-f]{7}$|^dev$/);
   await expect(page.getByTestId('error-overlay')).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -144,11 +144,13 @@ test('the normal game (no debug scenario) starts without errors', async ({ page 
     if (message.type() === 'error') problems.push(`console error: ${message.text()}`);
   });
   await page.goto('/');
-  // The top bar shows the player's country once the sim is running; the loading note goes when the map is ready.
-  await expect(page.getByTestId('top-bar-flag')).toContainText('United States', {
-    timeout: 30_000,
-  });
+  // A new game starts with the country selection (F05); the loading note goes when the map is ready.
+  await expect(page.getByTestId('country-selection')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('loading-note')).toHaveCount(0, { timeout: 50_000 });
+  await page.locator('[data-testid="selection-quick-pick"][data-country="USA"]').click();
+  await page.getByTestId('selection-play').click();
+  // Then the top bar shows the player's country.
+  await expect(page.getByTestId('top-bar-flag')).toContainText('United States');
   await openAbout(page);
   await expect(page.getByTestId('sim-status')).toHaveText('Running');
   await expect(page.getByTestId('renderer-status')).toHaveText(/WebGPU|WebGL 2/);

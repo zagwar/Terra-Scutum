@@ -111,6 +111,30 @@ describe('save and load', () => {
     expect(hashGameState(original)).not.toBe(hashGameState(new GameState({ data, seed: 3 })));
   });
 
+  it("keeps the player's country (F05)", () => {
+    const data = testData();
+    const original = new GameState({ data, seed: 8 });
+    original.applyCommand({ type: 'choosePlayerCountry', country: 'BBB' });
+    const save = serializeGameState(original);
+    expect(save.playerCountry).toBe('BBB');
+    const loaded = deserializeGameState(JSON.parse(JSON.stringify(save)), { data });
+    expect(loaded.world.countryIds[loaded.playerCountry]).toBe('BBB');
+    expect(hashGameState(loaded)).toBe(hashGameState(original));
+    // The player's country is part of the fingerprint.
+    expect(hashGameState(original)).not.toBe(hashGameState(new GameState({ data, seed: 8 })));
+    expect(errorKey(() => deserializeGameState({ ...save, playerCountry: 'ZZZ' }, { data }))).toBe(
+      'SAVE_ERROR_CORRUPT',
+    );
+  });
+
+  it("loads a version 2 save (from before the country selection) as the data's player country", () => {
+    const data = testData();
+    const current = serializeGameState(new GameState({ data, seed: 6 }));
+    const { playerCountry: _unused, ...versionTwo } = { ...current, saveVersion: 2 };
+    const loaded = deserializeGameState(versionTwo, { data });
+    expect(loaded.world.countryIds[loaded.playerCountry]).toBe('AAA');
+  });
+
   it('rejects a save made on a different map', () => {
     const data = testData();
     const good = serializeGameState(new GameState({ data, seed: 5 }));

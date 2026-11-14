@@ -143,6 +143,8 @@ export function testMapView() {
       neighbor: '#c0c000',
       neighborStrength: 0.5,
       hoverBrighten: 0.2,
+      countryHighlight: '#ffffff',
+      countryHighlightStrength: 0.4,
     },
     lines: {
       provinceBorder: line,
@@ -170,7 +172,26 @@ export function testRawData(
     ...testWorld(),
     mapView: testMapView(),
     notifications: testNotifications(),
+    countryScreen: testCountryScreen(),
+    countryFlags: testCountryFlags(),
   };
+}
+
+/** A valid `country_screen.json`: one entry per list. */
+export function testCountryScreen() {
+  const entry = (id: string) => ({ id, feature: 'F24', milestone: 'M6' });
+  return {
+    laws: [entry('conscription')],
+    cabinetSeats: [entry('defense')],
+    publicOpinion: { stances: ['denial', 'panic'], feature: 'F21', milestone: 'M5' },
+    diplomaticActions: [entry('improve_relations'), entry('declare_war')],
+    countrySelection: { quickPicks: ['BBB'] },
+  };
+}
+
+/** A valid `country_flags.json` for the two test countries. */
+export function testCountryFlags() {
+  return { flagSet: 'flag-icons', flags: { AAA: 'aa', BBB: 'bb' } };
 }
 
 /** A valid `notifications.json`: one message type and one alert type. */

@@ -1,6 +1,8 @@
 import type {
   CommandResult,
+  CountryScreenConfig,
   CountryStartTable,
+  GovernmentKind,
   MapViewConfig,
   NotificationsConfig,
   SimCommand,
@@ -8,6 +10,16 @@ import type {
   SimSnapshot,
   WorldMap,
 } from '@terra-scutum/sim';
+
+/** What the country screen (F138) needs from the data files, sent once in the `ready` message. */
+export interface CountryScreenData {
+  /** The lists the screen shows (validated `data/country_screen.json`). */
+  readonly config: CountryScreenConfig;
+  /** Each country's flag code (`data/country_flags.json`), by country index. */
+  readonly flagCodes: readonly string[];
+  /** The kind of each government type (democracy, autocracy, corporate), by government type id. */
+  readonly governmentKinds: Readonly<Record<string, GovernmentKind>>;
+}
 
 /**
  * Messages between the game (main thread) and the sim worker.
@@ -64,12 +76,15 @@ export type FromSimWorker =
       /** Days per second at speeds 1–5 (`data/game_config.json`). */
       readonly daysPerSecond: readonly number[];
       /**
-       * The country (index) the player leads: `playerCountry` in
-       * `data/game_config.json` until the country selection (F05).
+       * The country (index) the player leads at the start: `playerCountry` in
+       * `data/game_config.json` until the player chooses another (F05); after
+       * that, every snapshot carries it.
        */
       readonly playerCountry: number;
       /** Message types and alert types (validated `data/notifications.json`). */
       readonly notifications: NotificationsConfig;
+      /** What the country screen (F138) needs from the data files. */
+      readonly countryScreen: CountryScreenData;
     }
   | {
       readonly type: 'update';

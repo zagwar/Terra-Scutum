@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fitMapCamera, groundToScreen } from '../src/render/map/camera-fit';
+import { countryFrame } from '../src/render/map/country-frame';
 import {
   cameraAlphaForHeading,
   edgeScrollDirection,
@@ -141,5 +142,40 @@ describe('strategy camera math', () => {
     expect(edgeScrollDirection({ x: 1279, y: 0 }, 1280, 720, 8)).toEqual({ right: 1, up: 1 });
     expect(edgeScrollDirection({ x: 640, y: 715 }, 1280, 720, 8)).toEqual({ right: 0, up: -1 });
     expect(edgeScrollDirection({ x: 0, y: 0 }, 1280, 720, 0)).toEqual({ right: 0, up: 0 });
+  });
+});
+
+describe('framing a country (F05)', () => {
+  const box = (item: number, minX: number, maxX: number, minZ = 0, maxZ = 10) => ({
+    item,
+    rings: [],
+    minX,
+    maxX,
+    minZ,
+    maxZ,
+  });
+
+  it('frames the pieces near the capital and leaves far-away ones out', () => {
+    // Country 0: a mainland (provinces 0 and 1), an island 120° away (province 2); province 3 is someone else's.
+    const polygons = [box(0, -80, -70), box(1, -70, -60, 5, 20), box(2, 40, 41), box(3, -60, -50)];
+    const owners = Uint16Array.from([0, 0, 0, 1]);
+    expect(countryFrame(polygons, owners, 0, -75, 50, 360)).toEqual({
+      minX: -80,
+      maxX: -60,
+      minZ: 0,
+      maxZ: 20,
+    });
+    expect(countryFrame(polygons, owners, 2, -75, 50, 360)).toBeNull();
+  });
+
+  it('frames a country across the date line the short way round', () => {
+    // Pieces at 175° E and 175° W, capital at 175° E: the western one counts as 185°.
+    const polygons = [box(0, 174, 176), box(1, -176, -174)];
+    expect(countryFrame(polygons, Uint16Array.from([0, 0]), 0, 175, 50, 360)).toEqual({
+      minX: 174,
+      maxX: 186,
+      minZ: 0,
+      maxZ: 10,
+    });
   });
 });

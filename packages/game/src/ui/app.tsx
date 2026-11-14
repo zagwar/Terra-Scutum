@@ -2,7 +2,8 @@ import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import type { AppState, AppStore } from '../app-store';
 import type { MapMode } from '../render/map/map-colors';
 import type { TimeChange } from '../worker/protocol';
-import { CountryPanel } from './country-panel';
+import { CountryScreen } from './country-screen/country-screen';
+import { CountrySelection } from './country-selection';
 import { t } from './i18n';
 import { MapModeBar } from './map-mode-bar';
 import { MapTooltip } from './map-tooltip';
@@ -34,8 +35,8 @@ export interface AppProps {
 /**
  * The root of the React UI: an HTML layer drawn on top of the 3D view. The
  * UI shell (F122, section 12.1): the top bar, the alerts row under it, the
- * information panel on the left, the outliner on the right, the lens bar
- * bottom-left, the map mode box bottom-right, toasts, pop-ups and windows.
+ * information panel on the left (since F138 also the country screen), the
+ * outliner on the right, the lens bar bottom-center, the map mode box bottom-right, toasts, pop-ups and windows.
  */
 export function App({
   store,
@@ -64,49 +65,56 @@ export function App({
 
   return (
     <div className="ui-layer">
-      <TopBar
-        world={world}
-        playerCountry={state.playerCountry}
-        onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
-        onOpenWindow={actions.openWindow}
-        timeControl={
-          state.snapshot &&
-          state.time && (
-            <TimeControl
-              date={state.snapshot.date}
-              time={state.time}
-              daysPerSecond={state.daysPerSecond}
-              onChangeTime={onChangeTime}
+      {state.choosingCountry ? (
+        <ChoosingCountry state={state} actions={actions} />
+      ) : (
+        <>
+          <TopBar
+            world={world}
+            playerCountry={state.playerCountry}
+            flagCodes={state.countryScreen?.flagCodes ?? null}
+            onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
+            onOpenWindow={actions.openWindow}
+            timeControl={
+              state.snapshot &&
+              state.time && (
+                <TimeControl
+                  date={state.snapshot.date}
+                  time={state.time}
+                  daysPerSecond={state.daysPerSecond}
+                  onChangeTime={onChangeTime}
+                />
+              )
+            }
+          />
+
+          <AlertsRow
+            alerts={state.alerts}
+            notifications={state.notifications}
+            alertsOff={state.uiSettings.alertsOff}
+            onClick={(alert) => alert.target && actions.show(alert.target)}
+            onDismiss={(alert) => actions.dismissAlert(alert.id)}
+          />
+
+          <InfoPanel state={state} actions={actions} />
+
+          {state.sim === 'running' && (
+            <Outliner
+              entries={state.outliner}
+              onSelect={(entry) => entry.target && actions.show(entry.target)}
             />
-          )
-        }
-      />
+          )}
 
-      <AlertsRow
-        alerts={state.alerts}
-        notifications={state.notifications}
-        alertsOff={state.uiSettings.alertsOff}
-        onClick={(alert) => alert.target && actions.show(alert.target)}
-        onDismiss={(alert) => actions.dismissAlert(alert.id)}
-      />
+          <Toasts toasts={state.toasts} actions={actions} />
 
-      <InfoPanel state={state} actions={actions} />
-
-      {state.sim === 'running' && (
-        <Outliner
-          entries={state.outliner}
-          onSelect={(entry) => entry.target && actions.show(entry.target)}
-        />
-      )}
-
-      <Toasts toasts={state.toasts} actions={actions} />
-
-      {state.sim === 'running' && (
-        <LensBar
-          openLens={state.openLens}
-          onToggleLens={actions.toggleLens}
-          onOpenScreen={actions.openWindow}
-        />
+          {state.sim === 'running' && (
+            <LensBar
+              openLens={state.openLens}
+              onToggleLens={actions.toggleLens}
+              onOpenScreen={actions.openWindow}
+            />
+          )}
+        </>
       )}
       {state.map === 'ready' && (
         <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} onResetView={onResetView} />
@@ -154,9 +162,37 @@ export function App({
   );
 }
 
+/**
+ * The start of a game (F05): the country selection on the left, a title
+ * across the top, and the map; the shell (top bar, outliner, lenses) comes
+ * once the player has chosen. Time can't run meanwhile.
+ */
+function ChoosingCountry({ state, actions }: { state: AppState; actions: ShellActions }) {
+  const { world, countryStart, provinceOwner, countryScreen } = state;
+  return (
+    <>
+      <header className="selection-bar" data-testid="selection-bar">
+        <span className="selection-bar-title">{t('GAME_TITLE')}</span>
+        <span className="selection-bar-text">{t('COUNTRY_SELECTION_TITLE')}</span>
+      </header>
+      {world && countryStart && provinceOwner && countryScreen && (
+        <CountrySelection
+          world={world}
+          countryStart={countryStart}
+          provinceOwner={provinceOwner}
+          data={countryScreen}
+          candidate={state.candidateCountry}
+          onPick={actions.pickCandidate}
+          onPlay={(country) => void actions.playAs(country)}
+        />
+      )}
+    </>
+  );
+}
+
 /** The information panel on the left: one of province, sea zone, country or region (F122). */
 function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions }) {
-  const { world, provinceOwner, countryStart, panel } = state;
+  const { world, provinceOwner, countryStart, countryScreen, panel } = state;
   if (!world || !provinceOwner || !panel) return null;
   const nav: PanelNav = {
     canGoBack: state.panelHistory.length > 0,
@@ -194,15 +230,20 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
         />
       );
     case 'country':
-      return countryStart ? (
-        <CountryPanel
+      return countryStart && countryScreen ? (
+        <CountryScreen
+          // A new country starts at the top of the screen, not where the last one was scrolled to.
+          key={panel.index}
           world={world}
           countryStart={countryStart}
           provinceOwner={provinceOwner}
+          data={countryScreen}
           country={panel.index}
+          playerCountry={state.playerCountry}
           nav={nav}
           onSelectCountry={link.country}
           onSelectProvince={link.province}
+          onOpenWindow={actions.openWindow}
         />
       ) : null;
     case 'region':

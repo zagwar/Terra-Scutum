@@ -1,5 +1,6 @@
 import { type WorldMap, countryNameKey } from '@terra-scutum/sim';
 import type { ReactNode } from 'react';
+import { Flag } from '../flag';
 import { t, tKey } from '../i18n';
 import {
   TOP_BAR_ITEMS,
@@ -16,6 +17,8 @@ export interface TopBarProps {
   readonly world: WorldMap | null;
   /** The country (index) the player leads; null until the sim is ready. */
   readonly playerCountry: number | null;
+  /** Each country's flag code (F138), by country index; null until the sim is ready. */
+  readonly flagCodes: readonly string[] | null;
   /** The date and speed control (F04), at the bar's right end. */
   readonly timeControl: ReactNode;
   readonly onOpenCountry: (country: number) => void;
@@ -28,8 +31,8 @@ export function comesWithText(comesWith: ComesWith): string {
 }
 
 /**
- * The top bar (F122, section 12.1): the player's country (its map color until
- * flags exist; opens the country panel), the key numbers, the date and speed,
+ * The top bar (F122, section 12.1): the player's country (its flag since
+ * F138; opens the country screen's Government view), the key numbers, the date and speed,
  * the message log and the settings. None of the key numbers exists in the sim
  * yet: each shows a dim "—" and its tooltip says which feature brings it
  * (designer decision). Clicking a number opens its screen.
@@ -37,6 +40,7 @@ export function comesWithText(comesWith: ComesWith): string {
 export function TopBar({
   world,
   playerCountry,
+  flagCodes,
   timeControl,
   onOpenCountry,
   onOpenWindow,
@@ -53,17 +57,14 @@ export function TopBar({
           data-testid="top-bar-flag"
           onClick={() => onOpenCountry(playerCountry)}
         >
-          <span
-            className="top-bar-flag-color"
-            style={{ backgroundColor: world.countryMapColor[playerCountry] }}
-            aria-hidden="true"
+          <Flag
+            code={flagCodes?.[playerCountry]}
+            color={world.countryMapColor[playerCountry]}
+            className="top-bar-flag-image"
+            testId="top-bar-flag-image"
           />
           <span className="top-bar-flag-name">{countryName}</span>
-          <Tip
-            title={countryName}
-            lines={[t('TOP_BAR_FLAG_HINT'), t('TOP_BAR_FLAG_NOTE')]}
-            testId="top-bar-flag-tip"
-          />
+          <Tip title={countryName} lines={[t('TOP_BAR_FLAG_HINT')]} testId="top-bar-flag-tip" />
         </button>
       )}
 

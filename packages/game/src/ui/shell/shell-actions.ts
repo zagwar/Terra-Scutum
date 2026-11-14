@@ -1,4 +1,4 @@
-import type { MessageDelivery } from '@terra-scutum/sim';
+import type { CommandResult, MessageDelivery, SimCommand } from '@terra-scutum/sim';
 import { type AppStore, MESSAGE_LOG_LIMIT } from '../../app-store';
 import type { MapTarget } from '../../render/map/shape-lookup';
 import type { TimeChange } from '../../worker/protocol';
@@ -17,7 +17,11 @@ export interface ShellDeps {
   /** Brings a province or sea zone into view (does nothing before the map has loaded). */
   readonly focusProvince: (province: number) => void;
   readonly focusSeaZone: (seaZone: number) => void;
+  /** Brings a country into view (F05). */
+  readonly focusCountry: (country: number) => void;
   readonly changeTime: (change: TimeChange) => void;
+  /** Sends a command to the sim; resolves with whether it was accepted. */
+  readonly sendCommand: (command: SimCommand) => Promise<CommandResult>;
 }
 
 /**
@@ -48,13 +52,22 @@ export interface ShellActions {
   readonly setMessageDelivery: (typeId: string, delivery: MessageDelivery) => void;
   readonly setMessagePauses: (typeId: string, pauses: boolean) => void;
   readonly setAlertOn: (typeId: string, on: boolean) => void;
+  /**
+   * Country selection (F05): shows a country in the selection panel and
+   * tints it on the map; picked from a list (not the map), it is brought into view.
+   */
+  readonly pickCandidate: (country: number) => void;
+  /** Country selection (F05): plays as this country; the game starts, paused. Resolves with the sim's answer. */
+  readonly playAs: (country: number) => Promise<CommandResult>;
 }
 
 export function createShellActions({
   store,
   focusProvince,
   focusSeaZone,
+  focusCountry,
   changeTime,
+  sendCommand,
 }: ShellDeps): ShellActions {
   const state = () => store.getState();
 
@@ -80,6 +93,13 @@ export function createShellActions({
 
   const actions: ShellActions = {
     mapClick(target) {
+      const current = state();
+      // Choosing a country (F05): a click on land picks the country that owns it.
+      if (current.choosingCountry) {
+        if (target?.kind === 'province' && current.provinceOwner)
+          store.update({ candidateCountry: current.provinceOwner[target.index] });
+        return;
+      }
       if (!target) {
         store.update(closePanel());
         return;
@@ -167,6 +187,29 @@ export function createShellActions({
           ? s.alertsOff.filter((id) => id !== typeId)
           : [...s.alertsOff.filter((id) => id !== typeId), typeId],
       }));
+    },
+    pickCandidate(country) {
+      store.update({ candidateCountry: country });
+      focusCountry(country);
+    },
+    async playAs(country) {
+      const { world } = state();
+      if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      const result = await sendCommand({
+        type: 'choosePlayerCountry',
+        country: world.countryIds[country],
+      });
+      if (result.ok) {
+        store.update({
+          choosingCountry: false,
+          candidateCountry: null,
+          playerCountry: country,
+          ...closePanel(),
+        });
+        // The game starts looking at the player's country.
+        focusCountry(country);
+      }
+      return result;
     },
   };
   return actions;

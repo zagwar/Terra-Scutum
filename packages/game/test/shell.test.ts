@@ -1,3 +1,4 @@
+import type { WorldMap } from '@terra-scutum/sim';
 import { describe, expect, it } from 'vitest';
 import { createAppStore } from '../src/app-store';
 import {
@@ -97,7 +98,9 @@ describe('messages', () => {
       store,
       focusProvince: () => {},
       focusSeaZone: () => {},
+      focusCountry: () => {},
       changeTime: (change) => changes.push(change),
+      sendCommand: () => Promise.resolve({ ok: true }),
     });
     const message = (id: number) => ({
       id,
@@ -118,6 +121,56 @@ describe('messages', () => {
     actions.setMessageDelivery('province_owner_changed', 'off');
     actions.deliverMessage(message(3));
     expect(store.getState().messageLog.map((m) => m.id)).toEqual([1, 2]);
+  });
+
+  it('choosing a country (F05): a map click picks the owner, Play starts the game', async () => {
+    const world = {
+      countryIds: ['AAA', 'BBB'],
+      countryCapital: Int32Array.from([0, 2]),
+    } as unknown as WorldMap;
+    const store = createAppStore({
+      world,
+      provinceOwner: Uint16Array.from([0, 0, 1]),
+      playerCountry: 0,
+      choosingCountry: true,
+    });
+    const sent: unknown[] = [];
+    const focused: number[] = [];
+    const actions = createShellActions({
+      store,
+      focusProvince: () => {},
+      focusSeaZone: () => {},
+      focusCountry: (country) => focused.push(country),
+      changeTime: () => {},
+      sendCommand: (command) => {
+        sent.push(command);
+        return Promise.resolve({ ok: true });
+      },
+    });
+    // While choosing, a province click picks its owner and opens no panel (and doesn't move the
+    // camera: the player is looking there); the sea does nothing.
+    actions.mapClick({ kind: 'province', index: 2 });
+    expect(store.getState().candidateCountry).toBe(1);
+    expect(store.getState().panel).toBeNull();
+    actions.mapClick({ kind: 'seaZone', index: 0 });
+    actions.mapClick(null);
+    expect(store.getState().candidateCountry).toBe(1);
+    expect(focused).toEqual([]);
+    // Picked from a list, the country is brought into view.
+    actions.pickCandidate(0);
+    expect(store.getState().candidateCountry).toBe(0);
+    expect(focused).toEqual([0]);
+
+    expect(await actions.playAs(1)).toEqual({ ok: true });
+    expect(sent).toEqual([{ type: 'choosePlayerCountry', country: 'BBB' }]);
+    const after = store.getState();
+    expect(after.choosingCountry).toBe(false);
+    expect(after.playerCountry).toBe(1);
+    expect(after.candidateCountry).toBeNull();
+    expect(focused).toEqual([0, 1]);
+    // Afterwards the map opens panels again.
+    actions.mapClick({ kind: 'province', index: 2 });
+    expect(store.getState().panel).toEqual({ kind: 'province', index: 2 });
   });
 
   it('reads the default settings from the data', () => {

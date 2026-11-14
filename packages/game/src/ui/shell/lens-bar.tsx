@@ -55,6 +55,8 @@ export function LensBar({ openLens, onToggleLens, onOpenScreen }: LensBarProps) 
             type="button"
             className={lens === openLens ? 'lens-button is-active' : 'lens-button'}
             aria-pressed={lens === openLens}
+            // The name stays known when a phone shows the icon only.
+            aria-label={tKey(lensNameKey(lens))}
             data-testid={`lens-${lens}`}
             onClick={() => onToggleLens(lens)}
           >

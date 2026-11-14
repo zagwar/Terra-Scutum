@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { DATA_FILES, DataValidationError, formatDataIssue, parseGameData } from '../src';
-import { testMapView, testNotifications, testWorld } from './helpers';
+import {
+  testCountryFlags,
+  testCountryScreen,
+  testMapView,
+  testNotifications,
+  testWorld,
+} from './helpers';
 
 const validConfig = {
   startDate: '2025-01-01',
@@ -9,7 +15,13 @@ const validConfig = {
   gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
 };
 
-const world = { ...testWorld(), mapView: testMapView(), notifications: testNotifications() };
+const world = {
+  ...testWorld(),
+  mapView: testMapView(),
+  notifications: testNotifications(),
+  countryScreen: testCountryScreen(),
+  countryFlags: testCountryFlags(),
+};
 
 function issuesOf(raw: unknown): string[] {
   try {
@@ -81,6 +93,8 @@ describe('game data validation', () => {
       'data/country_start.json: file is missing',
       'data/map_view.json: file is missing',
       'data/notifications.json: file is missing',
+      'data/country_screen.json: file is missing',
+      'data/country_flags.json: file is missing',
     ]);
   });
 
@@ -115,6 +129,53 @@ describe('game data validation', () => {
     expect(badDelivery.join('\n')).toContain('messageTypes.0.defaultDelivery');
     const data = parseGameData({ gameConfig: validConfig, ...world });
     expect(data.notifications.messageTypes[0].defaultDelivery).toBe('toast');
+  });
+
+  it('checks the country screen lists and the flags (F138)', () => {
+    const screen = testCountryScreen();
+    const duplicate = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryScreen: {
+        ...screen,
+        diplomaticActions: [...screen.diplomaticActions, screen.diplomaticActions[0]],
+        publicOpinion: { ...screen.publicOpinion, stances: ['denial', 'denial'] },
+      },
+    });
+    expect(duplicate).toEqual([
+      'data/country_screen.json → publicOpinion.stances.1: duplicate id "denial" (also at publicOpinion.stances.0)',
+      'data/country_screen.json → diplomaticActions.2.id: duplicate id "improve_relations" (also at diplomaticActions.0)',
+    ]);
+    const badMilestone = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryScreen: { ...screen, laws: [{ id: 'trade', feature: 'F16', milestone: 'three' }] },
+    });
+    expect(badMilestone.join('\n')).toContain('laws.0.milestone');
+    const picks = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryScreen: { ...screen, countrySelection: { quickPicks: ['BBB', 'ZZZ', 'BBB'] } },
+    });
+    expect(picks).toEqual([
+      'data/country_screen.json → countrySelection.quickPicks.1: unknown country "ZZZ"',
+      'data/country_screen.json → countrySelection.quickPicks.2: "BBB" is listed twice',
+    ]);
+    const flags = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryFlags: { flagSet: 'flag-icons', flags: { AAA: 'aa', ZZZ: 'zz' } },
+    });
+    expect(flags).toEqual([
+      'data/country_flags.json → flags: no flag for country "BBB"',
+      'data/country_flags.json → flags.ZZZ: unknown country "ZZZ"',
+    ]);
+    const badCode = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryFlags: { flagSet: 'flag-icons', flags: { AAA: 'AA', BBB: 'bb' } },
+    });
+    expect(badCode.join('\n')).toContain('flags.AAA');
   });
 
   it('uses .json file names in snake_case for every data file', () => {

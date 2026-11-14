@@ -5,6 +5,7 @@ import {
   SAVE_FORMAT_VERSION,
   type SimSnapshot,
   createSnapshot,
+  flagCodesByIndex,
   parseGameData,
 } from '@terra-scutum/sim';
 import {
@@ -165,8 +166,15 @@ export function createSimHost(
           countryStart: state.countryStart,
           time,
           daysPerSecond,
-          playerCountry: state.world.countryIndex.get(data.gameConfig.playerCountry) ?? 0,
+          playerCountry: state.playerCountry,
           notifications: data.notifications,
+          countryScreen: {
+            config: data.countryScreen,
+            flagCodes: flagCodesByIndex(state.world.countryIds, data.countryFlags),
+            governmentKinds: Object.fromEntries(
+              data.governmentTypes.governmentTypes.map((g) => [g.id, g.kind]),
+            ),
+          },
         });
         return;
       }

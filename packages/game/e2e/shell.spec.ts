@@ -56,10 +56,10 @@ test('the top bar, lenses, screens, alerts and outliner (UI shell, F122)', async
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('shell-window')).toHaveCount(0);
 
-  // The flag opens the player's country panel, on the left.
+  // The flag opens the player's country screen (F138), on the left.
   await page.getByTestId('top-bar-flag').click();
   await expect(page.getByTestId('country-name')).toHaveText('United States');
-  const panelBox = (await page.getByTestId('country-panel').boundingBox())!;
+  const panelBox = (await page.getByTestId('country-screen').boundingBox())!;
   expect(panelBox.x).toBeLessThan(40);
 
   // The lens bar: a lens lists its screens; a screen opens as a window over the map.

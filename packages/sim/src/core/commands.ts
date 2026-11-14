@@ -16,7 +16,12 @@ export type SimCommand =
    * Diagnostic: hands a province to a country (both by id), as a war or a collapse will later.
    * Used by tests to check that the map and the panels follow ownership.
    */
-  | { readonly type: 'debugSetProvinceOwner'; readonly province: string; readonly country: string };
+  | { readonly type: 'debugSetProvinceOwner'; readonly province: string; readonly country: string }
+  /**
+   * The player chooses the country they lead (F05, by id). Only before the
+   * first day is simulated: afterwards the choice is locked.
+   */
+  | { readonly type: 'choosePlayerCountry'; readonly country: string };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -60,6 +65,22 @@ const HANDLERS: CommandHandlers = {
       };
     }
     state.setProvinceOwner(province, country);
+    return OK;
+  },
+  choosePlayerCountry(state, command): CommandResult {
+    const country = state.world.countryIndex.get(command.country);
+    if (country === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+        params: { country: String(command.country) },
+      };
+    }
+    if (state.day > 0) return { ok: false, reasonKey: 'COMMAND_PLAYER_COUNTRY_LOCKED' };
+    if (state.playerCountry !== country) {
+      state.playerCountry = country;
+      state.emit({ type: 'playerCountryChosen', country: command.country });
+    }
     return OK;
   },
 };

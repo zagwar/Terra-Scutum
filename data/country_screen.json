@@ -1,0 +1,39 @@
+{
+  "laws": [
+    { "id": "economy_mode", "feature": "F16", "milestone": "M3" },
+    { "id": "conscription", "feature": "F16", "milestone": "M3" },
+    { "id": "rationing", "feature": "F16", "milestone": "M3" },
+    { "id": "trade", "feature": "F16", "milestone": "M3" },
+    { "id": "press", "feature": "F16", "milestone": "M3" },
+    { "id": "emergency_powers", "feature": "F16", "milestone": "M3" },
+    { "id": "migration", "feature": "F16", "milestone": "M3" }
+  ],
+  "cabinetSeats": [
+    { "id": "defense", "feature": "F100", "milestone": "M3" },
+    { "id": "finance", "feature": "F100", "milestone": "M3" },
+    { "id": "foreign_affairs", "feature": "F100", "milestone": "M3" },
+    { "id": "interior", "feature": "F100", "milestone": "M3" },
+    { "id": "science", "feature": "F100", "milestone": "M3" },
+    { "id": "intelligence", "feature": "F100", "milestone": "M3" }
+  ],
+  "publicOpinion": {
+    "stances": ["denial", "prepare", "contact", "panic"],
+    "feature": "F21",
+    "milestone": "M5"
+  },
+  "diplomaticActions": [
+    { "id": "improve_relations", "feature": "F24", "milestone": "M6" },
+    { "id": "alliance", "feature": "F24", "milestone": "M6" },
+    { "id": "military_access", "feature": "F24", "milestone": "M6" },
+    { "id": "research_sharing", "feature": "F24", "milestone": "M6" },
+    { "id": "send_aid", "feature": "F24", "milestone": "M6" },
+    { "id": "embargo", "feature": "F24", "milestone": "M6" },
+    { "id": "ultimatum", "feature": "F24", "milestone": "M6" },
+    { "id": "refugee_agreement", "feature": "F34", "milestone": "M9" },
+    { "id": "joint_operation", "feature": "F50", "milestone": "M8b" },
+    { "id": "declare_war", "feature": "F59", "milestone": "M8c" }
+  ],
+  "countrySelection": {
+    "quickPicks": ["USA", "CHN", "RUS", "IND", "DEU", "GBR", "FRA", "JPN"]
+  }
+}

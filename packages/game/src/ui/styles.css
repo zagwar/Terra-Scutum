@@ -636,12 +636,9 @@ body {
   border-color: rgba(200, 168, 90, 0.45);
 }
 
-.top-bar-flag-color {
-  flex: none;
-  width: 34px;
-  height: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 1px;
+.top-bar-flag-image {
+  width: 32px;
+  height: 24px;
 }
 
 .top-bar-flag-name {
@@ -1238,4 +1235,766 @@ body {
 .shell-window,
 .popup {
   background: rgba(12, 18, 26, 0.985);
+}
+
+/* ── Flags (F138) ──────────────────────────────────────────────────────── */
+.flag {
+  flex: none;
+  display: inline-block;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Country screen (F138): a large panel over the left part of the map ── */
+.info-panel.country-screen {
+  /* As wide as the design's HOI4-style screen allows, never under the outliner. */
+  width: min(720px, calc(100% - var(--side-width) - 4 * var(--shell-gap)));
+  padding: 12px 16px 16px;
+}
+
+.cs-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-panel-border);
+}
+
+.cs-flag {
+  width: 96px;
+  height: 72px;
+}
+
+.cs-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.cs-view-label {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.cs-name {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.cs-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
+  color: var(--color-text-dim);
+}
+
+.cs-subtitle [data-testid='country-government'] {
+  color: var(--color-text);
+}
+
+.cs-dot {
+  color: var(--color-panel-border);
+}
+
+.cs-header-leader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cs-close {
+  margin-left: auto;
+}
+
+.cs-dim {
+  color: var(--color-text-dim);
+}
+
+.cs-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cs-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.cs-columns:has(> .cs-leader) {
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+
+.cs-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cs-section {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+}
+
+.cs-section-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.cs-section-title[title] {
+  cursor: help;
+}
+
+.cs-section .facts {
+  margin-bottom: 8px;
+}
+
+.cs-fact {
+  display: contents;
+}
+
+.cs-missing {
+  color: var(--color-text-dim);
+  cursor: help;
+}
+
+.cs-missing:focus-visible {
+  outline: 1px solid var(--color-accent);
+}
+
+.cs-comes-with {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-dim);
+}
+
+.cs-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+/* Placeholder portraits [DEFAULT] until characters (F100). */
+.cs-portrait {
+  flex: none;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+}
+
+.cs-portrait-large {
+  display: block;
+  width: 120px;
+  height: 144px;
+  margin: 0 auto 6px;
+}
+
+.cs-portrait-small {
+  width: 25px;
+  height: 30px;
+}
+
+.cs-portrait-back {
+  fill: #1a2633;
+}
+
+.cs-portrait-figure {
+  fill: #3a4b5d;
+}
+
+.cs-leader {
+  text-align: center;
+}
+
+.cs-leader .facts {
+  text-align: left;
+}
+
+.cs-leader-role {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.cs-pie-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cs-pie {
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+
+.cs-pie-empty {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: var(--color-text-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.cs-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.cs-tile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.cs-tile:hover,
+.cs-link-button:hover {
+  border-color: var(--color-accent);
+  background: rgba(200, 168, 90, 0.1);
+}
+
+.cs-tile:focus-visible,
+.cs-link-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.cs-tile-value {
+  color: var(--color-text-dim);
+}
+
+.cs-seat {
+  justify-content: flex-start;
+}
+
+.cs-seat-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cs-opinion-bar {
+  display: flex;
+  height: 24px;
+  border: 1px dashed var(--color-text-dim);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cs-opinion-segment {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--color-text-dim);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cs-opinion-segment + .cs-opinion-segment {
+  border-left: 1px dashed var(--color-panel-border);
+}
+
+.cs-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 24px;
+}
+
+.cs-neighbors {
+  margin-bottom: 0;
+}
+
+.cs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Diplomatic actions are greyed out, with the reason, until they can be taken (section 12.4.1). */
+.cs-action {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--color-text-dim);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+  cursor: not-allowed;
+}
+
+.cs-action-name {
+  color: var(--color-text);
+  opacity: 0.55;
+}
+
+.cs-action-reason {
+  flex: none;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.cs-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cs-link-button {
+  flex: 1;
+  padding: 7px 10px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text);
+  background: #1b2a3a;
+  border: 1px solid #3a5068;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+/* ── Country selection (F05): the start of a game ──────────────────────── */
+.selection-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--top-bar-height);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  background: rgba(10, 15, 22, 0.94);
+  border-bottom: 2px solid var(--color-accent);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.selection-bar-title {
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.selection-bar-text {
+  padding-left: 16px;
+  border-left: 1px solid var(--color-panel-border);
+  font-size: 16px;
+}
+
+.country-selection {
+  position: absolute;
+  top: calc(var(--top-bar-height) + var(--shell-gap));
+  left: var(--shell-gap);
+  width: 380px;
+  max-height: calc(100% - var(--top-bar-height) - 2 * var(--shell-gap));
+  overflow-y: auto;
+}
+
+.selection-hint {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.selection-search {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  color: var(--color-text);
+  background: #0d141c;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+}
+
+.selection-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.selection-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.selection-country {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.selection-country span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selection-country:hover,
+.selection-country[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: rgba(200, 168, 90, 0.12);
+}
+
+.selection-country-flag {
+  width: 24px;
+  height: 18px;
+}
+
+.selection-empty {
+  margin: 4px 0 0;
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--color-text-dim);
+  border: 1px dashed var(--color-panel-border);
+  border-radius: 2px;
+}
+
+.selection-card {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-panel-border);
+}
+
+.selection-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.selection-card-flag {
+  width: 80px;
+  height: 60px;
+}
+
+.selection-card-name {
+  margin: 0 0 2px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.selection-card-government {
+  margin: 0;
+  color: var(--color-text-dim);
+}
+
+.selection-play-row {
+  margin-top: 4px;
+}
+
+.button.selection-play {
+  padding: 10px 12px;
+  font-size: 15px;
+  color: #10151c;
+  background: var(--color-accent);
+  border-color: #f0d590;
+}
+
+.button.selection-play:hover {
+  color: #10151c;
+  background: #dcbd70;
+}
+
+.selection-play-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  text-align: center;
+  color: var(--color-text-dim);
+}
+
+/* ── Map mode box: the fold button (small screens) ─────────────────────── */
+.map-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.map-mode-toggle .panel-title {
+  margin: 0;
+}
+
+.map-mode-bar:not(.is-folded) .map-mode-toggle {
+  margin-bottom: 10px;
+}
+
+/*
+ * ── Compact layout: phones and small tablets ─────────────────────────────
+ * A narrow (portrait) or short (landscape) window. Keep the query the same as
+ * COMPACT_QUERY in `ui/use-media.ts`. The game is designed for a desktop
+ * browser; this layout makes it playable for testing on a phone [DEFAULT].
+ */
+@media (max-width: 760px), (max-height: 520px) {
+  .ui-layer {
+    --shell-gap: 8px;
+    --side-width: min(300px, calc(100vw - 16px));
+    --content-top: calc(var(--top-bar-height) + 46px);
+    /* Room kept free at the bottom for the lens bar. */
+    --bottom-room: 62px;
+  }
+
+  /* The top bar: the key numbers scroll sideways; only the flag shows (not the name). */
+  .top-bar-items {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .top-bar-item {
+    flex: none;
+  }
+
+  .top-bar-flag {
+    padding: 0 4px;
+  }
+
+  .top-bar-flag-name {
+    display: none;
+  }
+
+  .time-control {
+    width: auto;
+  }
+
+  .alerts-row {
+    top: calc(var(--top-bar-height) + 6px);
+    right: var(--shell-gap);
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .alert-icon {
+    flex: none;
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Panels: as wide as the screen allows, never under the lens bar. */
+  .info-panel,
+  .info-panel.country-screen {
+    width: calc(100% - 2 * var(--shell-gap));
+    max-height: calc(100% - var(--content-top) - var(--bottom-room) - var(--shell-gap));
+  }
+
+  .outliner {
+    max-height: calc(100% - var(--content-top) - var(--bottom-room) - 60px);
+  }
+
+  /* While a panel is open, the outliner and the map mode box step aside. */
+  .ui-layer:has(.info-panel) .outliner,
+  .ui-layer:has(.info-panel) .map-mode-bar {
+    display: none;
+  }
+
+  .toasts {
+    left: var(--shell-gap);
+    right: var(--shell-gap);
+    width: auto;
+  }
+
+  /* The lens bar fills the bottom edge. */
+  .lens-bar {
+    left: var(--shell-gap);
+    right: var(--shell-gap);
+    width: auto;
+  }
+
+  .lens-buttons {
+    justify-content: space-between;
+  }
+
+  .lens-button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    padding: 5px 1px 4px;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  .lens-button span {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lens-menu {
+    width: min(320px, calc(100vw - 16px));
+  }
+
+  .map-mode-bar {
+    width: auto;
+    min-width: 170px;
+    max-width: calc(100% - 2 * var(--shell-gap));
+    padding: 8px 10px;
+  }
+
+  .ui-layer:has(.lens-bar) .map-mode-bar {
+    bottom: calc(var(--bottom-room) + var(--shell-gap));
+  }
+
+  .popup-layer,
+  .shell-window-layer {
+    padding: 8px;
+  }
+
+  .shell-window {
+    max-height: 100%;
+  }
+
+  /* The country screen: one column. */
+  .cs-columns,
+  .cs-columns:has(> .cs-leader),
+  .cs-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cs-flag {
+    width: 64px;
+    height: 48px;
+  }
+
+  .cs-name {
+    font-size: 19px;
+  }
+
+  .cs-portrait-large {
+    width: 80px;
+    height: 96px;
+  }
+
+  /* The country selection: across the top half, so the map shows underneath. */
+  .country-selection {
+    width: calc(100% - 2 * var(--shell-gap));
+    max-height: 58%;
+    padding: 10px 12px 0;
+  }
+
+  /* "Play as …" stays in view at the bottom of the panel while the rest scrolls. */
+  .selection-play-row {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -12px;
+    padding: 8px 12px 10px;
+    background: rgba(12, 18, 26, 0.97);
+    border-top: 1px solid var(--color-panel-border);
+  }
+}
+
+/* A narrow window (a phone held upright): the top bar takes two rows, the key numbers below. */
+@media (max-width: 600px) {
+  .ui-layer {
+    --top-bar-height: 86px;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 2px;
+  }
+
+  .top-bar-items {
+    order: 3;
+    flex: 1 0 100%;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--color-panel-border);
+  }
+
+  .top-bar-end {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .selection-bar {
+    height: 48px;
+  }
+
+  .country-selection {
+    top: calc(48px + var(--shell-gap));
+  }
+}
+
+/* An upright or very short phone screen: the lens bar shows icons only (each button keeps its name for screen readers). */
+@media (max-width: 600px), (max-height: 520px) {
+  .lens-button span {
+    display: none;
+  }
+
+  .lens-button .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ui-layer {
+    --bottom-room: 48px;
+  }
+}
+
+/* A wider small window (a phone held sideways): panels stay on the left, the map shows beside them. */
+@media (max-height: 520px) and (min-width: 601px), (max-width: 760px) and (min-width: 601px) {
+  .country-selection {
+    width: 340px;
+    max-height: calc(100% - var(--top-bar-height) - 2 * var(--shell-gap));
+  }
+
+  .info-panel,
+  .info-panel.country-screen {
+    width: min(460px, 62%);
+  }
 }

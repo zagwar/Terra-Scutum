@@ -1,3 +1,4 @@
+import { countryFrame } from './country-frame';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import '@babylonjs/core/Culling/ray';
 import { Color4 } from '@babylonjs/core/Maths/math.color';
@@ -65,7 +66,8 @@ export type { MapTarget } from './shape-lookup';
  *   sends it. Mouse wheel and +/-: zoom (towards the mouse); dragging: move,
  *   exactly with the mouse; WASD, the arrow keys and the window's edge:
  *   scroll (faster with Shift held); middle mouse button or Q/E: turn; Home: the whole world, north
- *   up. The camera leans back more the closer it zooms in. The math is in
+ *   up. On a touch screen: tap = click, one finger drags, two fingers pinch
+ *   to zoom and move the map together. The camera leans back more the closer it zooms in. The math is in
  *   `camera-motion.ts`.
  *
  * - Everything lies flat on the ground (y = 0); terrain comes with F125.
@@ -122,6 +124,8 @@ export interface MapView {
   setProvinceOwners(provinceOwner: Uint16Array): void;
   setSelectedProvince(province: number | null): void;
   setSelectedSeaZone(seaZone: number | null): void;
+  /** Tints every province of a country (index), or none (null): the country picked while choosing (F05). */
+  setHighlightedCountry(country: number | null): void;
   /** The province index at a longitude/latitude, or -1 for the sea. */
   provinceAt(longitude: number, latitude: number): number;
   /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
@@ -161,14 +165,25 @@ export interface MapView {
   focusProvince(province: number): void;
   /** Brings a sea zone into view: glides to its label point. */
   focusSeaZone(seaZone: number): void;
+  /**
+   * Brings a country into view (F05): glides to its main part around the
+   * capital (`countryFrame`) and zooms so that part fills about half the screen.
+   */
+  focusCountry(country: number): void;
   dispose(): void;
 }
 
 /** Layers are drawn in a fixed order: the sea first, then the land on top of it. */
 const SEA_GROUP = 0;
 const LAND_GROUP = 1;
+/** `focusCountry`: pieces of a country farther than this from its capital (east–west, degrees) are not framed [DEFAULT]. */
+const COUNTRY_FRAME_REACH_DEGREES = 50;
+/** `focusCountry`: the share of the screen the framed country fills [DEFAULT]. */
+const COUNTRY_FRAME_SHARE = 0.5;
 /** How far the mouse may move between press and release for it to count as a click, in pixels. */
 const CLICK_TOLERANCE_PX = 4;
+/** The same for a tap with a finger, which wobbles more than a mouse. */
+const TAP_TOLERANCE_PX = 10;
 
 /** A TopoJSON file's content (the shapes carry only an id, no other properties). */
 type MapTopology = Topology<Objects<Record<string, never>>>;
@@ -383,13 +398,18 @@ export async function createMapView(
   let baseColors = provinceBaseColors(mode, world, config.colors, owners);
   const shownColors = new Uint8Array(baseColors.length);
   let selected: number | null = null;
+  let highlightedCountry: number | null = null;
   let hovered: MapTarget | null = null;
   const hoveredOf = (kind: MapTarget['kind']) => (hovered?.kind === kind ? hovered.index : null);
   const refreshColors = () => {
     applyHighlight(
       baseColors,
       shownColors,
-      { selected, hovered: hoveredOf('province') },
+      {
+        selected,
+        hovered: hoveredOf('province'),
+        country: highlightedCountry === null ? null : { index: highlightedCountry, owners },
+      },
       world,
       config.colors,
     );
@@ -663,7 +683,67 @@ export async function createMapView(
     setGoal({ zoom: 1, heading: 0 });
   };
 
+  // ── Touch: two fingers pinch to zoom and move the map together ──────────
+  /** Where each finger on the map is now (touch pointers only). */
+  const fingers = new Map<number, { x: number; y: number }>();
+  /** While two fingers are down: their distance apart and their midpoint at the last step. */
+  let pinch: { distance: number; middle: { x: number; y: number } } | null = null;
+  /** After a pinch, the finger left on the map neither drags nor taps until it is lifted. */
+  let pinchLeftover = false;
+  /** Whether the press now on the map is a finger (a tap may wobble a little more than a click). */
+  let pressedWithTouch = false;
+  const pinchState = () => {
+    const [a, b] = [...fingers.values()];
+    return {
+      distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      middle: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    };
+  };
+  /** Zooms by how much the fingers spread, and moves the map with their midpoint, at once (no glide). */
+  const stepPinch = () => {
+    if (!pinch || fingers.size < 2) return;
+    const next = pinchState();
+    const grabbed = groundAt(pinch.middle.x, pinch.middle.y);
+    jumpTo({ zoom: goal.zoom * (next.distance / pinch.distance) });
+    const under = groundAt(next.middle.x, next.middle.y);
+    if (grabbed && under) panBy(grabbed.x - under.x, grabbed.z - under.z);
+    pinch = next;
+  };
+  /** A finger touched the map. Returns true if the touch is handled here (a pinch, or a finger left over from one). */
+  const touchDown = (event: PointerEvent): boolean => {
+    if (event.pointerType !== 'touch') return false;
+    fingers.set(event.pointerId, { x: event.offsetX, y: event.offsetY });
+    if (fingers.size === 2) {
+      // The second finger: whatever the first one started (a drag, a tap) becomes a pinch.
+      endDrag();
+      setHovered(null);
+      pinch = pinchState();
+      canvas.setPointerCapture(event.pointerId);
+      return true;
+    }
+    return fingers.size > 2 || pinchLeftover;
+  };
+  /** A finger moved. Returns true if it belongs to a pinch. */
+  const touchMove = (event: PointerEvent): boolean => {
+    if (event.pointerType !== 'touch' || !fingers.has(event.pointerId)) return false;
+    fingers.set(event.pointerId, { x: event.offsetX, y: event.offsetY });
+    if (pinch) stepPinch();
+    return pinch !== null || pinchLeftover;
+  };
+  /** A finger left the map. Returns true if it belonged to a pinch (so it is no tap). */
+  const touchUp = (event: PointerEvent): boolean => {
+    if (event.pointerType !== 'touch' || !fingers.has(event.pointerId)) return false;
+    fingers.delete(event.pointerId);
+    const wasPinch = pinch !== null || pinchLeftover;
+    if (pinch && fingers.size < 2) {
+      pinch = null;
+      pinchLeftover = fingers.size > 0;
+    } else if (fingers.size === 0) pinchLeftover = false;
+    return wasPinch;
+  };
+
   const onPointerMove = (event: PointerEvent) => {
+    if (touchMove(event)) return;
     pointer = { x: event.offsetX, y: event.offsetY };
     pointerMoved = true;
     if (rotateFrom !== null) {
@@ -675,7 +755,8 @@ export async function createMapView(
     // Holding the button and moving drags the map: the place that was grabbed stays under the mouse.
     if (
       !dragFrom &&
-      Math.hypot(pointer.x - pressedAt.x, pointer.y - pressedAt.y) > CLICK_TOLERANCE_PX
+      Math.hypot(pointer.x - pressedAt.x, pointer.y - pressedAt.y) >
+        (pressedWithTouch ? TAP_TOLERANCE_PX : CLICK_TOLERANCE_PX)
     ) {
       dragFrom = pressedAt;
       canvas.style.cursor = 'grabbing';
@@ -698,6 +779,7 @@ export async function createMapView(
     if (!dragFrom && rotateFrom === null) setHovered(null);
   };
   const onPointerDown = (event: PointerEvent) => {
+    if (touchDown(event)) return;
     if (event.button === 1) {
       // The middle mouse button turns the map (and must not start the browser's auto-scroll).
       event.preventDefault();
@@ -707,10 +789,12 @@ export async function createMapView(
     }
     if (event.button !== 0) return;
     pressedAt = { x: event.offsetX, y: event.offsetY };
+    pressedWithTouch = event.pointerType === 'touch';
     // Keep getting the mouse while it is dragged across a panel or out of the window.
     canvas.setPointerCapture(event.pointerId);
   };
   const onPointerUp = (event: PointerEvent) => {
+    if (touchUp(event)) return;
     if (event.button === 1) {
       rotateFrom = null;
       return;
@@ -734,7 +818,11 @@ export async function createMapView(
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
-  canvas.addEventListener('pointercancel', endDrag);
+  const onPointerCancel = (event: PointerEvent) => {
+    touchUp(event);
+    endDrag();
+  };
+  canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
@@ -872,7 +960,7 @@ export async function createMapView(
       if (mode === 'political') {
         baseColors = provinceBaseColors(mode, world, config.colors, owners);
         refreshColors();
-      }
+      } else if (highlightedCountry !== null) refreshColors();
       // Country borders follow the owners. (Wrap copies share the mesh's buffers.)
       for (const { mesh, geometry } of borderMeshes)
         if (updateBorderKinds(geometry, owners, world.provinceRegion))
@@ -896,6 +984,11 @@ export async function createMapView(
         );
         selectionMeshes = addWrapCopies(mesh, worldWidth);
       }
+    },
+    setHighlightedCountry(country) {
+      if (country === highlightedCountry) return;
+      highlightedCountry = country;
+      refreshColors();
     },
     setSelectedSeaZone(seaZone) {
       if (seaZone === selectedSeaZone) return;
@@ -991,13 +1084,43 @@ export async function createMapView(
         z: projection.z(world.seaZoneCenter[seaZone * 2 + 1]),
       });
     },
+    focusCountry(country) {
+      const capital = world.countryCapital[country];
+      let anchorX = 0;
+      for (const polygon of provincePolygons)
+        if (polygon.item === capital) anchorX = (polygon.minX + polygon.maxX) / 2;
+      const box = countryFrame(
+        provincePolygons,
+        owners,
+        country,
+        anchorX,
+        COUNTRY_FRAME_REACH_DEGREES,
+        worldWidth,
+      );
+      if (!box) return;
+      const { width, height } = cssSize();
+      const degreesPerPixelAtZoom1 = (2 * fit.radius * Math.tan(camera.fov / 2)) / height;
+      // Visible ground at zoom 1, in map units, across and up the screen.
+      const visibleUp = degreesPerPixelAtZoom1 * height;
+      const visibleAcross = degreesPerPixelAtZoom1 * width;
+      const zoomToFit = Math.min(
+        (visibleUp * COUNTRY_FRAME_SHARE) / Math.max(box.maxZ - box.minZ, 0.01),
+        (visibleAcross * COUNTRY_FRAME_SHARE) / Math.max(box.maxX - box.minX, 0.01),
+      );
+      zoomAnchor = null;
+      setGoal({
+        zoom: Math.max(1, Math.min(settings.maxZoom, zoomToFit)),
+        x: (box.minX + box.maxX) / 2,
+        z: (box.minZ + box.maxZ) / 2,
+      });
+    },
     dispose() {
       scene.onBeforeRenderObservable.remove(beforeRender);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('pointercancel', endDrag);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKeyDown);

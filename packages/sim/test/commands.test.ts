@@ -36,6 +36,34 @@ describe('commands and sim events', () => {
     expect(state.drainEvents()).toEqual([]);
   });
 
+  it("choosePlayerCountry sets the player's country, only before the first day (F05)", () => {
+    const state = new GameState({ data: testData(), seed: 1 });
+    // A new campaign starts with the country from game_config.json.
+    expect(state.world.countryIds[state.playerCountry]).toBe('AAA');
+    expect(state.applyCommand({ type: 'choosePlayerCountry', country: 'BBB' })).toEqual({
+      ok: true,
+    });
+    expect(state.world.countryIds[state.playerCountry]).toBe('BBB');
+    expect(state.drainEvents()).toEqual([{ type: 'playerCountryChosen', country: 'BBB' }]);
+    // Choosing the same country again changes nothing.
+    expect(state.applyCommand({ type: 'choosePlayerCountry', country: 'BBB' })).toEqual({
+      ok: true,
+    });
+    expect(state.drainEvents()).toEqual([]);
+    expect(state.applyCommand({ type: 'choosePlayerCountry', country: 'ZZZ' })).toEqual({
+      ok: false,
+      reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+      params: { country: 'ZZZ' },
+    });
+    // Once a day has been simulated, the choice is locked.
+    state.advanceDay();
+    expect(state.applyCommand({ type: 'choosePlayerCountry', country: 'AAA' })).toEqual({
+      ok: false,
+      reasonKey: 'COMMAND_PLAYER_COUNTRY_LOCKED',
+    });
+    expect(state.world.countryIds[state.playerCountry]).toBe('BBB');
+  });
+
   it('refuses unknown or malformed commands without throwing', () => {
     const state = new GameState({ data: testData(), seed: 1 });
     const unknown = { type: 'launchEverything' } as unknown as SimCommand;

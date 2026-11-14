@@ -14,6 +14,11 @@ export interface DebugScenario {
   readonly edgeScrolling: boolean;
   /** Fills the UI shell with sample content and shows the demo buttons (F122). */
   readonly uiDemo?: boolean;
+  /**
+   * Starts with the country selection (F05), as a normal game does. Without
+   * it, the scenario plays as `playerCountry` from `data/game_config.json`.
+   */
+  readonly chooseCountry?: boolean;
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
@@ -21,6 +26,8 @@ export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
   foundation: { seed: 42, edgeScrolling: false },
   /** The UI shell with sample alerts, outliner entries and messages, for trying it on the preview link. */
   'ui-demo': { seed: 42, edgeScrolling: true, uiDemo: true },
+  /** A new game's country selection (F05). */
+  'country-selection': { seed: 42, edgeScrolling: false, chooseCountry: true },
 };
 
 export interface LaunchOptions {

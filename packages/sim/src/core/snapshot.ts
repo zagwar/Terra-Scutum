@@ -12,6 +12,8 @@ export interface SimSnapshot {
   readonly day: number;
   /** Today's calendar date. */
   readonly date: CalendarDate;
+  /** The country (index) the player leads (F05). */
+  readonly playerCountry: number;
   /** Goes up every time a province changes owner. */
   readonly ownershipVersion: number;
   /**
@@ -37,6 +39,7 @@ export function createSnapshot(state: GameState, known?: SnapshotKnown): SimSnap
   return {
     day: state.day,
     date: state.date,
+    playerCountry: state.playerCountry,
     ownershipVersion: state.ownershipVersion,
     // A copy: the sim keeps changing its own array.
     ...(ownersChanged ? { provinceOwner: state.provinceOwner.slice() } : {}),

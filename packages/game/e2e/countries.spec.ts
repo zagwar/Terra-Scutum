@@ -70,8 +70,8 @@ test('the political map is the default; a province opens its country panel', asy
   await waitForFrames(page);
   await shot('political-world');
 
-  // A province names its owner; the name opens the country panel.
-  await expect(page.getByTestId('country-panel')).toHaveCount(0);
+  // A province names its owner; the name opens the country screen.
+  await expect(page.getByTestId('country-screen')).toHaveCount(0);
   const paris = await screenPosition(page, ...PARIS);
   await page.mouse.click(paris.x, paris.y);
   await expect(page.getByTestId('province-country')).toHaveText('France');
@@ -85,7 +85,7 @@ test('the political map is the default; a province opens its country panel', asy
   await expect(page.getByTestId('country-population')).toHaveText('69.3 million');
   await expect(page.getByTestId('country-gdp')).toHaveText('$3.4 trillion');
   await expect(page.getByTestId('country-gdp-per-person')).toHaveText('$49,019');
-  await expect(page.getByTestId('country-panel')).toContainText('real-world figures for 2025');
+  await expect(page.getByTestId('country-screen')).toContainText('real-world figures for 2025');
   const neighbors = page.getByTestId('country-neighbors').getByRole('button');
   await expect(neighbors).toHaveText([
     'Andorra',
@@ -101,10 +101,10 @@ test('the political map is the default; a province opens its country panel', asy
     'Switzerland',
   ]);
   await waitForFrames(page);
-  await shot('country-panel');
+  await shot('country-screen');
 
   // A neighbor's name shows that country; its capital's name selects the capital's province.
-  // One panel at a time (F122): the country panel took the province panel's place.
+  // One panel at a time (F122): the country screen took the province panel's place.
   await expect(page.getByTestId('province-panel')).toHaveCount(0);
   await neighbors.filter({ hasText: 'Germany' }).click();
   await expect(page.getByTestId('country-name')).toHaveText('Germany');
@@ -140,8 +140,14 @@ test('the map and the panels follow a change of owner', async ({ page }, testInf
       path: join(SCREENSHOT_DIR, `countries-${name}-${testInfo.project.name}.png`),
     });
 
+  // Strasbourg must stay clear of the country screen (F138), which covers the left of the map
+  // up to about x = 730: put it at x = 850, between the screen and the outliner.
   await lookAt(page, 6, 49, 8);
+  const oneDegree = (await screenPosition(page, 7, 49)).x - (await screenPosition(page, 6, 49)).x;
+  await lookAt(page, STRASBOURG[0] - (850 - 640) / oneDegree, 49, 8);
   const strasbourg = await screenPosition(page, ...STRASBOURG);
+  expect(strasbourg.x).toBeGreaterThan(760);
+  expect(strasbourg.x).toBeLessThan(940);
   await page.mouse.click(strasbourg.x, strasbourg.y);
   await expect(page.getByTestId('province-name')).toHaveText('Grand Est');
   await expect(page.getByTestId('province-country')).toHaveText('France');
@@ -324,6 +330,8 @@ test('the tiny provinces can be seen and clicked', async ({ page }, testInfo) =>
   await expect(page.getByTestId('country-neighbors').getByRole('button')).toHaveText(['Italy']);
   await waitForFrames(page, 3);
   await shot('vatican-city');
+  // The country screen covers the left of the map (F138): close it before clicking there.
+  await page.getByTestId('country-close').click();
 
   // Gibraltar: British, on the coast of Spain.
   await lookAt(page, -5.35, 36.14, 40);

@@ -1,15 +1,20 @@
 # Checks that run automatically on every pull request (the green ✓ or red ✗ on the PR page):
 # typecheck, lint, data validation, unit tests, a short headless campaign, and browser tests.
+# Browser tests (designer decision, to save Actions minutes): pull requests run them on WebGL 2 only;
+# a push to main (a merged pull request) runs them on WebGPU; starting the run by hand runs both.
 name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 # A newer push to the same pull request cancels the older run (saves Actions minutes).
+# Runs on main are never cancelled, so every merge gets its WebGPU check.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -18,7 +23,7 @@ jobs:
   check:
     name: Check, test and build
     runs-on: ubuntu-latest
-    # The browser tests draw the map in software and take most of the run (about 12 minutes in all).
+    # The browser tests draw the map in software and take most of the run.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -55,7 +60,16 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Build the game and run the browser tests
+      - name: Build the game and run the browser tests (WebGL 2)
+        if: github.event_name == 'pull_request'
+        run: npm run test:e2e -- --project=webgl2
+
+      - name: Build the game and run the browser tests (WebGPU)
+        if: github.event_name == 'push'
+        run: npm run test:e2e -- --project=webgpu
+
+      - name: Build the game and run the browser tests (WebGL 2 and WebGPU)
+        if: github.event_name == 'workflow_dispatch'
         run: npm run test:e2e
 
       - name: Keep the screenshots

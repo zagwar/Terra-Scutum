@@ -27,6 +27,8 @@ export interface GameStateOptions {
     readonly rngState: RngState;
     /** Owner (country index) of every province. */
     readonly provinceOwner: Uint16Array;
+    /** The country (index) the player leads. */
+    readonly playerCountry: number;
   };
 }
 
@@ -60,6 +62,14 @@ export class GameState {
    * now. Read it freely; change it only through `setProvinceOwner`.
    */
   readonly provinceOwner: Uint16Array;
+  /**
+   * The country (index) the player leads (F05). A new campaign starts with
+   * `playerCountry` from `data/game_config.json`; the player chooses another
+   * with the `choosePlayerCountry` command before the first day is simulated.
+   * The sim treats every country alike; the hosts use this to know whose
+   * country the UI shows as "mine" (and, later, which one the AI leaves alone).
+   */
+  playerCountry: number;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -83,10 +93,15 @@ export class GameState {
       if (options.restore.provinceOwner.length !== this.world.provinceIds.length)
         throw new Error('GameState: the restored owners do not match the number of provinces');
       this.provinceOwner = options.restore.provinceOwner.slice();
+      if (!this.world.countryIds[options.restore.playerCountry])
+        throw new Error('GameState: the restored player country is not a country');
+      this.playerCountry = options.restore.playerCountry;
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);
       this.provinceOwner = startingOwners(this.world);
+      // The data checks make sure `playerCountry` is a country (`checkPlayerCountry`).
+      this.playerCountry = this.world.countryIndex.get(options.data.gameConfig.playerCountry) ?? 0;
     }
 
     const systems = options.systems ?? SYSTEMS;

@@ -1,5 +1,7 @@
 import { MAP_MODES, type MapMode } from '../render/map/map-colors';
+import { useState } from 'react';
 import { type TranslationKey, t } from './i18n';
+import { COMPACT_QUERY, TOUCH_QUERY, isCompactNow, useMedia } from './use-media';
 
 const MODE_TEXT: Record<MapMode, TranslationKey> = {
   political: 'MAP_MODE_POLITICAL',
@@ -19,35 +21,60 @@ export interface MapModeBarProps {
  * map mode here; the minimap joins them with the UI shell (F122).
  */
 export function MapModeBar({ mode, onSetMapMode, onResetView }: MapModeBarProps) {
+  const compact = useMedia(COMPACT_QUERY);
+  const touch = useMedia(TOUCH_QUERY);
+  // On a small screen (a phone) the box starts folded to its title, to keep the map free.
+  const [folded, setFolded] = useState(isCompactNow);
+  const isFolded = compact && folded;
   return (
-    <section className="panel map-mode-bar" data-testid="map-mode-bar">
-      <h2 className="panel-title">{t('MAP_MODE_TITLE')}</h2>
-      <div className="button-row">
-        {MAP_MODES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={option === mode ? 'button is-active' : 'button'}
-            aria-pressed={option === mode}
-            data-testid={`map-mode-${option}`}
-            onClick={() => onSetMapMode(option)}
-          >
-            {t(MODE_TEXT[option])}
-          </button>
-        ))}
-      </div>
-      <div className="map-hint-row">
-        <p className="hint">{t('MAP_HINT')}</p>
+    <section
+      className={isFolded ? 'panel map-mode-bar is-folded' : 'panel map-mode-bar'}
+      data-testid="map-mode-bar"
+    >
+      {compact ? (
         <button
           type="button"
-          className="link-button"
-          title={t('MAP_RESET_VIEW_HINT')}
-          data-testid="map-reset-view"
-          onClick={onResetView}
+          className="map-mode-toggle"
+          aria-expanded={!isFolded}
+          data-testid="map-mode-toggle"
+          onClick={() => setFolded(!folded)}
         >
-          {t('MAP_RESET_VIEW')}
+          <span className="panel-title">{t('MAP_MODE_TITLE')}</span>
+          <span aria-hidden="true">{isFolded ? '▴' : '▾'}</span>
         </button>
-      </div>
+      ) : (
+        <h2 className="panel-title">{t('MAP_MODE_TITLE')}</h2>
+      )}
+      {!isFolded && (
+        <>
+          <div className="button-row">
+            {MAP_MODES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={option === mode ? 'button is-active' : 'button'}
+                aria-pressed={option === mode}
+                data-testid={`map-mode-${option}`}
+                onClick={() => onSetMapMode(option)}
+              >
+                {t(MODE_TEXT[option])}
+              </button>
+            ))}
+          </div>
+          <div className="map-hint-row">
+            <p className="hint">{t(touch ? 'MAP_HINT_TOUCH' : 'MAP_HINT')}</p>
+            <button
+              type="button"
+              className="link-button"
+              title={t('MAP_RESET_VIEW_HINT')}
+              data-testid="map-reset-view"
+              onClick={onResetView}
+            >
+              {t('MAP_RESET_VIEW')}
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 }
