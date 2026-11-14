@@ -29,6 +29,8 @@ export const countryScreenSchema = z.strictObject({
   publicOpinion: z.strictObject({ stances: z.array(id).min(1), ...comesWith }),
   /** The diplomatic actions the Diplomacy view lists (section 6), in order. */
   diplomaticActions: z.array(entry).min(1),
+  /** The country selection (F05): the countries offered as quick picks, by id, in order. */
+  countrySelection: z.strictObject({ quickPicks: z.array(z.string()) }),
 });
 
 export type CountryScreenConfig = z.infer<typeof countryScreenSchema>;
@@ -75,6 +77,20 @@ export const checkCountryScreen: DataCrossCheck = (data, report) => {
         });
     });
   }
+};
+
+/** The country selection's quick picks are countries, each listed once. */
+export const checkQuickPicks: DataCrossCheck = (data, report) => {
+  const known = new Set(data.countries.countries.map((c) => c.id));
+  const seen = new Set<string>();
+  data.countryScreen.countrySelection.quickPicks.forEach((countryId, index) => {
+    const path = `countrySelection.quickPicks.${index}`;
+    if (!known.has(countryId))
+      report({ file: 'country_screen.json', path, message: `unknown country "${countryId}"` });
+    else if (seen.has(countryId))
+      report({ file: 'country_screen.json', path, message: `"${countryId}" is listed twice` });
+    seen.add(countryId);
+  });
 };
 
 /** Every country in `countries.json` has a flag, and every flag belongs to a known country. */

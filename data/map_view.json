@@ -39,7 +39,9 @@
     "selected": "#e8c86a",
     "neighbor": "#c8a85a",
     "neighborStrength": 0.45,
-    "hoverBrighten": 0.2
+    "hoverBrighten": 0.2,
+    "countryHighlight": "#fff2c4",
+    "countryHighlightStrength": 0.45
   },
   "lines": {
     "provinceBorder": { "color": "#0a0e14", "opacity": 0.4, "widthPx": 1 },

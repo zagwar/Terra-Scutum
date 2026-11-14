@@ -1,3 +1,4 @@
+import { countryFrame } from './country-frame';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import '@babylonjs/core/Culling/ray';
 import { Color4 } from '@babylonjs/core/Maths/math.color';
@@ -122,6 +123,8 @@ export interface MapView {
   setProvinceOwners(provinceOwner: Uint16Array): void;
   setSelectedProvince(province: number | null): void;
   setSelectedSeaZone(seaZone: number | null): void;
+  /** Tints every province of a country (index), or none (null): the country picked while choosing (F05). */
+  setHighlightedCountry(country: number | null): void;
   /** The province index at a longitude/latitude, or -1 for the sea. */
   provinceAt(longitude: number, latitude: number): number;
   /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
@@ -161,12 +164,21 @@ export interface MapView {
   focusProvince(province: number): void;
   /** Brings a sea zone into view: glides to its label point. */
   focusSeaZone(seaZone: number): void;
+  /**
+   * Brings a country into view (F05): glides to its main part around the
+   * capital (`countryFrame`) and zooms so that part fills about half the screen.
+   */
+  focusCountry(country: number): void;
   dispose(): void;
 }
 
 /** Layers are drawn in a fixed order: the sea first, then the land on top of it. */
 const SEA_GROUP = 0;
 const LAND_GROUP = 1;
+/** `focusCountry`: pieces of a country farther than this from its capital (east–west, degrees) are not framed [DEFAULT]. */
+const COUNTRY_FRAME_REACH_DEGREES = 50;
+/** `focusCountry`: the share of the screen the framed country fills [DEFAULT]. */
+const COUNTRY_FRAME_SHARE = 0.5;
 /** How far the mouse may move between press and release for it to count as a click, in pixels. */
 const CLICK_TOLERANCE_PX = 4;
 
@@ -383,13 +395,18 @@ export async function createMapView(
   let baseColors = provinceBaseColors(mode, world, config.colors, owners);
   const shownColors = new Uint8Array(baseColors.length);
   let selected: number | null = null;
+  let highlightedCountry: number | null = null;
   let hovered: MapTarget | null = null;
   const hoveredOf = (kind: MapTarget['kind']) => (hovered?.kind === kind ? hovered.index : null);
   const refreshColors = () => {
     applyHighlight(
       baseColors,
       shownColors,
-      { selected, hovered: hoveredOf('province') },
+      {
+        selected,
+        hovered: hoveredOf('province'),
+        country: highlightedCountry === null ? null : { index: highlightedCountry, owners },
+      },
       world,
       config.colors,
     );
@@ -872,7 +889,7 @@ export async function createMapView(
       if (mode === 'political') {
         baseColors = provinceBaseColors(mode, world, config.colors, owners);
         refreshColors();
-      }
+      } else if (highlightedCountry !== null) refreshColors();
       // Country borders follow the owners. (Wrap copies share the mesh's buffers.)
       for (const { mesh, geometry } of borderMeshes)
         if (updateBorderKinds(geometry, owners, world.provinceRegion))
@@ -896,6 +913,11 @@ export async function createMapView(
         );
         selectionMeshes = addWrapCopies(mesh, worldWidth);
       }
+    },
+    setHighlightedCountry(country) {
+      if (country === highlightedCountry) return;
+      highlightedCountry = country;
+      refreshColors();
     },
     setSelectedSeaZone(seaZone) {
       if (seaZone === selectedSeaZone) return;
@@ -989,6 +1011,36 @@ export async function createMapView(
       setGoal({
         x: projection.x(world.seaZoneCenter[seaZone * 2]),
         z: projection.z(world.seaZoneCenter[seaZone * 2 + 1]),
+      });
+    },
+    focusCountry(country) {
+      const capital = world.countryCapital[country];
+      let anchorX = 0;
+      for (const polygon of provincePolygons)
+        if (polygon.item === capital) anchorX = (polygon.minX + polygon.maxX) / 2;
+      const box = countryFrame(
+        provincePolygons,
+        owners,
+        country,
+        anchorX,
+        COUNTRY_FRAME_REACH_DEGREES,
+        worldWidth,
+      );
+      if (!box) return;
+      const { width, height } = cssSize();
+      const degreesPerPixelAtZoom1 = (2 * fit.radius * Math.tan(camera.fov / 2)) / height;
+      // Visible ground at zoom 1, in map units, across and up the screen.
+      const visibleUp = degreesPerPixelAtZoom1 * height;
+      const visibleAcross = degreesPerPixelAtZoom1 * width;
+      const zoomToFit = Math.min(
+        (visibleUp * COUNTRY_FRAME_SHARE) / Math.max(box.maxZ - box.minZ, 0.01),
+        (visibleAcross * COUNTRY_FRAME_SHARE) / Math.max(box.maxX - box.minX, 0.01),
+      );
+      zoomAnchor = null;
+      setGoal({
+        zoom: Math.max(1, Math.min(settings.maxZoom, zoomToFit)),
+        x: (box.minX + box.maxX) / 2,
+        z: (box.minZ + box.maxZ) / 2,
       });
     },
     dispose() {

@@ -3,6 +3,7 @@ import type { AppState, AppStore } from '../app-store';
 import type { MapMode } from '../render/map/map-colors';
 import type { TimeChange } from '../worker/protocol';
 import { CountryScreen } from './country-screen/country-screen';
+import { CountrySelection } from './country-selection';
 import { t } from './i18n';
 import { MapModeBar } from './map-mode-bar';
 import { MapTooltip } from './map-tooltip';
@@ -64,50 +65,56 @@ export function App({
 
   return (
     <div className="ui-layer">
-      <TopBar
-        world={world}
-        playerCountry={state.playerCountry}
-        flagCodes={state.countryScreen?.flagCodes ?? null}
-        onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
-        onOpenWindow={actions.openWindow}
-        timeControl={
-          state.snapshot &&
-          state.time && (
-            <TimeControl
-              date={state.snapshot.date}
-              time={state.time}
-              daysPerSecond={state.daysPerSecond}
-              onChangeTime={onChangeTime}
+      {state.choosingCountry ? (
+        <ChoosingCountry state={state} actions={actions} />
+      ) : (
+        <>
+          <TopBar
+            world={world}
+            playerCountry={state.playerCountry}
+            flagCodes={state.countryScreen?.flagCodes ?? null}
+            onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
+            onOpenWindow={actions.openWindow}
+            timeControl={
+              state.snapshot &&
+              state.time && (
+                <TimeControl
+                  date={state.snapshot.date}
+                  time={state.time}
+                  daysPerSecond={state.daysPerSecond}
+                  onChangeTime={onChangeTime}
+                />
+              )
+            }
+          />
+
+          <AlertsRow
+            alerts={state.alerts}
+            notifications={state.notifications}
+            alertsOff={state.uiSettings.alertsOff}
+            onClick={(alert) => alert.target && actions.show(alert.target)}
+            onDismiss={(alert) => actions.dismissAlert(alert.id)}
+          />
+
+          <InfoPanel state={state} actions={actions} />
+
+          {state.sim === 'running' && (
+            <Outliner
+              entries={state.outliner}
+              onSelect={(entry) => entry.target && actions.show(entry.target)}
             />
-          )
-        }
-      />
+          )}
 
-      <AlertsRow
-        alerts={state.alerts}
-        notifications={state.notifications}
-        alertsOff={state.uiSettings.alertsOff}
-        onClick={(alert) => alert.target && actions.show(alert.target)}
-        onDismiss={(alert) => actions.dismissAlert(alert.id)}
-      />
+          <Toasts toasts={state.toasts} actions={actions} />
 
-      <InfoPanel state={state} actions={actions} />
-
-      {state.sim === 'running' && (
-        <Outliner
-          entries={state.outliner}
-          onSelect={(entry) => entry.target && actions.show(entry.target)}
-        />
-      )}
-
-      <Toasts toasts={state.toasts} actions={actions} />
-
-      {state.sim === 'running' && (
-        <LensBar
-          openLens={state.openLens}
-          onToggleLens={actions.toggleLens}
-          onOpenScreen={actions.openWindow}
-        />
+          {state.sim === 'running' && (
+            <LensBar
+              openLens={state.openLens}
+              onToggleLens={actions.toggleLens}
+              onOpenScreen={actions.openWindow}
+            />
+          )}
+        </>
       )}
       {state.map === 'ready' && (
         <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} onResetView={onResetView} />
@@ -152,6 +159,34 @@ export function App({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The start of a game (F05): the country selection on the left, a title
+ * across the top, and the map; the shell (top bar, outliner, lenses) comes
+ * once the player has chosen. Time can't run meanwhile.
+ */
+function ChoosingCountry({ state, actions }: { state: AppState; actions: ShellActions }) {
+  const { world, countryStart, provinceOwner, countryScreen } = state;
+  return (
+    <>
+      <header className="selection-bar" data-testid="selection-bar">
+        <span className="selection-bar-title">{t('GAME_TITLE')}</span>
+        <span className="selection-bar-text">{t('COUNTRY_SELECTION_TITLE')}</span>
+      </header>
+      {world && countryStart && provinceOwner && countryScreen && (
+        <CountrySelection
+          world={world}
+          countryStart={countryStart}
+          provinceOwner={provinceOwner}
+          data={countryScreen}
+          candidate={state.candidateCountry}
+          onPick={actions.pickCandidate}
+          onPlay={(country) => void actions.playAs(country)}
+        />
+      )}
+    </>
   );
 }
 

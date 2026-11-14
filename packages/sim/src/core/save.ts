@@ -17,7 +17,7 @@ import type { SystemRegistry } from './systems';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 2;
+export const SAVE_FORMAT_VERSION = 3;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -37,6 +37,8 @@ const saveFileSchema = z.strictObject({
   }),
   /** Owner of each province: an index into `map.countries`, in the order of `map.provinces`. */
   provinceOwners: z.array(z.number().int().min(0)),
+  /** The country the player leads (its id, F05). */
+  playerCountry: z.string(),
 });
 
 export type SaveFile = z.infer<typeof saveFileSchema>;
@@ -75,6 +77,9 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
       provinceOwners: map.provinces.map((id) => countryIndex.get(startingOwner.get(id)!)),
     };
   },
+  // Version 3 (F05) stores the player's country. Older saves were all played
+  // as the one fixed in the data (`playerCountry` in `data/game_config.json`).
+  2: (save, data) => ({ ...save, playerCountry: data.gameConfig.playerCountry }),
 };
 
 /** Writes the state as a plain JSON-compatible object. */
@@ -88,6 +93,7 @@ export function serializeGameState(state: GameState): SaveFile {
     rng: [s0, s1, s2, s3],
     map: { provinces: [...state.world.provinceIds], countries: [...state.world.countryIds] },
     provinceOwners: Array.from(state.provinceOwner),
+    playerCountry: state.world.countryIds[state.playerCountry],
   };
 }
 
@@ -168,6 +174,10 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'provinceOwners does not match the map');
   }
+  const playerCountry = map.countries.indexOf(save.playerCountry);
+  if (playerCountry < 0) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, `unknown player country "${save.playerCountry}"`);
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
@@ -176,6 +186,7 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
       day: save.day,
       rngState: save.rng,
       provinceOwner: Uint16Array.from(save.provinceOwners),
+      playerCountry,
     },
   });
 }

@@ -33,6 +33,7 @@ import {
   type CountryScreenConfig,
   checkCountryFlags,
   checkCountryScreen,
+  checkQuickPicks,
   countryFlagsSchema,
   countryScreenSchema,
 } from './country-screen-config';
@@ -126,6 +127,7 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkPlayerCountry,
   checkCountryScreen,
   checkCountryFlags,
+  checkQuickPicks,
 ];
 
 /**

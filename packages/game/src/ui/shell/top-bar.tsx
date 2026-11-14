@@ -64,11 +64,7 @@ export function TopBar({
             testId="top-bar-flag-image"
           />
           <span className="top-bar-flag-name">{countryName}</span>
-          <Tip
-            title={countryName}
-            lines={[t('TOP_BAR_FLAG_HINT'), t('TOP_BAR_FLAG_NOTE')]}
-            testId="top-bar-flag-tip"
-          />
+          <Tip title={countryName} lines={[t('TOP_BAR_FLAG_HINT')]} testId="top-bar-flag-tip" />
         </button>
       )}
 

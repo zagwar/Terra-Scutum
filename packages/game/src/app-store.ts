@@ -43,6 +43,13 @@ export interface AppState extends PanelState {
   readonly hoveredSeaZone: number | null;
   /** The country (index) the player leads; null until the sim is ready. */
   readonly playerCountry: number | null;
+  /**
+   * True while the player chooses their country at the start of a game (F05):
+   * the map shows the selection panel instead of the shell, and time can't run.
+   */
+  readonly choosingCountry: boolean;
+  /** The country (index) shown in the selection panel and tinted on the map, or null. */
+  readonly candidateCountry: number | null;
   /** Message types and alert types (`data/notifications.json`); null until the sim is ready. */
   readonly notifications: NotificationsConfig | null;
   /** What the country screen needs from the data files (F138); null until the sim is ready. */
@@ -93,6 +100,8 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     selectedSeaZone: null,
     hoveredSeaZone: null,
     playerCountry: null,
+    choosingCountry: false,
+    candidateCountry: null,
     notifications: null,
     countryScreen: null,
     openWindow: null,

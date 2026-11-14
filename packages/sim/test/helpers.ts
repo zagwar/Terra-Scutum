@@ -143,6 +143,8 @@ export function testMapView() {
       neighbor: '#c0c000',
       neighborStrength: 0.5,
       hoverBrighten: 0.2,
+      countryHighlight: '#ffffff',
+      countryHighlightStrength: 0.4,
     },
     lines: {
       provinceBorder: line,
@@ -183,6 +185,7 @@ export function testCountryScreen() {
     cabinetSeats: [entry('defense')],
     publicOpinion: { stances: ['denial', 'panic'], feature: 'F21', milestone: 'M5' },
     diplomaticActions: [entry('improve_relations'), entry('declare_war')],
+    countrySelection: { quickPicks: ['BBB'] },
   };
 }
 

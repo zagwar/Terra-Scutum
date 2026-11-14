@@ -76,8 +76,9 @@ export type FromSimWorker =
       /** Days per second at speeds 1–5 (`data/game_config.json`). */
       readonly daysPerSecond: readonly number[];
       /**
-       * The country (index) the player leads: `playerCountry` in
-       * `data/game_config.json` until the country selection (F05).
+       * The country (index) the player leads at the start: `playerCountry` in
+       * `data/game_config.json` until the player chooses another (F05); after
+       * that, every snapshot carries it.
        */
       readonly playerCountry: number;
       /** Message types and alert types (validated `data/notifications.json`). */

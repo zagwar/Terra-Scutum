@@ -31,7 +31,11 @@ function randomSeed(): number {
 document.title = t('GAME_TITLE');
 
 const launch = parseLaunchOptions(window.location.search);
-const store = createAppStore({ uiSettings: loadUiSettings() });
+const store = createAppStore({
+  uiSettings: loadUiSettings(),
+  // A normal game starts with the country selection (F05); most debug scenarios skip it.
+  choosingCountry: launch.scenario ? launch.scenario.chooseCountry === true : true,
+});
 let debugHooks: DebugHooks | null = null;
 
 // The map needs two things that start at the same time: the 3D renderer, and
@@ -60,6 +64,7 @@ function showMapWhenPossible(): void {
           if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
           map.setSelectedProvince(state.selectedProvince);
           map.setSelectedSeaZone(state.selectedSeaZone);
+          map.setHighlightedCountry(state.choosingCountry ? state.candidateCountry : null);
         };
         store.subscribe(sync);
         sync();
@@ -97,9 +102,11 @@ const sim = createSimClient({
   },
   onUpdate(snapshot, events) {
     // The owners only come along when they changed; otherwise the ones we have still hold.
-    store.update(
-      snapshot.provinceOwner ? { snapshot, provinceOwner: snapshot.provinceOwner } : { snapshot },
-    );
+    store.update({
+      snapshot,
+      playerCountry: snapshot.playerCountry,
+      ...(snapshot.provinceOwner ? { provinceOwner: snapshot.provinceOwner } : {}),
+    });
     debugHooks?.recordEvents(events);
     // Sim events that have a message type become messages (toasts, pop-ups, the log).
     const { world } = store.getState();
@@ -127,7 +134,9 @@ const actions = createShellActions({
   // A province or sea zone picked from a list (not on the map) is brought into view.
   focusProvince: (province) => renderer?.map?.focusProvince(province),
   focusSeaZone: (seaZone) => renderer?.map?.focusSeaZone(seaZone),
+  focusCountry: (country) => renderer?.map?.focusCountry(country),
   changeTime,
+  sendCommand: (command) => sim.sendCommand(command),
 });
 
 if (launch.scenarioName !== null) debugHooks = installDebugHooks(store, sim);

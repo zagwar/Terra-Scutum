@@ -55,7 +55,13 @@ describe('sim host (the logic inside the sim worker)', () => {
     expect(posted[1]).toEqual({
       type: 'update',
       requestId: 5,
-      snapshot: { day: 31, date: { year: 2025, month: 2, day: 1 }, ownershipVersion: 0 },
+      snapshot: {
+        day: 31,
+        date: { year: 2025, month: 2, day: 1 },
+        // The United States (game_config.json) until the player chooses (F05).
+        playerCountry: 163,
+        ownershipVersion: 0,
+      },
       events: [],
     });
   });

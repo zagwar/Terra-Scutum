@@ -120,6 +120,9 @@ export const mapViewSchema = z.strictObject({
     neighborStrength: fraction,
     /** How much the province under the mouse is brightened. */
     hoverBrighten: fraction,
+    /** The country picked while choosing a country (F05): its provinces are tinted with this color. */
+    countryHighlight: hexColor,
+    countryHighlightStrength: fraction,
   }),
   lines: z.strictObject({
     provinceBorder: lineStyle,

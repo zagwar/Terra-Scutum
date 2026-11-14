@@ -94,9 +94,14 @@ export interface ProvinceHighlight {
   /** Province (or sea zone) indices, or null for none. */
   readonly selected: number | null;
   readonly hovered: number | null;
+  /** A whole country to tint (F05, while choosing a country), with the current owners; or null. */
+  readonly country?: { readonly index: number; readonly owners: Uint16Array } | null;
 }
 
-/** Copies `base` into `target` and marks the selected province, its neighbors and the hovered province. */
+/**
+ * Copies `base` into `target` and marks the highlighted country, the selected
+ * province, its neighbors and the hovered province.
+ */
 export function applyHighlight(
   base: Uint8Array,
   target: Uint8Array,
@@ -110,6 +115,13 @@ export function applyHighlight(
     target[index * 4 + 1],
     target[index * 4 + 2],
   ];
+  if (highlight.country) {
+    const { index, owners } = highlight.country;
+    const tint = parseHexColor(colors.countryHighlight);
+    for (let province = 0; province < owners.length; province++)
+      if (owners[province] === index)
+        write(target, province, mix(read(province), tint, colors.countryHighlightStrength));
+  }
   if (highlight.selected !== null) {
     const neighborColor = parseHexColor(colors.neighbor);
     for (const neighbor of neighborsOf(world.provinceNeighbors, highlight.selected))

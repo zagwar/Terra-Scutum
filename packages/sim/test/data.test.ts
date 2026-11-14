@@ -152,6 +152,15 @@ describe('game data validation', () => {
       countryScreen: { ...screen, laws: [{ id: 'trade', feature: 'F16', milestone: 'three' }] },
     });
     expect(badMilestone.join('\n')).toContain('laws.0.milestone');
+    const picks = issuesOf({
+      ...world,
+      gameConfig: validConfig,
+      countryScreen: { ...screen, countrySelection: { quickPicks: ['BBB', 'ZZZ', 'BBB'] } },
+    });
+    expect(picks).toEqual([
+      'data/country_screen.json → countrySelection.quickPicks.1: unknown country "ZZZ"',
+      'data/country_screen.json → countrySelection.quickPicks.2: "BBB" is listed twice',
+    ]);
     const flags = issuesOf({
       ...world,
       gameConfig: validConfig,

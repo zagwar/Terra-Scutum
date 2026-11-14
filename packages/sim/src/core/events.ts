@@ -15,6 +15,8 @@ export type SimEvent =
       readonly province: string;
       readonly from: string;
       readonly to: string;
-    };
+    }
+  /** The player chose the country they lead (its id), before the campaign's first day (F05). */
+  | { readonly type: 'playerCountryChosen'; readonly country: string };
 
 export type SimEventType = SimEvent['type'];

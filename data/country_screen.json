@@ -32,5 +32,8 @@
     { "id": "refugee_agreement", "feature": "F34", "milestone": "M9" },
     { "id": "joint_operation", "feature": "F50", "milestone": "M8b" },
     { "id": "declare_war", "feature": "F59", "milestone": "M8c" }
-  ]
+  ],
+  "countrySelection": {
+    "quickPicks": ["USA", "CHN", "RUS", "IND", "DEU", "GBR", "FRA", "JPN"]
+  }
 }
