@@ -15,7 +15,7 @@
 > designs for them. If a task depends on one, build the simplest placeholder,
 > mark it **[DEFAULT]**, and say so in your reply.
 
-- [x] **Country screen (F138; asked for by the designer during F02):** decided: it works **like Hearts of Iron IV's**, with a Government view for your own country and a Diplomacy view for other countries. Layout in section 12.4.1 **[DEFAULT]**. Two details are still to confirm when it's built: panel over the map or full-screen, and flags.
+- [x] **Country screen (F138; asked for by the designer during F02):** decided: it works **like Hearts of Iron IV's**, with a Government view for your own country and a Diplomacy view for other countries. Layout in section 12.4.1 **[DEFAULT]**. Built in F138: a large panel over the map, real flags (designer decisions).
 
 ### 17.1 Overlooked systems (need a design decision)
 All system design decisions have been made (2026-11-11). Resolved items are kept below for reference.

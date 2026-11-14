@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import type { AppState, AppStore } from '../app-store';
 import type { MapMode } from '../render/map/map-colors';
 import type { TimeChange } from '../worker/protocol';
-import { CountryPanel } from './country-panel';
+import { CountryScreen } from './country-screen/country-screen';
 import { t } from './i18n';
 import { MapModeBar } from './map-mode-bar';
 import { MapTooltip } from './map-tooltip';
@@ -34,8 +34,8 @@ export interface AppProps {
 /**
  * The root of the React UI: an HTML layer drawn on top of the 3D view. The
  * UI shell (F122, section 12.1): the top bar, the alerts row under it, the
- * information panel on the left, the outliner on the right, the lens bar
- * bottom-left, the map mode box bottom-right, toasts, pop-ups and windows.
+ * information panel on the left (since F138 also the country screen), the
+ * outliner on the right, the lens bar bottom-center, the map mode box bottom-right, toasts, pop-ups and windows.
  */
 export function App({
   store,
@@ -67,6 +67,7 @@ export function App({
       <TopBar
         world={world}
         playerCountry={state.playerCountry}
+        flagCodes={state.countryScreen?.flagCodes ?? null}
         onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
         onOpenWindow={actions.openWindow}
         timeControl={
@@ -156,7 +157,7 @@ export function App({
 
 /** The information panel on the left: one of province, sea zone, country or region (F122). */
 function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions }) {
-  const { world, provinceOwner, countryStart, panel } = state;
+  const { world, provinceOwner, countryStart, countryScreen, panel } = state;
   if (!world || !provinceOwner || !panel) return null;
   const nav: PanelNav = {
     canGoBack: state.panelHistory.length > 0,
@@ -194,15 +195,20 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
         />
       );
     case 'country':
-      return countryStart ? (
-        <CountryPanel
+      return countryStart && countryScreen ? (
+        <CountryScreen
+          // A new country starts at the top of the screen, not where the last one was scrolled to.
+          key={panel.index}
           world={world}
           countryStart={countryStart}
           provinceOwner={provinceOwner}
+          data={countryScreen}
           country={panel.index}
+          playerCountry={state.playerCountry}
           nav={nav}
           onSelectCountry={link.country}
           onSelectProvince={link.province}
+          onOpenWindow={actions.openWindow}
         />
       ) : null;
     case 'region':

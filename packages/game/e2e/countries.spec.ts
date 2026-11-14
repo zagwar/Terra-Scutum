@@ -70,8 +70,8 @@ test('the political map is the default; a province opens its country panel', asy
   await waitForFrames(page);
   await shot('political-world');
 
-  // A province names its owner; the name opens the country panel.
-  await expect(page.getByTestId('country-panel')).toHaveCount(0);
+  // A province names its owner; the name opens the country screen.
+  await expect(page.getByTestId('country-screen')).toHaveCount(0);
   const paris = await screenPosition(page, ...PARIS);
   await page.mouse.click(paris.x, paris.y);
   await expect(page.getByTestId('province-country')).toHaveText('France');
@@ -85,7 +85,7 @@ test('the political map is the default; a province opens its country panel', asy
   await expect(page.getByTestId('country-population')).toHaveText('69.3 million');
   await expect(page.getByTestId('country-gdp')).toHaveText('$3.4 trillion');
   await expect(page.getByTestId('country-gdp-per-person')).toHaveText('$49,019');
-  await expect(page.getByTestId('country-panel')).toContainText('real-world figures for 2025');
+  await expect(page.getByTestId('country-screen')).toContainText('real-world figures for 2025');
   const neighbors = page.getByTestId('country-neighbors').getByRole('button');
   await expect(neighbors).toHaveText([
     'Andorra',
@@ -101,10 +101,10 @@ test('the political map is the default; a province opens its country panel', asy
     'Switzerland',
   ]);
   await waitForFrames(page);
-  await shot('country-panel');
+  await shot('country-screen');
 
   // A neighbor's name shows that country; its capital's name selects the capital's province.
-  // One panel at a time (F122): the country panel took the province panel's place.
+  // One panel at a time (F122): the country screen took the province panel's place.
   await expect(page.getByTestId('province-panel')).toHaveCount(0);
   await neighbors.filter({ hasText: 'Germany' }).click();
   await expect(page.getByTestId('country-name')).toHaveText('Germany');

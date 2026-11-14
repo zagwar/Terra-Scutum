@@ -1,6 +1,10 @@
 import {
   type GameData,
   alertTypeNameKey,
+  cabinetSeatNameKey,
+  diplomaticActionNameKey,
+  lawCategoryNameKey,
+  opinionStanceNameKey,
   messageTypeNameKey,
   countryNameKey,
   governmentTypeNameKey,
@@ -28,6 +32,12 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const m of data.notifications.messageTypes)
     need(messageTypeNameKey(m.id), `message type ${m.id}`);
   for (const a of data.notifications.alertTypes) need(alertTypeNameKey(a.id), `alert type ${a.id}`);
+  const screen = data.countryScreen;
+  for (const l of screen.laws) need(lawCategoryNameKey(l.id), `law ${l.id}`);
+  for (const s of screen.cabinetSeats) need(cabinetSeatNameKey(s.id), `cabinet seat ${s.id}`);
+  for (const s of screen.publicOpinion.stances) need(opinionStanceNameKey(s), `stance ${s}`);
+  for (const a of screen.diplomaticActions)
+    need(diplomaticActionNameKey(a.id), `diplomatic action ${a.id}`);
   return problems;
 }
 

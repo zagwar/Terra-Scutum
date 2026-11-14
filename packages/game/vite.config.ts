@@ -38,6 +38,8 @@ export default defineConfig({
     target: 'es2022',
     // Babylon.js is large; the engine chunk is expected to be over Vite's default warning size.
     chunkSizeWarningLimit: 2500,
+    // Flags (F138) stay separate files, downloaded only when shown, instead of being put into the code.
+    assetsInlineLimit: (file) => (file.includes('/flag-icons/') ? false : undefined),
   },
   server: {
     // The game imports `data/` and `locales/` from the repository root.

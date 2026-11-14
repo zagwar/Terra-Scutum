@@ -31,7 +31,7 @@ export interface ScreenInfo {
   readonly comesWith: ComesWith;
 }
 
-const at = (feature: string, milestone: string): ComesWith => ({ feature, milestone });
+export const at = (feature: string, milestone: string): ComesWith => ({ feature, milestone });
 
 /** Every screen reachable from a lens (section 12.1), with the feature that builds it. */
 export const SCREENS = {
@@ -72,10 +72,16 @@ export const SCREENS = {
   hiveTracker: { lens: 'swarm', comesWith: at('F27', 'M7') },
   bugKnowledge: { lens: 'swarm', comesWith: at('F57', 'M10') },
   journal: { lens: 'politics', comesWith: at('F96', 'M3') },
+  // Opened from the country screen's buttons (F138), not listed in a lens [DEFAULT].
+  decisions: { lens: 'politics', comesWith: at('F97', 'M3') },
+  ledger: { lens: 'economy', comesWith: at('F124', 'M5') },
 } as const satisfies Record<string, ScreenInfo>;
 export type ScreenId = keyof typeof SCREENS;
 
-/** The screens each lens lists, in order (the journal is reached from the top bar only). */
+/**
+ * The screens each lens lists, in order (the journal is reached from the top
+ * bar only; decisions and the ledger from the country screen).
+ */
 export const LENS_SCREENS: Readonly<Record<LensId, readonly ScreenId[]>> = {
   economy: ['budget', 'buildings', 'productionChains', 'markets', 'trade', 'corporations'],
   politics: ['government', 'laws', 'movements', 'characters', 'elections'],

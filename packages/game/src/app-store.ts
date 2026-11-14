@@ -12,7 +12,7 @@ import type { GameMessage } from './ui/shell/messages';
 import type { PanelState } from './ui/shell/panel-navigation';
 import type { OutlinerEntry, ShellAlert } from './ui/shell/shell-types';
 import { EMPTY_UI_SETTINGS, type UiSettings } from './ui/shell/ui-settings';
-import type { TimeState } from './worker/protocol';
+import type { CountryScreenData, TimeState } from './worker/protocol';
 
 /** What the UI shows. Changed only through `AppStore.update`; React re-renders when it changes. */
 export interface AppState extends PanelState {
@@ -45,6 +45,8 @@ export interface AppState extends PanelState {
   readonly playerCountry: number | null;
   /** Message types and alert types (`data/notifications.json`); null until the sim is ready. */
   readonly notifications: NotificationsConfig | null;
+  /** What the country screen needs from the data files (F138); null until the sim is ready. */
+  readonly countryScreen: CountryScreenData | null;
   /** The window open over the map (a screen, the settings, the message log), or null. */
   readonly openWindow: ShellWindow | null;
   /** The lens whose screen list is open in the lens bar, or null. */
@@ -92,6 +94,7 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     hoveredSeaZone: null,
     playerCountry: null,
     notifications: null,
+    countryScreen: null,
     openWindow: null,
     openLens: null,
     alerts: [],

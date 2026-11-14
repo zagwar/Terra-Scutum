@@ -81,7 +81,7 @@ if (data) {
   }
   if (problemCount === before)
     console.log(
-      '  ✓ every map item, government type, message type and alert type has a name, every map item a shape',
+      '  ✓ every map item, government type, message type, alert type and country screen entry has a name, every map item a shape',
     );
 }
 

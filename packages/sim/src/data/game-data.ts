@@ -28,6 +28,14 @@ import {
   checkPlayerCountry,
   notificationsSchema,
 } from './notifications-config';
+import {
+  type CountryFlagsConfig,
+  type CountryScreenConfig,
+  checkCountryFlags,
+  checkCountryScreen,
+  countryFlagsSchema,
+  countryScreenSchema,
+} from './country-screen-config';
 
 /**
  * The list of JSON data files in `data/`, each with the zod schema that
@@ -48,6 +56,8 @@ export const DATA_FILES = {
   countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
+  countryScreen: { file: 'country_screen.json', schema: countryScreenSchema },
+  countryFlags: { file: 'country_flags.json', schema: countryFlagsSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -69,6 +79,10 @@ export interface GameData {
   readonly mapView: MapViewConfig;
   /** Message types and alert types of the UI shell (F122); used by the game, not by the sim's systems. */
   readonly notifications: NotificationsConfig;
+  /** The lists the country screen shows (F138); used by the game, not by the sim's systems. */
+  readonly countryScreen: CountryScreenConfig;
+  /** Which flag each country shows (F138); used by the game, not by the sim's systems. */
+  readonly countryFlags: CountryFlagsConfig;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */
@@ -110,6 +124,8 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkCountryStart,
   checkNotifications,
   checkPlayerCountry,
+  checkCountryScreen,
+  checkCountryFlags,
 ];
 
 /**

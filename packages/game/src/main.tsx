@@ -91,6 +91,7 @@ const sim = createSimClient({
       daysPerSecond: message.daysPerSecond,
       playerCountry: message.playerCountry,
       notifications: message.notifications,
+      countryScreen: message.countryScreen,
     });
     showMapWhenPossible();
   },
