@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { t, tKey } from '../i18n';
+import { isCompactNow } from '../use-media';
 import { OUTLINER_COMES_WITH, OUTLINER_SECTIONS, outlinerSectionKey } from './catalog';
 import { Icon } from './icons';
 import type { OutlinerEntry } from './shell-types';
@@ -18,7 +19,8 @@ export interface OutlinerProps {
  * without entries are shown dimmed with 0, and say which feature fills them.
  */
 export function Outliner({ entries, onSelect }: OutlinerProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  // On a small screen (a phone) the outliner starts folded, to keep the map free.
+  const [collapsed, setCollapsed] = useState(isCompactNow);
   const [closedSections, setClosedSections] = useState<ReadonlySet<string>>(new Set());
   const toggleSection = (id: string) =>
     setClosedSections((current) => {

@@ -160,6 +160,7 @@
   "MAP_MODE_REGIONS": "Regions",
   "MAP_MODE_SEA_ZONES": "Sea zones",
   "MAP_HINT": "Click a province or sea zone for its details. Wheel or +/-: zoom. Drag, WASD, arrow keys or the window's edge: move (Shift: faster). Q/E or middle mouse button: turn.",
+  "MAP_HINT_TOUCH": "Tap a province or sea zone for its details. Drag with one finger to move, pinch with two to zoom.",
   "MAP_RESET_VIEW": "Whole world",
   "MAP_RESET_VIEW_HINT": "Show the whole world, north up (Home key)",
   "MAP_TOOLTIP_PROVINCE": "{province} · {country}",

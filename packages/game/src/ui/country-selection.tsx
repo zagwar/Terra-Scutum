@@ -142,14 +142,26 @@ export function CountrySelection({
           name={nameOf(candidate)}
           nameOf={nameOf}
           onPick={onPick}
-          onPlay={onPlay}
         />
+      )}
+      {candidate !== null && (
+        <div className="selection-play-row">
+          <button
+            type="button"
+            className="button selection-play"
+            data-testid="selection-play"
+            onClick={() => onPlay(candidate)}
+          >
+            {t('COUNTRY_SELECTION_PLAY', { country: nameOf(candidate) })}
+          </button>
+          <p className="selection-play-note">{t('COUNTRY_SELECTION_PLAY_NOTE')}</p>
+        </div>
       )}
     </section>
   );
 }
 
-/** The picked country: flag, name, government type and its real 2025 facts, and "Play as …". */
+/** The picked country: flag, name, government type and its real 2025 facts. */
 function CandidateCard({
   world,
   countryStart,
@@ -159,7 +171,6 @@ function CandidateCard({
   name,
   nameOf,
   onPick,
-  onPlay,
 }: {
   readonly world: WorldMap;
   readonly countryStart: CountryStartTable;
@@ -169,7 +180,6 @@ function CandidateCard({
   readonly name: string;
   readonly nameOf: (country: number) => string;
   readonly onPick: (country: number) => void;
-  readonly onPlay: (country: number) => void;
 }) {
   const summary = summarizeCountry(world, provinceOwner, country);
   const population = countryStart.population[country];
@@ -221,15 +231,6 @@ function CandidateCard({
           ))}
         </ul>
       )}
-      <button
-        type="button"
-        className="button selection-play"
-        data-testid="selection-play"
-        onClick={() => onPlay(country)}
-      >
-        {t('COUNTRY_SELECTION_PLAY', { country: name })}
-      </button>
-      <p className="selection-play-note">{t('COUNTRY_SELECTION_PLAY_NOTE')}</p>
     </div>
   );
 }

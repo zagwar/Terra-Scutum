@@ -1726,8 +1726,11 @@ body {
   color: var(--color-text-dim);
 }
 
-.button.selection-play {
+.selection-play-row {
   margin-top: 4px;
+}
+
+.button.selection-play {
   padding: 10px 12px;
   font-size: 15px;
   color: #10151c;
@@ -1745,4 +1748,253 @@ body {
   font-size: 11px;
   text-align: center;
   color: var(--color-text-dim);
+}
+
+/* ── Map mode box: the fold button (small screens) ─────────────────────── */
+.map-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.map-mode-toggle .panel-title {
+  margin: 0;
+}
+
+.map-mode-bar:not(.is-folded) .map-mode-toggle {
+  margin-bottom: 10px;
+}
+
+/*
+ * ── Compact layout: phones and small tablets ─────────────────────────────
+ * A narrow (portrait) or short (landscape) window. Keep the query the same as
+ * COMPACT_QUERY in `ui/use-media.ts`. The game is designed for a desktop
+ * browser; this layout makes it playable for testing on a phone [DEFAULT].
+ */
+@media (max-width: 760px), (max-height: 520px) {
+  .ui-layer {
+    --shell-gap: 8px;
+    --side-width: min(300px, calc(100vw - 16px));
+    --content-top: calc(var(--top-bar-height) + 46px);
+    /* Room kept free at the bottom for the lens bar. */
+    --bottom-room: 62px;
+  }
+
+  /* The top bar: the key numbers scroll sideways; only the flag shows (not the name). */
+  .top-bar-items {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .top-bar-item {
+    flex: none;
+  }
+
+  .top-bar-flag {
+    padding: 0 4px;
+  }
+
+  .top-bar-flag-name {
+    display: none;
+  }
+
+  .time-control {
+    width: auto;
+  }
+
+  .alerts-row {
+    top: calc(var(--top-bar-height) + 6px);
+    right: var(--shell-gap);
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .alert-icon {
+    flex: none;
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Panels: as wide as the screen allows, never under the lens bar. */
+  .info-panel,
+  .info-panel.country-screen {
+    width: calc(100% - 2 * var(--shell-gap));
+    max-height: calc(100% - var(--content-top) - var(--bottom-room) - var(--shell-gap));
+  }
+
+  .outliner {
+    max-height: calc(100% - var(--content-top) - var(--bottom-room) - 60px);
+  }
+
+  /* While a panel is open, the outliner and the map mode box step aside. */
+  .ui-layer:has(.info-panel) .outliner,
+  .ui-layer:has(.info-panel) .map-mode-bar {
+    display: none;
+  }
+
+  .toasts {
+    left: var(--shell-gap);
+    right: var(--shell-gap);
+    width: auto;
+  }
+
+  /* The lens bar fills the bottom edge. */
+  .lens-bar {
+    left: var(--shell-gap);
+    right: var(--shell-gap);
+    width: auto;
+  }
+
+  .lens-buttons {
+    justify-content: space-between;
+  }
+
+  .lens-button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    padding: 5px 1px 4px;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  .lens-button span {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lens-menu {
+    width: min(320px, calc(100vw - 16px));
+  }
+
+  .map-mode-bar {
+    width: auto;
+    min-width: 170px;
+    max-width: calc(100% - 2 * var(--shell-gap));
+    padding: 8px 10px;
+  }
+
+  .ui-layer:has(.lens-bar) .map-mode-bar {
+    bottom: calc(var(--bottom-room) + var(--shell-gap));
+  }
+
+  .popup-layer,
+  .shell-window-layer {
+    padding: 8px;
+  }
+
+  .shell-window {
+    max-height: 100%;
+  }
+
+  /* The country screen: one column. */
+  .cs-columns,
+  .cs-columns:has(> .cs-leader),
+  .cs-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cs-flag {
+    width: 64px;
+    height: 48px;
+  }
+
+  .cs-name {
+    font-size: 19px;
+  }
+
+  .cs-portrait-large {
+    width: 80px;
+    height: 96px;
+  }
+
+  /* The country selection: across the top half, so the map shows underneath. */
+  .country-selection {
+    width: calc(100% - 2 * var(--shell-gap));
+    max-height: 58%;
+    padding: 10px 12px 0;
+  }
+
+  /* "Play as …" stays in view at the bottom of the panel while the rest scrolls. */
+  .selection-play-row {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -12px;
+    padding: 8px 12px 10px;
+    background: rgba(12, 18, 26, 0.97);
+    border-top: 1px solid var(--color-panel-border);
+  }
+}
+
+/* A narrow window (a phone held upright): the top bar takes two rows, the key numbers below. */
+@media (max-width: 600px) {
+  .ui-layer {
+    --top-bar-height: 86px;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 2px;
+  }
+
+  .top-bar-items {
+    order: 3;
+    flex: 1 0 100%;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--color-panel-border);
+  }
+
+  .top-bar-end {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .selection-bar {
+    height: 48px;
+  }
+
+  .country-selection {
+    top: calc(48px + var(--shell-gap));
+  }
+}
+
+/* An upright or very short phone screen: the lens bar shows icons only (each button keeps its name for screen readers). */
+@media (max-width: 600px), (max-height: 520px) {
+  .lens-button span {
+    display: none;
+  }
+
+  .lens-button .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ui-layer {
+    --bottom-room: 48px;
+  }
+}
+
+/* A wider small window (a phone held sideways): panels stay on the left, the map shows beside them. */
+@media (max-height: 520px) and (min-width: 601px), (max-width: 760px) and (min-width: 601px) {
+  .country-selection {
+    width: 340px;
+    max-height: calc(100% - var(--top-bar-height) - 2 * var(--shell-gap));
+  }
+
+  .info-panel,
+  .info-panel.country-screen {
+    width: min(460px, 62%);
+  }
 }
