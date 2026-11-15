@@ -1,0 +1,105 @@
+{
+  "sim": {
+    "scale": 1,
+    "goods": 50,
+    "popGroupsPerProvince": 24,
+    "needsPerPop": 8,
+    "buildingsPerProvince": 16,
+    "inputsPerBuilding": 3,
+    "outputsPerBuilding": 2,
+    "tradeRoutes": 3000,
+    "units": 5000,
+    "battles": 30,
+    "unitsPerBattleSide": 40,
+    "supplyPasses": 6,
+    "corporations": 600,
+    "investmentsPerCorporation": 30,
+    "aiOptionsPerCountry": 200
+  },
+  "render": {
+    "buildings": 20000,
+    "buildingModels": ["boxBuilding", "factoryHall"],
+    "buildingSpacingKm": 3,
+    "unitSpacingKm": 4,
+    "units": 5000,
+    "unitModels": ["unitTank"],
+    "battle": {
+      "longitude": -98.5,
+      "latitude": 38.5,
+      "bugs": 2400,
+      "bugModels": ["bugWarrior", "bugInterceptor"],
+      "defenders": 300,
+      "lasers": 60,
+      "explosions": 24,
+      "sizeKm": 220
+    },
+    "infrastructure": {
+      "road": {
+        "color": "#b9a27a",
+        "widthPx": 1.2
+      },
+      "rail": {
+        "color": "#4a4440",
+        "widthPx": 1.6
+      },
+      "power": {
+        "color": "#d6d0c4",
+        "widthPx": 0.8
+      }
+    },
+    "weather": {
+      "rainParticles": 6000,
+      "clouds": 400,
+      "smokeParticles": 1500,
+      "fireParticles": 800
+    },
+    "sizePx": [
+      {
+        "zoom": 1,
+        "px": 4
+      },
+      {
+        "zoom": 20,
+        "px": 8
+      },
+      {
+        "zoom": 80,
+        "px": 14
+      }
+    ],
+    "views": [
+      {
+        "name": "STRESS_VIEW_WORLD",
+        "longitude": 0,
+        "latitude": 20,
+        "zoom": 1
+      },
+      {
+        "name": "STRESS_VIEW_EUROPE",
+        "longitude": 10,
+        "latitude": 50,
+        "zoom": 6
+      },
+      {
+        "name": "STRESS_VIEW_FOREST",
+        "longitude": -62,
+        "latitude": -4,
+        "zoom": 24
+      },
+      {
+        "name": "STRESS_VIEW_BATTLE",
+        "longitude": -98.5,
+        "latitude": 38.5,
+        "zoom": 24
+      },
+      {
+        "name": "STRESS_VIEW_BATTLE_CLOSE",
+        "longitude": -98.5,
+        "latitude": 38.5,
+        "zoom": 70
+      }
+    ],
+    "measureSeconds": 5,
+    "settleSeconds": 15
+  }
+}

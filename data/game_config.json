@@ -3,7 +3,12 @@
   "playerCountry": "USA",
   "performanceBudget": {
     "dailyTickAverageMs": 30,
-    "weeklyTickAverageMs": 150
+    "weeklyTickAverageMs": 150,
+    "worstDayMs": 100,
+    "strategicFps": 60,
+    "closeFps": 30,
+    "tabMemoryMb": 2048,
+    "loadSeconds": 20
   },
   "gameSpeed": {
     "daysPerSecond": [0.5, 1, 2, 5, 10],

@@ -33,6 +33,15 @@ export const gameConfigSchema = z.strictObject({
     dailyTickAverageMs: z.number().positive(),
     /** Target average time for a tick that also runs the weekly calculations, in milliseconds. */
     weeklyTickAverageMs: z.number().positive(),
+    /** The slowest an ordinary day may ever take, in milliseconds (F139). */
+    worstDayMs: z.number().positive(),
+    /** Frames per second at strategic zoom, and in the busiest close-up and battle views (F139). */
+    strategicFps: z.number().positive(),
+    closeFps: z.number().positive(),
+    /** The whole browser tab's memory in a late-game save, in megabytes (F139). */
+    tabMemoryMb: z.number().positive(),
+    /** A new game loads in this many seconds on a normal connection (F139). */
+    loadSeconds: z.number().positive(),
   }),
   /**
    * Game speed (F04, section 5.1): real time with pause. The sim worker runs

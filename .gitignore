@@ -12,3 +12,4 @@ packages/game/playwright-report/
 .DS_Store
 *.log
 .cache/
+sim-stress.json

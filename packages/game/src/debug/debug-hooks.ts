@@ -6,6 +6,9 @@ import type { GalleryModelStats } from '../render/models/model-gallery';
 import type { SceneryProbe } from '../render/scenery/map-scenery';
 import type { TimeChange, TimeState } from '../worker/protocol';
 import type { SimClient } from '../worker/sim-client';
+import type { PerfNumbers } from '../render/stress/perf-meter';
+import type { StressPart, StressSceneStats } from '../render/stress/stress-scene';
+import type { BenchmarkResult, SimTicks, StressTest } from './stress-test';
 
 /**
  * Test hooks, installed as `window.__terraScutum` only when the game is
@@ -77,6 +80,24 @@ export interface DebugApi {
      */
     replaceWithFile(modelId: string, url: string): void;
   };
+  /** The render stress test (`?debug=stress`, F139); these return null elsewhere or before its load is on the map. */
+  readonly stress: {
+    /** What is on the map, and what was drawn in the last frame. */
+    scene(): StressSceneStats | null;
+    /** The counter's numbers over the last second. */
+    live(): PerfNumbers | null;
+    /** The sim worker's days over the last few seconds. */
+    sim(): SimTicks | null;
+    /** Moves the camera to one of the views of `data/stress_test.json`. */
+    goTo(view: number): void;
+    /** Turns parts of the load on or off. */
+    setParts(parts: Partial<Record<StressPart, boolean>>): void;
+    /** Visits every view and measures it (`measureSeconds` each, or what the test asks for). */
+    runBenchmark(timing?: {
+      measureSeconds: number;
+      settleSeconds: number;
+    }): Promise<BenchmarkResult[]> | null;
+  };
 }
 
 declare global {
@@ -87,11 +108,13 @@ declare global {
 
 export interface DebugHooks {
   setRenderer(renderer: GameRenderer): void;
+  setStressTest(test: StressTest): void;
   recordEvents(events: readonly SimEvent[]): void;
 }
 
 export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
   let renderer: GameRenderer | null = null;
+  let stressTest: StressTest | null = null;
   const events: SimEvent[] = [];
   const idOf = (province: number | null | undefined): string | null =>
     province === null || province === undefined || province < 0
@@ -159,11 +182,22 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
         renderer?.gallery?.rebuild();
       },
     },
+    stress: {
+      scene: () => stressTest?.scene() ?? null,
+      live: () => stressTest?.live() ?? null,
+      sim: () => stressTest?.sim() ?? null,
+      goTo: (view) => stressTest?.goTo(view),
+      setParts: (parts) => stressTest?.setParts(parts),
+      runBenchmark: (timing) => stressTest?.runBenchmark(undefined, timing) ?? null,
+    },
   };
 
   return {
     setRenderer(created) {
       renderer = created;
+    },
+    setStressTest(test) {
+      stressTest = test;
     },
     recordEvents(received) {
       events.push(...received);

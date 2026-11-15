@@ -13,6 +13,8 @@ export interface GameRendererOptions {
 /** The 3D view: owns the Babylon engine, its canvas and the scene being shown. */
 export interface GameRenderer {
   readonly type: RendererType;
+  /** The Babylon scene everything is drawn in (the render stress test adds to it, F139). */
+  readonly scene: Scene;
   /** The world map, once `showMap` has finished. */
   readonly map: MapView | null;
   /** Loads the map's shapes and puts the world map in the scene. */
@@ -64,6 +66,7 @@ export async function createGameRenderer(
 
   return {
     type,
+    scene,
     get map() {
       return map;
     },

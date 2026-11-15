@@ -111,11 +111,46 @@ export const treeClumpSpecSchema = z.strictObject({
 });
 export type TreeClumpSpec = z.infer<typeof treeClumpSpecSchema>;
 
+/** The `vehicle` generator (F139, placeholder): a tank-like hull, an optional turret with a gun, tracks. */
+export const vehicleSpecSchema = z.strictObject({
+  hullMaterial: id,
+  /** The gun, the tracks and small parts. */
+  detailMaterial: id,
+  /** Size in model units (metres): length along x, width across, the hull's height. */
+  length: range(0.5, 100),
+  width: range(0.5, 50),
+  hullHeight: range(0.2, 20),
+  /** The share of vehicles with a turret and gun. */
+  turretShare: fraction,
+  /** The gun's length as a share of the hull's length. */
+  gunShare: range(0, 2),
+});
+export type VehicleSpec = z.infer<typeof vehicleSpecSchema>;
+
+/** The `bug` generator (F139, placeholder): body segments in a row, legs, and maybe a glowing organ. */
+export const bugSpecSchema = z.strictObject({
+  bodyMaterial: id,
+  legMaterial: id,
+  /** The glowing organ (used only when `organ` is true; it must still name a material). */
+  organMaterial: id,
+  /** Body length in model units (metres). */
+  length: range(0.2, 100),
+  segments: range(1, 6),
+  legPairs: range(0, 6),
+  /** Leg length as a share of the body length. */
+  legShare: range(0.1, 3),
+  /** A glowing organ on the back (the Interceptor's laser organ, section 10.5). */
+  organ: z.boolean(),
+});
+export type BugSpec = z.infer<typeof bugSpecSchema>;
+
 /** Each generator's spec schema, by generator name. Add a generator: its schema here, its code in `packages/game/src/generators`. */
 export const GENERATOR_SPECS = {
   tree: treeSpecSchema,
   treeClump: treeClumpSpecSchema,
   boxBuilding: boxBuildingSpecSchema,
+  vehicle: vehicleSpecSchema,
+  bug: bugSpecSchema,
 } as const;
 export type GeneratorName = keyof typeof GENERATOR_SPECS;
 
@@ -138,6 +173,18 @@ const generatedModel = z.discriminatedUnion('generator', [
     generator: z.literal('boxBuilding'),
     variants: z.number().int().min(1).max(16),
     spec: boxBuildingSpecSchema,
+  }),
+  z.strictObject({
+    source: z.literal('generator'),
+    generator: z.literal('vehicle'),
+    variants: z.number().int().min(1).max(16),
+    spec: vehicleSpecSchema,
+  }),
+  z.strictObject({
+    source: z.literal('generator'),
+    generator: z.literal('bug'),
+    variants: z.number().int().min(1).max(16),
+    spec: bugSpecSchema,
   }),
 ]);
 
@@ -180,6 +227,10 @@ export function materialsOfModel(
     }
     case 'boxBuilding':
       return [entry.spec.wallMaterial, entry.spec.roofMaterial, entry.spec.detailMaterial];
+    case 'vehicle':
+      return [entry.spec.hullMaterial, entry.spec.detailMaterial];
+    case 'bug':
+      return [entry.spec.bodyMaterial, entry.spec.legMaterial, entry.spec.organMaterial];
   }
 }
 

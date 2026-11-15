@@ -10,8 +10,11 @@ import type {
 export interface SimClientHandlers {
   /** The campaign has started. */
   onReady(ready: ReadyMessage): void;
-  /** The sim state changed (after ticks and commands). */
-  onUpdate(snapshot: SimSnapshot, events: readonly SimEvent[]): void;
+  /**
+   * The sim state changed (after ticks and commands). `tickMs`: for a day run
+   * at game speed, how long its daily tick took.
+   */
+  onUpdate(snapshot: SimSnapshot, events: readonly SimEvent[], tickMs?: number): void;
   /** The game speed changed (pause, unpause, a new speed). */
   onTime(time: TimeState): void;
   /** The sim could not start or crashed. */
@@ -20,8 +23,8 @@ export interface SimClientHandlers {
 
 /** The game's connection to the sim worker. */
 export interface SimClient {
-  /** Starts a new campaign. */
-  init(seed: number): void;
+  /** Starts a new campaign; `stressLoad` runs the sim stress test's placeholder load (F139). */
+  init(seed: number, options?: { readonly stressLoad?: boolean }): void;
   /** Sends a sim command; resolves with whether the sim accepted it. */
   sendCommand(command: SimCommand): Promise<CommandResult>;
   /** Simulates the given number of days now; resolves with the new snapshot. */
@@ -59,7 +62,7 @@ export function createSimClient(handlers: SimClientHandlers): SimClient {
         handlers.onReady(message);
         break;
       case 'update': {
-        handlers.onUpdate(message.snapshot, message.events);
+        handlers.onUpdate(message.snapshot, message.events, message.tickMs);
         if (message.requestId !== undefined) {
           pending.get(message.requestId)?.(message);
           pending.delete(message.requestId);
@@ -79,7 +82,7 @@ export function createSimClient(handlers: SimClientHandlers): SimClient {
   };
 
   return {
-    init: (seed) => send({ type: 'init', seed }),
+    init: (seed, options) => send({ type: 'init', seed, stressLoad: options?.stressLoad }),
     sendCommand: async (command) => {
       const update = await request((requestId) => ({ type: 'command', requestId, command }));
       return update.commandResult ?? { ok: true };

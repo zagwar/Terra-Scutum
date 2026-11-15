@@ -11,6 +11,7 @@ import notifications from '../../../../data/notifications.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
 import seaZones from '../../../../data/sea_zones.json';
+import stressTest from '../../../../data/stress_test.json';
 import terrainTiles from '../../../../data/terrain_tiles.json';
 
 /**
@@ -32,4 +33,5 @@ export const RAW_GAME_DATA: RawGameData = {
   countryScreen,
   countryFlags,
   models,
+  stressTest,
 };

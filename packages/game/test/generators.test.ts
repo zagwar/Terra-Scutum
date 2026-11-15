@@ -68,6 +68,9 @@ describe('the generators (F133)', () => {
   it('make every model in the data, at every detail level, standing on the ground', () => {
     expect(generated.map(([id]) => id).sort()).toEqual([
       'boxBuilding',
+      'bugInterceptor',
+      'bugWarrior',
+      'factoryHall',
       'treeAcacia',
       'treeBroadleaf',
       'treeClumpAcacia',
@@ -78,6 +81,7 @@ describe('the generators (F133)', () => {
       'treeConifer',
       'treeJungle',
       'treePalm',
+      'unitTank',
     ]);
     for (const [id, entry] of generated) {
       for (let variant = 0; variant < entry.variants; variant++) {
