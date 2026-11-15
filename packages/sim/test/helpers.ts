@@ -183,6 +183,91 @@ export function testMapView() {
       ),
       rivers: { minWeightByLevel: [null, 0.3], majorWeight: 0.4, greatWeight: 1 },
     },
+    scenery: {
+      simplePx: 9,
+      detailedPx: 13,
+      ambientLight: 0.5,
+      sunLight: 0.7,
+      forests: {
+        enabled: true,
+        landCover: ['forest'],
+        models: [{ model: 'tree', latitudes: [0, 90] }],
+        fromZoom: 4,
+        fullZoom: 6,
+        sizePx: [{ zoom: 4, px: 9 }],
+        referenceHeight: 10,
+        spacingPx: 9,
+        sizeVariation: 0.2,
+        tintVariation: 0.1,
+        placeMsPerFrame: 6,
+        maxInstances: 1000,
+      },
+      capitals: {
+        enabled: true,
+        model: 'building',
+        buildings: 5,
+        clusterPx: 8,
+        fromZoom: 2,
+        fullZoom: 3,
+        sizePx: [{ zoom: 2, px: 9 }],
+        referenceHeight: 20,
+      },
+    },
+  };
+}
+
+/** A valid `models.json`: one tree and one building with their materials. */
+export function testModels() {
+  const material = (kind: string) => ({
+    color: '#556677',
+    roughness: 0.8,
+    metallic: 0,
+    pattern: { kind, size: 2, strength: 0.3 },
+  });
+  return {
+    materials: {
+      bark: material('bark'),
+      leaves: material('foliage'),
+      wall: material('windows'),
+      roof: material('tiles'),
+    },
+    models: {
+      tree: {
+        source: 'generator',
+        generator: 'tree',
+        variants: 2,
+        spec: {
+          kind: 'conifer',
+          trunkMaterial: 'bark',
+          crownMaterial: 'leaves',
+          height: [8, 12],
+          trunkShare: [0.1, 0.2],
+          trunkRadius: [0.02, 0.04],
+          crownRadius: [0.2, 0.3],
+          crownParts: [2, 4],
+          leanDegrees: 3,
+        },
+      },
+      building: {
+        source: 'generator',
+        generator: 'boxBuilding',
+        variants: 3,
+        spec: {
+          wallMaterial: 'wall',
+          roofMaterial: 'roof',
+          detailMaterial: 'roof',
+          floors: [2, 10],
+          floorHeight: 3,
+          width: [10, 20],
+          depth: [10, 20],
+          gabledShare: 0.3,
+          gabledMaxFloors: 4,
+          setbackShare: 0.5,
+          rooftopUnits: [0, 2],
+        },
+      },
+      replaced: { source: 'file', file: 'models/replaced.glb', scale: 1 },
+    },
   };
 }
 
@@ -216,6 +301,7 @@ export function testRawData(
     notifications: testNotifications(),
     countryScreen: testCountryScreen(),
     countryFlags: testCountryFlags(),
+    models: testModels(),
   };
 }
 

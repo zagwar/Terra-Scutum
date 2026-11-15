@@ -1,8 +1,10 @@
 import { Color4 } from '@babylonjs/core/Maths/math.color';
 import { Scene } from '@babylonjs/core/scene';
-import type { MapViewConfig, TerrainTilesFile, WorldMap } from '@terra-scutum/sim';
+import type { MapViewConfig, ModelsConfig, TerrainTilesFile, WorldMap } from '@terra-scutum/sim';
 import { type RendererPreference, type RendererType, createEngine } from './create-engine';
 import { type MapView, type MapViewEvents, createMapView } from './map/map-view';
+import { type ModelGallery, createModelGallery } from './models/model-gallery';
+import { type ModelLibrary, createModelLibrary } from './models/model-library';
 
 export interface GameRendererOptions {
   readonly preference: RendererPreference;
@@ -18,8 +20,15 @@ export interface GameRenderer {
     world: WorldMap,
     config: MapViewConfig,
     terrainTiles: TerrainTilesFile,
+    models: ModelsConfig,
     events: MapViewEvents,
   ): Promise<MapView>;
+  /** The model library (F133), once `showMap` or `showGallery` made it. */
+  readonly models: ModelLibrary | null;
+  /** Shows the model gallery (`?debug=models`) instead of the map. */
+  showGallery(models: ModelsConfig, config: MapViewConfig): ModelGallery;
+  /** The model gallery, once `showGallery` has made it. */
+  readonly gallery: ModelGallery | null;
   /** How many frames have been drawn (used by tests to know the scene is really rendering). */
   getFrameCount(): number;
   /** Frames per second, averaged over the last second or so. */
@@ -35,6 +44,12 @@ export async function createGameRenderer(
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.02, 0.03, 0.05, 1);
   let map: MapView | null = null;
+  let models: ModelLibrary | null = null;
+  let gallery: ModelGallery | null = null;
+  const libraryFor = (config: ModelsConfig) => {
+    models ??= createModelLibrary(scene, config);
+    return models;
+  };
 
   let frameCount = 0;
   engine.runRenderLoop(() => {
@@ -52,10 +67,39 @@ export async function createGameRenderer(
     get map() {
       return map;
     },
-    async showMap(world, config, terrainTiles, events) {
+    get models() {
+      return models;
+    },
+    get gallery() {
+      return gallery;
+    },
+    showGallery(modelsConfig, config) {
+      gallery?.dispose();
+      const { lightAzimuthDegrees, lightElevationDegrees } = config.terrain;
+      const azimuth = (lightAzimuthDegrees * Math.PI) / 180;
+      const elevation = (lightElevationDegrees * Math.PI) / 180;
+      gallery = createModelGallery(scene, libraryFor(modelsConfig), {
+        towardLight: [
+          Math.sin(azimuth) * Math.cos(elevation),
+          Math.sin(elevation),
+          Math.cos(azimuth) * Math.cos(elevation),
+        ],
+        ambient: config.scenery.ambientLight,
+        sun: config.scenery.sunLight,
+      });
+      return gallery;
+    },
+    async showMap(world, config, terrainTiles, modelsConfig, events) {
       map?.dispose();
       map = null;
-      map = await createMapView(scene, world, config, terrainTiles, events);
+      map = await createMapView(
+        scene,
+        world,
+        config,
+        terrainTiles,
+        libraryFor(modelsConfig),
+        events,
+      );
       return map;
     },
     getFrameCount: () => frameCount,
@@ -64,6 +108,8 @@ export async function createGameRenderer(
       resizeObserver.disconnect();
       engine.stopRenderLoop();
       map?.dispose();
+      gallery?.dispose();
+      models?.dispose();
       scene.dispose();
       engine.dispose();
     },

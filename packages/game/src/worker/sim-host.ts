@@ -164,6 +164,7 @@ export function createSimHost(
           world: state.world,
           mapView: data.mapView,
           terrainTiles: data.terrainTiles,
+          models: data.models,
           countryStart: state.countryStart,
           time,
           daysPerSecond,

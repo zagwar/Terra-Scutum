@@ -1,4 +1,5 @@
 import type {
+  ModelsConfig,
   TerrainTilesFile,
   CommandResult,
   CountryScreenConfig,
@@ -72,6 +73,8 @@ export type FromSimWorker =
       readonly mapView: MapViewConfig;
       /** Which terrain tiles exist (validated `data/terrain_tiles.json`). */
       readonly terrainTiles: TerrainTilesFile;
+      /** The 3D model library and procedural materials (validated `data/models.json`). */
+      readonly models: ModelsConfig;
       /** Each country's real-world starting data (population, GDP, government type), by country index. */
       readonly countryStart: CountryStartTable;
       /** The game speed at the start: paused. */

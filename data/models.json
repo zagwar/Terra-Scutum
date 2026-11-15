@@ -1,0 +1,92 @@
+{
+  "materials": {
+    "bark": {
+      "color": "#5b4532",
+      "roughness": 0.95,
+      "metallic": 0,
+      "pattern": { "kind": "bark", "size": 1.5, "strength": 0.35 }
+    },
+    "coniferNeedles": {
+      "color": "#3d6339",
+      "roughness": 0.9,
+      "metallic": 0,
+      "pattern": { "kind": "foliage", "size": 3, "strength": 0.35 }
+    },
+    "broadleafLeaves": {
+      "color": "#5a7d3a",
+      "roughness": 0.85,
+      "metallic": 0,
+      "pattern": { "kind": "foliage", "size": 4, "strength": 0.3 }
+    },
+    "concreteWall": {
+      "color": "#a29b90",
+      "roughness": 0.8,
+      "metallic": 0,
+      "pattern": { "kind": "windows", "size": 3.2, "strength": 0.75, "accent": "#36424f" }
+    },
+    "roofing": {
+      "color": "#6d5a50",
+      "roughness": 0.7,
+      "metallic": 0,
+      "pattern": { "kind": "tiles", "size": 1.2, "strength": 0.3, "accent": "#4e3f38" }
+    },
+    "rooftopMetal": {
+      "color": "#8c9296",
+      "roughness": 0.45,
+      "metallic": 0.6,
+      "pattern": { "kind": "noise", "size": 2, "strength": 0.2 }
+    }
+  },
+  "models": {
+    "treeConifer": {
+      "source": "generator",
+      "generator": "tree",
+      "variants": 4,
+      "spec": {
+        "kind": "conifer",
+        "trunkMaterial": "bark",
+        "crownMaterial": "coniferNeedles",
+        "height": [9, 14],
+        "trunkShare": [0.12, 0.22],
+        "trunkRadius": [0.025, 0.04],
+        "crownRadius": [0.2, 0.28],
+        "crownParts": [3, 4],
+        "leanDegrees": 4
+      }
+    },
+    "treeBroadleaf": {
+      "source": "generator",
+      "generator": "tree",
+      "variants": 4,
+      "spec": {
+        "kind": "broadleaf",
+        "trunkMaterial": "bark",
+        "crownMaterial": "broadleafLeaves",
+        "height": [8, 12],
+        "trunkShare": [0.3, 0.42],
+        "trunkRadius": [0.035, 0.05],
+        "crownRadius": [0.32, 0.42],
+        "crownParts": [2, 4],
+        "leanDegrees": 5
+      }
+    },
+    "boxBuilding": {
+      "source": "generator",
+      "generator": "boxBuilding",
+      "variants": 6,
+      "spec": {
+        "wallMaterial": "concreteWall",
+        "roofMaterial": "roofing",
+        "detailMaterial": "rooftopMetal",
+        "floors": [2, 14],
+        "floorHeight": 3.2,
+        "width": [12, 24],
+        "depth": [10, 18],
+        "gabledShare": 0.35,
+        "gabledMaxFloors": 4,
+        "setbackShare": 0.6,
+        "rooftopUnits": [1, 3]
+      }
+    }
+  }
+}

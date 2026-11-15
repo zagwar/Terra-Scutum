@@ -114,6 +114,14 @@ export interface TerrainLand {
   setLook(look: LandLook): void;
   /** The height of the land as drawn right now at a map position, in metres (0 at sea). */
   heightAt(x: number, z: number): number;
+  /**
+   * How much of the land at a map position is of the land cover classes
+   * marked in `classes` (one entry per position in `LAND_COVER_CLASSES`),
+   * from the finest tile drawn there: 0…1 (0 at sea or where no tile is drawn).
+   */
+  coverShareAt(x: number, z: number, classes: ArrayLike<boolean>): number;
+  /** Goes up by one each time the set of tiles drawn changes (heights and land cover may differ). */
+  drawnVersion(): number;
   /** The size of the mesh cells of the finest level drawn right now, in map units. */
   cellSize(): number;
   /** Border kinds follow the owners: call when they changed. */
@@ -236,6 +244,7 @@ export function createTerrainLand(options: TerrainLandOptions): TerrainLand {
   /** What is drawn right now: tile and copy of the world. */
   let drawn: { tile: Tile; shift: number }[] = [];
   let drawnKey = '';
+  let drawnCount = 0;
   const drawnTiles = new Map<string, Tile>();
   let drawnMaxLevel = 0;
   let disposed = false;
@@ -502,6 +511,7 @@ export function createTerrainLand(options: TerrainLandOptions): TerrainLand {
     for (const { tile } of next) tile.lastUsed = frame;
     if (key === drawnKey) return false;
     drawnKey = key;
+    drawnCount += 1;
     const shiftsOf = new Map<Tile, number[]>();
     for (const { tile, shift } of next) {
       const list = shiftsOf.get(tile);
@@ -532,6 +542,42 @@ export function createTerrainLand(options: TerrainLandOptions): TerrainLand {
       .sort((a, b) => a.lastUsed - b.lastUsed)
       .slice(0, kept.length - config.cacheTiles)
       .forEach(unbuild);
+  };
+
+  const wrapX = (x: number) =>
+    ((((x + TERRAIN_WORLD_WIDTH / 2) % TERRAIN_WORLD_WIDTH) + TERRAIN_WORLD_WIDTH) %
+      TERRAIN_WORLD_WIDTH) -
+    TERRAIN_WORLD_WIDTH / 2;
+  // The last tile found: lookups come in runs over the same tile (the scenery asks thousands at a time).
+  let lastTile: Tile | null = null;
+  let lastTileDrawn = -1;
+  /** The finest tile drawn at a map position (x in the main copy of the world), or null. */
+  const drawnTileAt = (wrapped: number, z: number): Tile | null => {
+    // Tiles drawn never overlap, so the last tile found is still the one wherever it covers.
+    const last = lastTileDrawn === drawnCount ? lastTile?.surface : null;
+    if (
+      last &&
+      wrapped >= last.minX &&
+      wrapped < last.minX + last.size &&
+      z >= last.minZ &&
+      z < last.minZ + last.size
+    )
+      return lastTile;
+    for (let level = drawnMaxLevel; level >= 0; level--) {
+      const size = terrainTileSize(layout, level);
+      const column = Math.min(
+        terrainColumns(layout, level) - 1,
+        Math.floor((wrapped + TERRAIN_WORLD_WIDTH / 2) / size),
+      );
+      const row = Math.floor((z - layout.minZ) / size);
+      const tile = drawnTiles.get(tileKey(level, column, row));
+      if (tile?.surface) {
+        lastTile = tile;
+        lastTileDrawn = drawnCount;
+        return tile;
+      }
+    }
+    return null;
   };
 
   return {
@@ -600,22 +646,27 @@ export function createTerrainLand(options: TerrainLandOptions): TerrainLand {
       for (const tile of tiles.values()) if (tile.material) applyLandLook(tile.material, look);
     },
     heightAt(x, z) {
-      const wrapped =
-        ((((x + TERRAIN_WORLD_WIDTH / 2) % TERRAIN_WORLD_WIDTH) + TERRAIN_WORLD_WIDTH) %
-          TERRAIN_WORLD_WIDTH) -
-        TERRAIN_WORLD_WIDTH / 2;
-      for (let level = drawnMaxLevel; level >= 0; level--) {
-        const size = terrainTileSize(layout, level);
-        const column = Math.min(
-          terrainColumns(layout, level) - 1,
-          Math.floor((wrapped + TERRAIN_WORLD_WIDTH / 2) / size),
-        );
-        const row = Math.floor((z - layout.minZ) / size);
-        const tile = drawnTiles.get(tileKey(level, column, row));
-        if (tile?.surface) return surfaceHeight(tile.surface, wrapped, z);
-      }
-      return 0;
+      const wrapped = wrapX(x);
+      const tile = drawnTileAt(wrapped, z);
+      return tile?.surface ? surfaceHeight(tile.surface, wrapped, z) : 0;
     },
+    coverShareAt(x, z, classes) {
+      const wrapped = wrapX(x);
+      const tile = drawnTileAt(wrapped, z);
+      if (!tile?.surface || !tile.data) return 0;
+      const { tileCells } = layout;
+      const cell = tile.surface.size / tileCells;
+      const i = Math.min(
+        tileCells - 1,
+        Math.max(0, Math.floor((wrapped - tile.surface.minX) / cell)),
+      );
+      const j = Math.min(tileCells - 1, Math.max(0, Math.floor((z - tile.surface.minZ) / cell)));
+      const index = (j + 2) * (tileCells + 4) + (i + 2);
+      const cover = tile.data.cover[index];
+      const second = tile.data.coverMix[index] / 15;
+      return (classes[cover & 15] ? 1 - second : 0) + (classes[cover >> 4] ? second : 0);
+    },
+    drawnVersion: () => drawnCount,
     cellSize: () =>
       (terrainTileSize(layout, drawnMaxLevel) / layout.tileCells) * meshStep(drawnMaxLevel),
     ownersChanged() {

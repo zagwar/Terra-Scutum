@@ -94,5 +94,46 @@
       "majorWeight": 0.4,
       "greatWeight": 1
     }
+  },
+  "scenery": {
+    "simplePx": 11,
+    "detailedPx": 14,
+    "ambientLight": 0.85,
+    "sunLight": 0.6,
+    "forests": {
+      "enabled": true,
+      "landCover": ["forest", "mangrove"],
+      "models": [
+        { "model": "treeBroadleaf", "latitudes": [0, 52] },
+        { "model": "treeConifer", "latitudes": [40, 90] }
+      ],
+      "fromZoom": 4,
+      "fullZoom": 6,
+      "sizePx": [
+        { "zoom": 4, "px": 9 },
+        { "zoom": 20, "px": 12 },
+        { "zoom": 80, "px": 15 }
+      ],
+      "referenceHeight": 11,
+      "spacingPx": 10,
+      "sizeVariation": 0.2,
+      "tintVariation": 0.12,
+      "placeMsPerFrame": 6,
+      "maxInstances": 40000
+    },
+    "capitals": {
+      "enabled": true,
+      "model": "boxBuilding",
+      "buildings": 7,
+      "clusterPx": 9,
+      "fromZoom": 2.5,
+      "fullZoom": 3.5,
+      "sizePx": [
+        { "zoom": 2.5, "px": 9 },
+        { "zoom": 20, "px": 14 },
+        { "zoom": 80, "px": 18 }
+      ],
+      "referenceHeight": 20
+    }
   }
 }

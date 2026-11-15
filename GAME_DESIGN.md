@@ -14,7 +14,7 @@
 > - **Section numbers are the same in every file**, so "section 8.3" always means the same thing. Use the table below to find which file holds a section.
 
 **Title:** *Terra Scutum: The Last Line of Earth* (short form: *Terra Scutum*)
-**Last updated:** 2026-11-14
+**Last updated:** 2026-11-15
 **Platform:** runs in the **web browser** (desktop app wrapper for Steam later) · **Language:** TypeScript · **3D:** Babylon.js · **UI:** React · **Simulation:** a separate pure TypeScript package (see `docs/13_technical.md`)
 **Development:** Claude Code cloud sessions (browser) on the GitHub repo `terra-scutum`; previews on Cloudflare Pages
 **Target platform:** Windows / Mac / Linux **[DEFAULT]**

@@ -8,6 +8,7 @@ import {
   lawCategoryNameKey,
   opinionStanceNameKey,
   messageTypeNameKey,
+  modelNameKey,
   countryNameKey,
   governmentTypeNameKey,
   provinceNameKey,
@@ -40,6 +41,7 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const s of screen.publicOpinion.stances) need(opinionStanceNameKey(s), `stance ${s}`);
   for (const a of screen.diplomaticActions)
     need(diplomaticActionNameKey(a.id), `diplomatic action ${a.id}`);
+  for (const id of Object.keys(data.models.models)) need(modelNameKey(id), `model ${id}`);
   return problems;
 }
 
