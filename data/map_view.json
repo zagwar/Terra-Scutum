@@ -107,10 +107,10 @@
         { "model": "treeBroadleaf", "latitudes": [0, 52] },
         { "model": "treeConifer", "latitudes": [40, 90] }
       ],
-      "fromZoom": 7,
-      "fullZoom": 10,
+      "fromZoom": 14,
+      "fullZoom": 15.5,
       "sizePx": [
-        { "zoom": 7, "px": 9 },
+        { "zoom": 14, "px": 10 },
         { "zoom": 20, "px": 12 },
         { "zoom": 80, "px": 15 }
       ],
@@ -125,13 +125,12 @@
       "enabled": true,
       "model": "boxBuilding",
       "buildings": 7,
-      "clusterPx": 9,
-      "fromZoom": 2.5,
-      "fullZoom": 3.5,
+      "clusterPx": 6,
+      "fromZoom": 14,
+      "fullZoom": 15.5,
       "sizePx": [
-        { "zoom": 2.5, "px": 9 },
-        { "zoom": 20, "px": 14 },
-        { "zoom": 80, "px": 18 }
+        { "zoom": 14, "px": 6 },
+        { "zoom": 80, "px": 10 }
       ],
       "referenceHeight": 20
     }

@@ -51,12 +51,15 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   const far = await scenery(page);
   expect(far.trees).toBe(0);
   expect(far.capitalBuildings).toBe(0);
-  // A continent in view (zoom 5): still no trees (designer decision: they grow in from zoom 7).
-  await lookAt(page, 15, 60, 5);
-  expect((await scenery(page)).trees).toBe(0);
+  // A continent, then a few countries in view: still no trees or capital markers
+  // (designer decision: both appear from zoom 14, when the forests are dense).
+  for (const zoom of [5, 11]) {
+    await lookAt(page, 15, 60, zoom);
+    expect(await scenery(page)).toMatchObject({ trees: 0, capitalBuildings: 0 });
+  }
 
   // The Amazon: a forest of trees, standing on the land as drawn.
-  await lookAt(page, -62, -4, 10);
+  await lookAt(page, -62, -4, 16);
   const amazon = await scenery(page);
   expect(amazon.trees).toBeGreaterThan(2000);
   expect(amazon.treeDetail).not.toBeNull();
@@ -87,8 +90,8 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   await lookAt(page, 10, 24, 25);
   expect((await scenery(page)).trees).toBeLessThan(20);
 
-  // Paris: the placeholder capital buildings around the capital, drawn simply from this far.
-  await lookAt(page, 2.35, 48.85, 5);
+  // Paris: the placeholder capital buildings around the capital.
+  await lookAt(page, 2.35, 48.85, 16);
   const paris = await scenery(page);
   expect(paris.capitalBuildings).toBeGreaterThan(20);
   const buildings = (await page.evaluate(() => window.__terraScutum!.map.sceneryProbe(100_000)!))
