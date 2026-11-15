@@ -162,7 +162,19 @@ A desktop wrapper (Electron/Tauri) does **not** fix performance, since it uses t
 | The page's JavaScript memory (map, terrain, models, load) | about 190 MB | the tab: 2,048 MB | ✓ (graphics memory not included) |
 | Loading `?debug=stress` (served from the cloud machine itself) | about 2.5 s to a running game | 20 s on a normal connection | ✓ (the download is about 3 MB, compressed) |
 
-For scale: a mid-range graphics card draws several million simple triangles at 60 FPS, and browsers handle a thousand or more draw calls per frame (WebGL 2) and more with WebGPU; the stress scene uses at most about 150 draw calls and 1.3 million triangles. The unknowns that only real machines answer: the land's per-pixel shading, the see-through clouds and particles (overdraw), and phones. **The designer's results** (the benchmark's **Copy the results** on his PC and phone) and his decision go here: _waiting for the designer_.
+For scale: a mid-range graphics card draws several million simple triangles at 60 FPS, and browsers handle a thousand or more draw calls per frame (WebGL 2) and more with WebGPU; the stress scene uses at most about 150 draw calls and 1.3 million triangles. The unknowns that only real machines answer: the land's per-pixel shading, the see-through clouds and particles (overdraw), and phones. **The designer's results (2026-11-15), his phone** (Android 16, Firefox 159, WebGL 2, 427 × 799 CSS pixels at 2.86× = about 1,220 × 2,280 real pixels; two runs, within 1–2 FPS of each other):
+
+| View | FPS (goal on a mid-range PC) | Frame, 1 % slowest | CPU per frame | Draw calls, triangles |
+|---|---|---|---|---|
+| Whole world (zoom 1) | 31 (60) | 32 ms, 47 ms | 21 ms | 66, 0.99 M |
+| Europe (zoom 6) | 42 (30) | 24 ms, 53 ms | 9–11 ms | 32, 0.43 M |
+| Amazon forest (zoom 24) | 42–43 (30) | 23–24 ms, 38–49 ms | 12–15 ms | 98, 0.35 M |
+| Battle (zoom 24) | 23 (30) | 43 ms, 50 ms | 33–34 ms | 113, 0.46 M |
+| Battle close up (zoom 70) | 26–27 (30) | 37–38 ms, 48–49 ms | 25 ms | 138, 0.77 M |
+
+The sim worker on the phone, while it draws: 10.2 days a second, 14 ms a day on average (worst 35 ms). Reading: the phone's graphics chip copes with everything drawn at every zoom; where it falls short (the battle, the whole world) the **main thread** is the limit (CPU 21–34 ms of a 32–43 ms frame: animating 2,400 bugs, the CPU particle systems, writing every model's matrix while all of them are in view). The fixes are the plan's first steps: particles on the graphics card (GPU particles), bug animation in the vertex shader instead of rewriting matrices, far-away cities as clusters (section 12.5). Not measured yet: a PC (the designer had none at hand); **to do: run the benchmark on a PC** when he has one, at the latest at engine checkpoint 2 (F140).
+
+**Decision (designer, 2026-11-15): continue in the browser.** Recorded in the decision log; M2 starts.
 
 **Keep the project portable** (so a switch, now or later, stays cheap):
 - The sim stays pure TypeScript with no browser shortcuts, and all content stays in engine-neutral **JSON** data.

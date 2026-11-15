@@ -1,6 +1,6 @@
 # Next prompt
 
-**Only for after engine checkpoint 1:** paste this into a **new** Claude Code session on `terra-scutum` / `main` once you have (1) played the F139 stress test on the preview link, (2) told Claude your benchmark results and your decision (**continue in the browser**), and (3) merged the F139 pull request. If you decide to switch to Godot instead, don't use this prompt: ask for a Godot plan first.
+Paste this into a **new** Claude Code session on `terra-scutum` / `main` after merging the F139 pull request (engine checkpoint 1 is decided: continue in the browser).
 
 F06 is a **⚑ Fable** task (economy core): choose **Claude Fable 5.2** as the model for that new session.
 
@@ -9,7 +9,7 @@ Start M2 (a living country). First, propose the M2 build order (the order of M2'
 
 First: check that the latest CI run on main (the F139 merge) is green. If it is red, fix that first and tell me what broke.
 
-Where we are: M1 is finished (F132, F64, F01, F02, F70, F03, F04, F71, F122, F138, F05, F125, F133, F139 merged). At engine checkpoint 1 I decided to continue in the browser (my benchmark results are in docs/13_technical.md, "Engine checkpoint 1"). F139 added the stress tests: `npm run runner -- --stress` runs a placeholder late-game load in the sim (data/stress_test.json → sim) and `?debug=stress` shows a late-game map with an on-screen counter and a benchmark; CI runs the browser tests in three parallel parts. F06 is the first real sim system: keep it within the performance budget (typed arrays, no allocation in the daily tick, heavy work weekly), and let the sim stress test use the real pops in place of the placeholder pops where that is simple (F140 does the rest).
+Where we are: M1 is finished (F132, F64, F01, F02, F70, F03, F04, F71, F122, F138, F05, F125, F133, F139 merged). At engine checkpoint 1 I decided to continue in the browser (my phone's benchmark results are in docs/13_technical.md, "Engine checkpoint 1"; I haven't run it on a PC yet, see section 17.3). F139 added the stress tests: `npm run runner -- --stress` runs a placeholder late-game load in the sim (data/stress_test.json → sim) and `?debug=stress` shows a late-game map with an on-screen counter and a benchmark; CI runs the browser tests in three parallel parts. F06 is the first real sim system: keep it within the performance budget (typed arrays, no allocation in the daily tick, heavy work weekly), and let the sim stress test use the real pops in place of the placeholder pops where that is simple (F140 does the rest).
 
 I'm a beginner, so walk me through anything I need to do myself step by step.
 When the feature is done, push it, open the pull request and watch it (fix failing checks), tell me how to test it on the preview link, then give me the next prompt.
