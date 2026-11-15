@@ -5,10 +5,18 @@ import { Color4 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
-import type { MapViewConfig, WorldMap } from '@terra-scutum/sim';
+import {
+  METRES_PER_MAP_UNIT,
+  type MapViewConfig,
+  type TerrainTilesFile,
+  type WorldMap,
+  terrainCellSize,
+  terrainLayout,
+} from '@terra-scutum/sim';
 import { presimplify, simplify } from 'topojson-simplify';
 import type { Objects, Topology } from 'topojson-specification';
 import provincesUrl from '../../../../../data/geometry/provinces.topo.json?url';
+import riversUrl from '../../../../../data/geometry/rivers.json?url';
 import seaZonesUrl from '../../../../../data/geometry/sea_zones.topo.json?url';
 import { type CameraFit, fitMapCamera } from './camera-fit';
 import {
@@ -22,27 +30,25 @@ import {
 import { type LineMaterial, type LineStyles, createLineMaterial } from './line-material';
 import {
   type MapMode,
-  applyHighlight,
   applySeaHighlight,
   parseHexColor,
   provinceBaseColors,
+  provinceHighlights,
   seaZoneColors,
 } from './map-colors';
 import {
+  LINE_COAST,
   LINE_OTHER_COUNTRY,
   LINE_OTHER_REGION,
-  type LineGeometry,
+  LINE_PLAIN,
   type MapPolygon,
+  type StyledLine,
   buildInnerBorders,
   buildLineGeometry,
   buildProvinceBorders,
-  chunkLines,
-  chunkPolygons,
-  createChunkGrid,
   decodePolygons,
   outlineOf,
   triangulate,
-  updateBorderKinds,
   wholeLine,
 } from './map-geometry';
 import {
@@ -51,10 +57,11 @@ import {
   createFillMaterial,
   createFillMesh,
   createLineMesh,
-  uploadLineKinds,
 } from './map-meshes';
 import { createMapProjection } from './map-projection';
 import { type MapTarget, createShapeLookup, findTarget } from './shape-lookup';
+import { type TerrainShapes, createTerrainLand } from '../terrain/terrain-land';
+import { drapeLines } from '../terrain/terrain-mesh';
 
 export type { MapTarget } from './shape-lookup';
 
@@ -70,7 +77,11 @@ export type { MapTarget } from './shape-lookup';
  *   to zoom and move the map together. The camera leans back more the closer it zooms in. The math is in
  *   `camera-motion.ts`.
  *
- * - Everything lies flat on the ground (y = 0); terrain comes with F125.
+ * - The land is real terrain (F125, `../terrain/`): the provinces are cut into
+ *   terrain tiles that load as the view needs them, finer ones the closer the
+ *   view. The land rises more (exaggerated) than in reality; the map mode's
+ *   colors fade as the view zooms in, so the terrain shows through. The sea
+ *   stays flat at y = 0.
  * - The map wraps east–west: the camera's position is kept inside the main
  *   copy of the world, and the map is drawn on both sides of it, so
  *   scrolling never reaches an edge.
@@ -80,13 +91,13 @@ export type { MapTarget } from './shape-lookup';
  *   political colors and the country borders follow the current owners.
  *   Border lines know the provinces on their two sides, so a change of
  *   owner only rewrites one small number per vertex of the lines it affects.
- * - Picking uses the shape lookup (exact, no GPU readback). Sea zones (F70)
- *   are picked the same way; land wins where the two overlap, because the
- *   sea zone shapes continue under the land.
- * - The land has two levels of detail. Far away: simplified shapes, drawn as
- *   three copies. Close up: the full shapes, cut into chunks; only the chunks
- *   on screen are drawn, each placed on the copy of the world nearest to the
- *   camera. The close-up level is built the first time it's needed.
+ * - Picking: the mouse's ray is followed to where it meets the land as it is
+ *   drawn (`groundAt`), then the shape lookup says which province is there
+ *   (exact, no GPU readback). Sea zones (F70) are picked the same way; land
+ *   wins where the two overlap, because the sea zone shapes continue under
+ *   the land.
+ * - The coarse terrain levels are drawn from simplified shapes, the finer
+ *   ones from the full shapes.
  */
 
 export interface MapViewEvents {
@@ -100,21 +111,27 @@ export interface MapViewEvents {
 export interface MapStats {
   readonly provinces: number;
   readonly seaZones: number;
-  /** Which level of detail the land is drawn with right now. */
+  /** Which shapes the land is drawn from right now: simplified (far) or full (near). */
   readonly detail: 'far' | 'near';
-  /** Triangles in one copy of the world at the far level (sea, land and lines). */
-  readonly farTriangles: number;
-  /** Triangles in the whole close-up level; null until it has been built. */
-  readonly nearTriangles: number | null;
+  /** The terrain level the zoom asks for (0 = coarsest). */
+  readonly terrainLevel: number;
+  /** Terrain tiles on screen, tiles the view still waits for, and tiles kept ready. */
+  readonly terrainTiles: number;
+  readonly terrainPending: number;
+  readonly terrainReady: number;
+  /** The longest a single terrain tile took to build, in milliseconds. */
+  readonly slowestTileBuildMs: number;
+  /** How many times higher than in reality the land is drawn right now. */
+  readonly exaggeration: number;
+  /** How much of the map mode's color covers the terrain right now: 0…1. */
+  readonly colorStrength: number;
   /** What the last frame actually drew. */
   readonly drawnTriangles: number;
   readonly drawnMeshes: number;
   /** Time to download and read the shape files, in milliseconds. */
   readonly loadMs: number;
-  /** Time to build the map (far level), in milliseconds. */
+  /** Time to build the map (the sea and the coarsest terrain level), in milliseconds. */
   readonly buildMs: number;
-  /** Time to build the close-up level, in milliseconds; null until it has been built. */
-  readonly nearBuildMs: number | null;
 }
 
 export interface MapView {
@@ -128,6 +145,8 @@ export interface MapView {
   setHighlightedCountry(country: number | null): void;
   /** The province index at a longitude/latitude, or -1 for the sea. */
   provinceAt(longitude: number, latitude: number): number;
+  /** The height of the land as drawn right now at a longitude/latitude, in metres (0 at sea). */
+  heightAt(longitude: number, latitude: number): number;
   /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
   seaZoneAt(longitude: number, latitude: number): number;
   /** Where a longitude/latitude is on screen, in CSS pixels from the canvas's top-left corner. */
@@ -188,6 +207,12 @@ const TAP_TOLERANCE_PX = 10;
 /** A TopoJSON file's content (the shapes carry only an id, no other properties). */
 type MapTopology = Topology<Objects<Record<string, never>>>;
 
+/** `data/geometry/rivers.json`: each river's stroke weight and its points (whole units, stored as steps). */
+interface RiversFile {
+  readonly unitsPerDegree: number;
+  readonly rivers: readonly { readonly weight: number; readonly points: readonly number[] }[];
+}
+
 async function fetchTopology(url: string): Promise<MapTopology> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
@@ -214,6 +239,7 @@ export async function createMapView(
   scene: Scene,
   world: WorldMap,
   config: MapViewConfig,
+  terrainTiles: TerrainTilesFile,
   events: MapViewEvents,
 ): Promise<MapView> {
   const engine = scene.getEngine();
@@ -221,9 +247,13 @@ export async function createMapView(
   if (!canvas) throw new Error('the map needs a canvas');
 
   const loadStart = performance.now();
-  const [provinceTopology, seaTopology] = await Promise.all([
+  const [provinceTopology, seaTopology, riversFile] = await Promise.all([
     fetchTopology(provincesUrl),
     fetchTopology(seaZonesUrl),
+    fetch(riversUrl).then((response) => {
+      if (!response.ok) throw new Error(`${riversUrl}: HTTP ${response.status}`);
+      return response.json() as Promise<RiversFile>;
+    }),
   ]);
   const buildStart = performance.now();
 
@@ -245,13 +275,10 @@ export async function createMapView(
       world.provinceRegion,
       projection,
     );
-  // The full shapes: used for picking, for outlines and for the close-up level.
+  // The full shapes: used for picking, for outlines and for the finer terrain levels.
   const provincePolygons = decodePolygons(provinceTopology, 'provinces', provinceIndex, projection);
   const lookup = createShapeLookup(provincePolygons, projection);
-  let widestPolygon = 0;
-  for (const polygon of provincePolygons)
-    widestPolygon = Math.max(widestPolygon, polygon.maxX - polygon.minX);
-  // The far level's shapes. Simplifying the topology keeps neighbors fitting together without gaps.
+  // The coarse terrain levels' shapes. Simplifying the topology keeps neighbors fitting together without gaps.
   const tolerance = config.detail.farSimplifyDegrees;
   const farTopology =
     tolerance > 0
@@ -265,7 +292,6 @@ export async function createMapView(
 
   const allMeshes: Mesh[] = [];
   const lineMaterials: LineMaterial[] = [];
-  const trianglesOf = (mesh: Mesh) => mesh.getTotalIndices() / 3;
   const lineMaterial = (name: string, styles: LineStyles) => {
     const material = createLineMaterial(name, scene, styles);
     lineMaterials.push(material);
@@ -306,105 +332,96 @@ export async function createMapView(
   );
   allMeshes.push(...addWrapCopies(seaFill, worldWidth), ...addWrapCopies(seaLines, worldWidth));
 
-  // The land. Both levels of detail share the color table and the materials.
+  // The land (F125): the provinces lie on terrain tiles (`../terrain/terrain-land.ts`).
   // Until the sim's first owners arrive: the starting owners.
   let owners: Uint16Array = world.provinceCountry.slice();
-  /** Every land border mesh with its geometry, to change border kinds when provinces change owner. */
-  const borderMeshes: { readonly mesh: Mesh; readonly geometry: LineGeometry }[] = [];
-  const provinceTable = createColorTable('province-colors', scene, world.provinceIds.length);
-  const provinceMaterial = createFillMaterial('provinces-material', scene, provinceTable);
+  const terrainConfig = config.terrain;
+  const layout = terrainLayout(terrainTiles);
+  // Row 0: each province's map-mode color; row 1: its highlight.
+  const provinceTable = createColorTable('province-colors', scene, world.provinceIds.length, 2);
   const landLines = lineMaterial('borders-material', landLineStyles(mode, config.lines));
+  const riverLines = lineMaterial('rivers-material', {
+    plain: config.lines.river,
+    emphasis: config.lines.riverMajor,
+    emphasisFlag: LINE_OTHER_COUNTRY,
+    coast: config.lines.riverGreat,
+  });
   const selectionMaterial = lineMaterial('selection-material', { plain: config.lines.selection });
   let selectionMeshes: Mesh[] = [];
   let seaSelectionMeshes: Mesh[] = [];
 
-  /** Builds the land (fills and border lines) from one set of shapes, one pair of meshes per chunk. */
-  const buildLand = (
-    name: string,
-    topology: MapTopology,
-    polygons: readonly MapPolygon[],
-    chunkDegrees: number,
-  ): Mesh[] => {
-    const grid = createChunkGrid(projection, chunkDegrees);
-    const meshes: Mesh[] = [];
-    for (const [chunk, list] of chunkPolygons(polygons, grid))
-      meshes.push(
-        createFillMesh(
-          `provinces-${name}-${chunk}`,
-          scene,
-          triangulate(list),
-          provinceTable,
-          provinceMaterial,
-          LAND_GROUP,
-        ),
-      );
-    for (const [chunk, spans] of chunkLines(bordersOf(topology), grid)) {
-      const geometry = buildLineGeometry(spans);
-      updateBorderKinds(geometry, owners, world.provinceRegion);
-      const mesh = createLineMesh(
-        `borders-${name}-${chunk}`,
-        scene,
-        geometry,
-        landLines.material,
-        LAND_GROUP,
-        0,
-      );
-      borderMeshes.push({ mesh, geometry });
-      meshes.push(mesh);
+  // The coarse levels are drawn from the simplified shapes, the finer ones from the full shapes.
+  const farShapes: TerrainShapes = {
+    polygons: decodePolygons(farTopology, 'provinces', provinceIndex, projection),
+    borders: bordersOf(farTopology),
+  };
+  let fullShapes: TerrainShapes | null = null;
+  const shapesFor = (level: number): TerrainShapes =>
+    level <= terrainConfig.simplifiedShapesMaxLevel
+      ? farShapes
+      : (fullShapes ??= { polygons: provincePolygons, borders: bordersOf(provinceTopology) });
+
+  // Rivers: thin, major and great ones use the line shader's three styles.
+  const rivers: { weight: number; line: StyledLine }[] = riversFile.rivers.map((river) => {
+    const points = new Float32Array(river.points.length);
+    let longitude = 0;
+    let latitude = 0;
+    for (let i = 0; i < river.points.length; i += 2) {
+      longitude += river.points[i] / riversFile.unitsPerDegree;
+      latitude += river.points[i + 1] / riversFile.unitsPerDegree;
+      points[i] = projection.x(longitude);
+      points[i + 1] = projection.z(latitude);
     }
-    allMeshes.push(...meshes);
-    return meshes;
+    const { majorWeight, greatWeight } = terrainConfig.rivers;
+    const kind =
+      river.weight >= greatWeight
+        ? LINE_COAST
+        : river.weight >= majorWeight
+          ? LINE_OTHER_COUNTRY
+          : LINE_PLAIN;
+    return { weight: river.weight, line: { points, kind } };
+  });
+  const riversOfLevel = new Map<number, StyledLine[]>();
+  const riversFor = (level: number): StyledLine[] => {
+    let lines = riversOfLevel.get(level);
+    if (!lines) {
+      const thinnest = terrainConfig.rivers.minWeightByLevel[level] ?? null;
+      lines =
+        thinnest === null
+          ? []
+          : rivers.filter((river) => river.weight >= thinnest).map((river) => river.line);
+      riversOfLevel.set(level, lines);
+    }
+    return lines;
   };
-  const trianglesIn = (meshes: readonly Mesh[]) =>
-    meshes.reduce((sum, mesh) => sum + trianglesOf(mesh), 0);
 
-  // Far level: big chunks, each drawn on all three copies of the world (the ones off screen are skipped).
-  const farChunks = buildLand(
-    'far',
-    farTopology,
-    decodePolygons(farTopology, 'provinces', provinceIndex, projection),
-    config.detail.farChunkDegrees,
-  );
-  const farMeshes = farChunks.flatMap((mesh) => addWrapCopies(mesh, worldWidth));
-  allMeshes.push(...farMeshes.filter((mesh) => !farChunks.includes(mesh)));
-  const farTriangles = trianglesOf(seaFill) + trianglesOf(seaLines) + trianglesIn(farChunks);
-
-  /** The close-up level: small chunks of the full shapes, each drawn once. */
-  interface NearChunk {
-    readonly mesh: Mesh;
-    /** Where the chunk's middle is in the main copy of the world. */
-    readonly centerX: number;
-  }
-  let nearChunks: NearChunk[] | null = null;
-  let nearTriangles: number | null = null;
-  let nearBuildMs: number | null = null;
-  const buildNearLevel = (): NearChunk[] => {
-    const start = performance.now();
-    const meshes = buildLand(
-      'near',
-      provinceTopology,
-      provincePolygons,
-      config.detail.chunkDegrees,
-    );
-    nearTriangles = trianglesIn(meshes);
-    nearBuildMs = Math.round(performance.now() - start);
-    return meshes.map((mesh) => ({
-      mesh,
-      centerX: mesh.getBoundingInfo().boundingBox.center.x,
-    }));
-  };
+  const terrain = createTerrainLand({
+    scene,
+    tiles: terrainTiles,
+    config: terrainConfig,
+    provinceTable,
+    borderMaterial: landLines.material,
+    riverMaterial: riverLines.material,
+    renderingGroup: LAND_GROUP,
+    shapesFor,
+    riversFor,
+    owners: () => owners,
+    regionOf: world.provinceRegion,
+  });
 
   // ── Colors and highlights ─────────────────────────────────────────────────
   let baseColors = provinceBaseColors(mode, world, config.colors, owners);
-  const shownColors = new Uint8Array(baseColors.length);
+  const highlights = new Uint8Array(baseColors.length);
   let selected: number | null = null;
   let highlightedCountry: number | null = null;
   let hovered: MapTarget | null = null;
   const hoveredOf = (kind: MapTarget['kind']) => (hovered?.kind === kind ? hovered.index : null);
+  /** The map mode's colors (row 0 of the land's color table). */
+  const refreshBaseColors = () => provinceTable.update(baseColors, 0);
+  /** The highlights (row 1): the picked country, the selection and its neighbors, the hovered province. */
   const refreshColors = () => {
-    applyHighlight(
-      baseColors,
-      shownColors,
+    provinceHighlights(
+      highlights,
       {
         selected,
         hovered: hoveredOf('province'),
@@ -413,8 +430,9 @@ export async function createMapView(
       world,
       config.colors,
     );
-    provinceTable.update(shownColors);
+    provinceTable.update(highlights, 1);
   };
+  refreshBaseColors();
   refreshColors();
   let seaBaseColors = seaZoneColors(mode, world, config.colors);
   const seaShownColors = new Uint8Array(seaBaseColors.length);
@@ -429,6 +447,23 @@ export async function createMapView(
     seaTable.update(seaShownColors);
   };
   refreshSeaColors();
+
+  /** Draws the selected province's outline on the land as it is drawn right now (again whenever that changes). */
+  const drawSelection = () => {
+    for (const mesh of selectionMeshes) mesh.dispose();
+    selectionMeshes = [];
+    if (selected === null) return;
+    const outline = outlineOf(provincePolygons, selected, projection);
+    const mesh = createLineMesh(
+      'selection',
+      scene,
+      drapeLines(outline, (x, z) => terrain.heightAt(x, z), terrain.cellSize()),
+      selectionMaterial.material,
+      LAND_GROUP,
+      2,
+    );
+    selectionMeshes = addWrapCopies(mesh, worldWidth);
+  };
 
   // Mouse state (used further down; the camera code needs to flag "look under the mouse again").
   let pointer: { x: number; y: number } | null = null;
@@ -467,70 +502,155 @@ export async function createMapView(
   let heading = 0;
   /** Where the camera is going. */
   const goal = { x: 0, z: 0, zoom: 1, heading: 0 };
-  /** While a mouse-wheel zoom glides: the place that must stay under the mouse. */
+  /** While a mouse-wheel zoom glides: the place (and its height, in metres) that must stay under the mouse. */
   let zoomAnchor: {
     readonly screen: { x: number; y: number };
-    readonly ground: { x: number; z: number };
+    readonly ground: { x: number; z: number; height: number };
   } | null = null;
   let edgeScrolling = settings.edgeScrollPx > 0;
   let fit: CameraFit = { radius: 100, targetZ: 0 };
   let fittedAspect = 0;
-  let detail: 'far' | 'near' = 'far';
 
-  /** The map position under a point of the canvas (CSS pixels), or null if it misses the ground. */
-  const groundAt = (x: number, y: number): { x: number; z: number } | null => {
+  // ── The land's look at a zoom level (F125) ────────────────────────────────
+  /** 0 with the whole world in view, 1 at the closest zoom, evenly per zoom step. */
+  const zoomShare = (zoomLevel: number) =>
+    settings.maxZoom > 1
+      ? Math.min(1, Math.max(0, Math.log(zoomLevel) / Math.log(settings.maxZoom)))
+      : 0;
+  /** How many times higher than in reality the land is drawn at a zoom level. */
+  const exaggerationAt = (zoomLevel: number) => {
+    const { exaggeration: far, exaggerationNear: near } = terrainConfig;
+    if (far <= 0 || near <= 0) return far + (near - far) * zoomShare(zoomLevel);
+    return far * (near / far) ** zoomShare(zoomLevel);
+  };
+  /** Heights in metres times this are heights in map units as drawn right now. */
+  const heightUnits = () => exaggerationAt(zoom) / METRES_PER_MAP_UNIT;
+  /** How much of the map mode's color covers the terrain at a zoom level. */
+  const colorStrengthAt = (zoomLevel: number) => {
+    if (terrainConfig.naturalModes.includes(mode)) return 0;
+    const stops = terrainConfig.colorStrength;
+    if (zoomLevel <= stops[0].zoom) return stops[0].strength;
+    for (let i = 1; i < stops.length; i++) {
+      if (zoomLevel > stops[i].zoom) continue;
+      const share =
+        Math.log(zoomLevel / stops[i - 1].zoom) / Math.log(stops[i].zoom / stops[i - 1].zoom);
+      return stops[i - 1].strength + (stops[i].strength - stops[i - 1].strength) * share;
+    }
+    return stops[stops.length - 1].strength;
+  };
+
+  const pickingRay = (x: number, y: number) => {
     // The view may have changed since the last frame was drawn (zooming, dragging).
     camera.getViewMatrix(true);
     camera.getProjectionMatrix(true);
-    const ray = scene.createPickingRay(x, y, Matrix.Identity(), camera);
+    return scene.createPickingRay(x, y, Matrix.Identity(), camera);
+  };
+  /** Where the ray through a point of the canvas (CSS pixels) meets a level plane (`height` in map units), or null. */
+  const planeAt = (x: number, y: number, height = 0): { x: number; z: number } | null => {
+    const ray = pickingRay(x, y);
     if (Math.abs(ray.direction.y) < 1e-9) return null;
-    const distance = -ray.origin.y / ray.direction.y;
+    const distance = (height - ray.origin.y) / ray.direction.y;
     if (distance <= 0) return null;
     return {
       x: ray.origin.x + ray.direction.x * distance,
       z: ray.origin.z + ray.direction.z * distance,
     };
   };
+  /**
+   * The map position under a point of the canvas (CSS pixels) and the land's height there in
+   * metres, or null if it misses the ground. The ray is followed down to where it first meets
+   * the land as it is drawn right now (the sea is flat, at height 0).
+   */
+  const groundAt = (x: number, y: number): { x: number; z: number; height: number } | null => {
+    const ray = pickingRay(x, y);
+    const { origin, direction } = ray;
+    if (direction.y > -1e-9) return null;
+    const units = heightUnits();
+    const top = Math.max(0, terrainTiles.maxHeightM) * units;
+    const bottom = Math.min(0, terrainTiles.minHeightM) * units;
+    const start = origin.y > top ? (top - origin.y) / direction.y : 0;
+    const end = (bottom - origin.y) / direction.y;
+    /** How far the ray is above the land after travelling `t`. */
+    const above = (t: number) =>
+      origin.y +
+      direction.y * t -
+      terrain.heightAt(origin.x + direction.x * t, origin.z + direction.z * t) * units;
+    const at = (t: number) => {
+      const px = origin.x + direction.x * t;
+      const pz = origin.z + direction.z * t;
+      return { x: px, z: pz, height: terrain.heightAt(px, pz) };
+    };
+    // Walk along the ray in steps of half a mesh cell, then close in on the crossing.
+    const travel = (end - start) * Math.hypot(direction.x, direction.z);
+    const steps = Math.min(240, Math.max(1, Math.ceil(travel / (terrain.cellSize() / 2))));
+    let before = start;
+    if (above(start) <= 0) return at(start);
+    for (let i = 1; i <= steps; i++) {
+      const t = start + ((end - start) * i) / steps;
+      if (above(t) > 0) {
+        before = t;
+        continue;
+      }
+      let low = before;
+      let high = t;
+      for (let k = 0; k < 20; k++) {
+        const middle = (low + high) / 2;
+        if (above(middle) > 0) low = middle;
+        else high = middle;
+      }
+      return at(high);
+    }
+    return at(end);
+  };
   const cssSize = () => {
     const scale = engine.getHardwareScalingLevel();
     return { width: engine.getRenderWidth() * scale, height: engine.getRenderHeight() * scale };
   };
 
-  /** Shows the level of detail that suits the zoom, and puts the close-up chunks on the nearest copy of the world. */
+  /** Called when the land as drawn changed (terrain arrived, another level): whatever stands on it follows. */
+  const landChanged = () => {
+    pointerMoved = true; // the province under the mouse may have changed
+    drawSelection();
+  };
+  /** Tells the terrain what the screen shows, and gives the land its look for this zoom. */
   const updateDetail = () => {
     const { width, height } = cssSize();
-    const degreesPerPixel = (2 * camera.radius * Math.tan(camera.fov / 2)) / height;
-    // What the screen shows of the ground, east to west (the view can be turned and tilted).
-    let minX = Infinity;
-    let maxX = -Infinity;
+    const unitsPerPixel = (2 * camera.radius * Math.tan(camera.fov / 2)) / height;
+    const units = heightUnits();
+    for (const material of lineMaterials) material.setHeightScale(exaggerationAt(zoom));
+    // What the screen shows of the ground (the view can be turned and tilted).
+    const rect = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
     for (const [x, y] of [
       [0, 0],
       [width, 0],
       [0, height],
       [width, height],
     ]) {
-      const ground = groundAt(x, y);
-      minX = Math.min(minX, ground ? ground.x : -Infinity);
-      maxX = Math.max(maxX, ground ? ground.x : Infinity);
+      const ground = planeAt(x, y);
+      if (!ground) continue;
+      rect.minX = Math.min(rect.minX, ground.x);
+      rect.maxX = Math.max(rect.maxX, ground.x);
+      rect.minZ = Math.min(rect.minZ, ground.z);
+      rect.maxZ = Math.max(rect.maxZ, ground.z);
     }
-    const viewWidth = maxX - minX;
-    const middleX = Number.isFinite(viewWidth) ? (minX + maxX) / 2 : centerX;
-    // A chunk is drawn once, so it must never be needed on both sides of the screen at the same time.
-    const fitsOnce = viewWidth + config.detail.chunkDegrees + widestPolygon <= worldWidth;
-    const wanted =
-      degreesPerPixel <= config.detail.nearMaxDegreesPerPixel && fitsOnce ? 'near' : 'far';
-    if (wanted === 'near') nearChunks ??= buildNearLevel();
-    if (wanted !== detail) {
-      detail = wanted;
-      for (const mesh of farMeshes) mesh.setEnabled(detail === 'far');
-    }
-    if (!nearChunks) return;
-    for (const chunk of nearChunks) {
-      chunk.mesh.setEnabled(detail === 'near');
-      if (detail !== 'near') continue;
-      const x = Math.round((middleX - chunk.centerX) / worldWidth) * worldWidth;
-      if (chunk.mesh.position.x !== x) chunk.mesh.position.x = x;
-    }
+    if (!Number.isFinite(rect.minX)) return;
+    // High land just outside that rectangle can still reach into the picture.
+    const margin = terrainTiles.maxHeightM * units * 1.5;
+    rect.minX -= margin;
+    rect.maxX += margin;
+    rect.minZ -= margin;
+    rect.maxZ += margin;
+    const changed = terrain.update({ rect, unitsPerPixel, centerX, centerZ });
+    // Up close, where the land cover's cells get big on screen: a surface pattern and wandering edges.
+    const cellPixels = terrainCellSize(layout, terrain.stats().level) / unitsPerPixel;
+    const closeness = Math.min(1, Math.max(0, (cellPixels - 2) / 3));
+    terrain.setLook({
+      heightScale: exaggerationAt(zoom),
+      colorStrength: colorStrengthAt(zoom),
+      detailStrength: terrainConfig.detailStrength * closeness,
+      wander: terrainConfig.detailWander * closeness,
+    });
+    if (changed) landChanged();
   };
   /**
    * How far north or south the camera may look at a zoom level: nowhere but
@@ -588,7 +708,12 @@ export async function createMapView(
     if (zoomAnchor) {
       // Zooming with the wheel: the place under the mouse stays under the mouse.
       applyView();
-      const ground = groundAt(zoomAnchor.screen.x, zoomAnchor.screen.y);
+      // The anchored place rose or sank with the zoom (the exaggeration changes): aim at its height now.
+      const ground = planeAt(
+        zoomAnchor.screen.x,
+        zoomAnchor.screen.y,
+        zoomAnchor.ground.height * heightUnits(),
+      );
       if (ground) {
         centerX += wrappedDelta(ground.x, zoomAnchor.ground.x, worldWidth);
         centerZ += zoomAnchor.ground.z - ground.z;
@@ -705,7 +830,7 @@ export async function createMapView(
     const next = pinchState();
     const grabbed = groundAt(pinch.middle.x, pinch.middle.y);
     jumpTo({ zoom: goal.zoom * (next.distance / pinch.distance) });
-    const under = groundAt(next.middle.x, next.middle.y);
+    const under = grabbed && planeAt(next.middle.x, next.middle.y, grabbed.height * heightUnits());
     if (grabbed && under) panBy(grabbed.x - under.x, grabbed.z - under.z);
     pinch = next;
   };
@@ -762,8 +887,9 @@ export async function createMapView(
       canvas.style.cursor = 'grabbing';
     }
     if (!dragFrom) return;
+    // The grabbed place keeps its height: where does the mouse now point at that height?
     const from = groundAt(dragFrom.x, dragFrom.y);
-    const to = groundAt(pointer.x, pointer.y);
+    const to = from && planeAt(pointer.x, pointer.y, from.height * heightUnits());
     dragFrom = pointer;
     if (from && to) panBy(from.x - to.x, from.z - to.z);
   };
@@ -921,34 +1047,48 @@ export async function createMapView(
     if (turn !== 0)
       turnBy(Math.sign(turn) * degrees(settings.rotateDegreesPerSecond) * seconds, false);
     stepCamera(seconds);
+    // Terrain that arrived is built a little every frame; then the view may draw finer tiles.
+    if (terrain.tick()) updateDetail();
     if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
       setHovered(targetAtCanvasPoint(pointer.x, pointer.y));
     }
   });
 
+  // The coarsest terrain level is there before the map appears; finer tiles arrive as the view asks.
+  await terrain.preload();
+  updateDetail();
   const buildMs = Math.round(performance.now() - buildStart);
 
   return {
-    getStats: () => ({
-      provinces: world.provinceIds.length,
-      seaZones: world.seaZoneIds.length,
-      detail,
-      farTriangles,
-      nearTriangles,
-      drawnTriangles: scene.getActiveIndices() / 3,
-      drawnMeshes: scene.getActiveMeshes().length,
-      loadMs: Math.round(buildStart - loadStart),
-      buildMs,
-      nearBuildMs,
-    }),
+    getStats: () => {
+      const land = terrain.stats();
+      return {
+        provinces: world.provinceIds.length,
+        seaZones: world.seaZoneIds.length,
+        detail: land.level <= terrainConfig.simplifiedShapesMaxLevel ? 'far' : 'near',
+        terrainLevel: land.level,
+        terrainTiles: land.drawn,
+        terrainPending: land.pending,
+        terrainReady: land.ready,
+        slowestTileBuildMs: Math.round(land.slowestBuildMs),
+        exaggeration: exaggerationAt(zoom),
+        colorStrength: colorStrengthAt(zoom),
+        drawnTriangles: scene.getActiveIndices() / 3,
+        drawnMeshes: scene.getActiveMeshes().length,
+        loadMs: Math.round(buildStart - loadStart),
+        buildMs,
+      };
+    },
     setMode(next) {
       if (next === mode) return;
       mode = next;
       baseColors = provinceBaseColors(mode, world, config.colors, owners);
-      refreshColors();
+      refreshBaseColors();
       seaBaseColors = seaZoneColors(mode, world, config.colors);
       refreshSeaColors();
+      // Some map modes show the natural terrain: the land's look depends on the mode.
+      updateDetail();
       landLines.setStyles(landLineStyles(mode, config.lines));
       seaLineMaterial.setStyles(seaLineStyles(mode, config.lines));
     },
@@ -959,31 +1099,17 @@ export async function createMapView(
       owners = provinceOwner.slice();
       if (mode === 'political') {
         baseColors = provinceBaseColors(mode, world, config.colors, owners);
-        refreshColors();
-      } else if (highlightedCountry !== null) refreshColors();
-      // Country borders follow the owners. (Wrap copies share the mesh's buffers.)
-      for (const { mesh, geometry } of borderMeshes)
-        if (updateBorderKinds(geometry, owners, world.provinceRegion))
-          uploadLineKinds(mesh, geometry);
+        refreshBaseColors();
+      }
+      if (highlightedCountry !== null) refreshColors();
+      // Country borders follow the owners.
+      terrain.ownersChanged();
     },
     setSelectedProvince(province) {
       if (province === selected) return;
       selected = province;
       refreshColors();
-      for (const mesh of selectionMeshes) mesh.dispose();
-      selectionMeshes = [];
-      if (province !== null) {
-        const outline = outlineOf(provincePolygons, province, projection).map(wholeLine);
-        const mesh = createLineMesh(
-          'selection',
-          scene,
-          buildLineGeometry(outline),
-          selectionMaterial.material,
-          LAND_GROUP,
-          1,
-        );
-        selectionMeshes = addWrapCopies(mesh, worldWidth);
-      }
+      drawSelection();
     },
     setHighlightedCountry(country) {
       if (country === highlightedCountry) return;
@@ -1012,6 +1138,8 @@ export async function createMapView(
     },
     provinceAt: (longitude, latitude) =>
       lookup.find(projection.x(longitude), projection.z(latitude)),
+    heightAt: (longitude, latitude) =>
+      terrain.heightAt(projection.x(longitude), projection.z(latitude)),
     seaZoneAt(longitude, latitude) {
       const target = targetAt(projection.x(longitude), projection.z(latitude));
       return target?.kind === 'seaZone' ? target.index : -1;
@@ -1021,8 +1149,10 @@ export async function createMapView(
       const x = centerX + projection.wrapX(projection.x(longitude) - centerX);
       const width = engine.getRenderWidth();
       const height = engine.getRenderHeight();
+      const z = projection.z(latitude);
       const projected = Vector3.Project(
-        new Vector3(x, 0, projection.z(latitude)),
+        // On the land as it is drawn right now.
+        new Vector3(x, terrain.heightAt(x, z) * heightUnits(), z),
         Matrix.Identity(),
         camera.getViewMatrix(true).multiply(camera.getProjectionMatrix(true)),
         camera.viewport.toGlobal(width, height),
@@ -1127,9 +1257,9 @@ export async function createMapView(
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       for (const mesh of [...allMeshes, ...selectionMeshes, ...seaSelectionMeshes]) mesh.dispose();
+      terrain.dispose();
       for (const material of lineMaterials) material.material.dispose();
       seaMaterial.dispose();
-      provinceMaterial.dispose();
       seaTable.dispose();
       provinceTable.dispose();
       camera.dispose();

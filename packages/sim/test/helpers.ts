@@ -122,12 +122,7 @@ export function testMapView() {
       rotateDegreesPerSecond: 90,
       rotateDegreesPerPixel: 0.3,
     },
-    detail: {
-      farSimplifyDegrees: 0.1,
-      nearMaxDegreesPerPixel: 0.05,
-      farChunkDegrees: 60,
-      chunkDegrees: 30,
-    },
+    detail: { farSimplifyDegrees: 0.1 },
     colors: {
       background: '#000000',
       land: '#808080',
@@ -140,6 +135,7 @@ export function testMapView() {
       seaSelectedStrength: 0.6,
       regionVariation: 0.1,
       selected: '#ffff00',
+      selectedStrength: 0.6,
       neighbor: '#c0c000',
       neighborStrength: 0.5,
       hoverBrighten: 0.2,
@@ -154,7 +150,52 @@ export function testMapView() {
       seaZoneBorder: line,
       seaZoneBorderEmphasis: line,
       selection: line,
+      river: line,
+      riverMajor: line,
+      riverGreat: line,
     },
+    terrain: {
+      maxLevel: 1,
+      pixelsPerSample: 1.6,
+      meshSteps: [4],
+      simplifiedShapesMaxLevel: 0,
+      exaggeration: 20,
+      exaggerationNear: 5,
+      lightAzimuthDegrees: 315,
+      lightElevationDegrees: 45,
+      shadingStrength: 1,
+      shadeMin: 0.4,
+      shadeMax: 1.5,
+      colorStrength: [
+        { zoom: 1, strength: 0.8 },
+        { zoom: 10, strength: 0.2 },
+      ],
+      naturalModes: ['provinces'],
+      detailStrength: 0.05,
+      detailWander: 1,
+      cacheTiles: 64,
+      buildMsPerFrame: 8,
+      materials: Object.fromEntries(
+        [
+          ...['none', 'forest', 'shrubland', 'grassland', 'farmland', 'urban'],
+          ...['bare', 'snow', 'water', 'wetland', 'mangrove', 'tundra'],
+        ].map((name) => [name, { color: '#808080', roughness: 0.5 }]),
+      ),
+      rivers: { minWeightByLevel: [null, 0.3], majorWeight: 0.4, greatWeight: 1 },
+    },
+  };
+}
+
+/** A valid `data/terrain_tiles.json`: two levels, one tile each, made for `testMapView`'s projection. */
+export function testTerrainTiles() {
+  return {
+    version: 'test',
+    projection: { type: 'miller', southLatitude: -60, northLatitude: 85 },
+    baseCells: 1024,
+    tileCells: 256,
+    minHeightM: -100,
+    maxHeightM: 8000,
+    levels: [{ tiles: ['0_0'] }, { tiles: ['1_2'] }],
   };
 }
 
@@ -171,6 +212,7 @@ export function testRawData(
     },
     ...testWorld(),
     mapView: testMapView(),
+    terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),
     countryScreen: testCountryScreen(),
     countryFlags: testCountryFlags(),

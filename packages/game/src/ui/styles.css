@@ -428,6 +428,27 @@ body {
   text-underline-offset: 3px;
 }
 
+/* The credits for the public data the game is made from (Settings → About this build). */
+.credits-title {
+  margin: 18px 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.credits {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-dim);
+}
+
+.credits li {
+  margin-bottom: 4px;
+}
+
 /* A small line under a panel's facts, for example where the numbers come from. */
 .panel-note {
   margin: -6px 0 14px;

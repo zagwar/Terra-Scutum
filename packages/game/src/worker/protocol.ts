@@ -1,4 +1,5 @@
 import type {
+  TerrainTilesFile,
   CommandResult,
   CountryScreenConfig,
   CountryStartTable,
@@ -69,6 +70,8 @@ export type FromSimWorker =
       readonly world: WorldMap;
       /** How the map is drawn (validated `data/map_view.json`). */
       readonly mapView: MapViewConfig;
+      /** Which terrain tiles exist (validated `data/terrain_tiles.json`). */
+      readonly terrainTiles: TerrainTilesFile;
       /** Each country's real-world starting data (population, GDP, government type), by country index. */
       readonly countryStart: CountryStartTable;
       /** The game speed at the start: paused. */

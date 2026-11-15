@@ -24,6 +24,7 @@ const SIM_TEXT: Record<AppState['sim'], TranslationKey> = {
  * "About this build" in the settings (F122; until then the temporary
  * Foundation check panel): the 3D renderer, the sim worker, the world map,
  * the days simulated, the save format and the build. Useful for bug reports.
+ * Below them: the credits for the public data the game is made from.
  */
 export function AboutBuild({ state }: { readonly state: AppState }) {
   const { snapshot } = state;
@@ -61,6 +62,15 @@ export function AboutBuild({ state }: { readonly state: AppState }) {
         <dt>{t('FOUNDATION_BUILD')}</dt>
         <dd data-testid="build-commit">{__BUILD_COMMIT__}</dd>
       </dl>
+      {/* The public data the map is made from; some of it asks to be credited (F125). */}
+      <h3 className="credits-title">{t('CREDITS_TITLE')}</h3>
+      <ul className="credits" data-testid="credits">
+        <li>{t('CREDITS_MAP')}</li>
+        <li>{t('CREDITS_ELEVATION')}</li>
+        <li>{t('CREDITS_LAND_COVER')}</li>
+        <li>{t('CREDITS_STATISTICS')}</li>
+        <li>{t('CREDITS_FLAGS')}</li>
+      </ul>
     </section>
   );
 }

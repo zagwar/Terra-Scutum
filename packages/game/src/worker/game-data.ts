@@ -10,6 +10,7 @@ import notifications from '../../../../data/notifications.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
 import seaZones from '../../../../data/sea_zones.json';
+import terrainTiles from '../../../../data/terrain_tiles.json';
 
 /**
  * The game's data files, bundled into the sim worker at build time. The sim
@@ -25,6 +26,7 @@ export const RAW_GAME_DATA: RawGameData = {
   governmentTypes,
   countryStart,
   mapView,
+  terrainTiles,
   notifications,
   countryScreen,
   countryFlags,

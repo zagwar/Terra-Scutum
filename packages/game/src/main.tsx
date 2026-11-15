@@ -47,7 +47,7 @@ function showMapWhenPossible(): void {
   if (!renderer || !ready) return;
   const view = renderer;
   view
-    .showMap(ready.world, ready.mapView, {
+    .showMap(ready.world, ready.mapView, ready.terrainTiles, {
       onHover: (target) =>
         store.update({
           hoveredProvince: target?.kind === 'province' ? target.index : null,

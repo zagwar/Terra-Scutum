@@ -117,11 +117,12 @@ test('messages, message settings, the region panel and Back (UI shell, F122)', a
   const shot = (name: string) =>
     page.screenshot({ path: join(SCREENSHOT_DIR, `shell-${name}-${testInfo.project.name}.png`) });
 
-  // The demo starts with a sample toast; ✕ closes it.
+  // The demo starts with a sample toast; ✕ closes it. (No screenshot first: a toast fades by
+  // itself after 8 seconds, and a screenshot of the software-drawn map can take that long.)
   await expect(page.getByTestId('toast')).toHaveCount(1);
-  await shot('demo-start');
   await page.getByTestId('toast').getByRole('button', { name: 'Close' }).click();
   await expect(page.getByTestId('toast')).toHaveCount(0);
+  await shot('demo-start');
 
   // A real sim event: a province changing hands is a toast by default…
   await page.getByTestId('demo-owner-change').click();

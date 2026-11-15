@@ -5,9 +5,9 @@ import provincesText from '../../../data/geometry/provinces.topo.json?raw';
 import seaZonesText from '../../../data/geometry/sea_zones.topo.json?raw';
 import {
   MAP_MODES,
-  applyHighlight,
   applySeaHighlight,
   provinceBaseColors,
+  provinceHighlights,
   seaZoneColors,
 } from '../src/render/map/map-colors';
 import {
@@ -18,13 +18,9 @@ import {
   buildInnerBorders,
   buildLineGeometry,
   buildProvinceBorders,
-  chunkLines,
-  chunkPolygons,
-  createChunkGrid,
   decodePolygons,
   outlineOf,
   triangulate,
-  updateBorderKinds,
   wholeLine,
 } from '../src/render/map/map-geometry';
 import { createMapProjection } from '../src/render/map/map-projection';
@@ -186,43 +182,6 @@ describe('border lines', () => {
     }
   });
 
-  it('turns province borders into country borders when a province changes owner', () => {
-    const geometry = buildLineGeometry(
-      [...chunkLines(borders, createChunkGrid(projection, 360)).values()].flat(),
-    );
-    const owners = world.provinceCountry.slice();
-    expect(updateBorderKinds(geometry, owners, world.provinceRegion)).toBe(false);
-    const kindsBetween = (a: number, b: number) => {
-      const kinds = new Set<number>();
-      const { borders: spans, sideAndKind } = geometry;
-      for (let i = 0; i < spans.length; i += 4) {
-        const [sideA, sideB] = [spans[i + 2], spans[i + 3]];
-        if (!(sideA === a && sideB === b) && !(sideA === b && sideB === a)) continue;
-        for (let v = spans[i]; v < spans[i] + spans[i + 1]; v++) kinds.add(sideAndKind[v * 2 + 1]);
-      }
-      return [...kinds];
-    };
-    const p = (id: string) => world.provinceIndex.get(id)!;
-    const [alsace, baden, french] = [
-      p('fra_grand_est'),
-      p('deu_baden_wurttemberg'),
-      p('fra_bourgogne_franche_comte'),
-    ];
-    const country = (k: number) => (k & LINE_OTHER_COUNTRY) !== 0;
-    expect(kindsBetween(alsace, baden).every(country)).toBe(true);
-    expect(kindsBetween(alsace, french).some(country)).toBe(false);
-
-    // Germany takes the province: the border moves to its other side.
-    owners[alsace] = world.provinceCountry[baden];
-    expect(updateBorderKinds(geometry, owners, world.provinceRegion)).toBe(true);
-    expect(kindsBetween(alsace, baden).some(country)).toBe(false);
-    expect(kindsBetween(alsace, french).every(country)).toBe(true);
-    // Nothing else to do the second time; region borders and coasts never change.
-    expect(updateBorderKinds(geometry, owners, world.provinceRegion)).toBe(false);
-    const coast = p('fra_bretagne');
-    expect(kindsBetween(coast, coast)).toEqual([LINE_COAST]);
-  });
-
   it('builds two vertices per point and two triangles per segment', () => {
     const sea = buildInnerBorders(seaTopology, 'seaZones', projection);
     const points = sea.reduce((sum, line) => sum + line.points.length / 2, 0);
@@ -233,41 +192,6 @@ describe('border lines', () => {
     expect(geometry.indices.length).toBe((points - sea.length) * 6);
     expect([geometry.sideAndKind[0], geometry.sideAndKind[2]]).toEqual([-1, 1]);
     expect(geometry.borders.length).toBe(0); // sea zone borders never change kind
-  });
-});
-
-describe('chunks', () => {
-  const grid = createChunkGrid(projection, 30);
-
-  it('cuts the map into a grid', () => {
-    expect(grid.columns).toBe(12);
-    expect(grid.rows).toBeGreaterThanOrEqual(5);
-    expect(grid.chunkAt(-179, projection.minZ + 1)).toBe(0);
-    expect(grid.chunkAt(179, projection.maxZ - 1)).toBe(grid.columns * grid.rows - 1);
-    expect(grid.chunkAt(500, 9999)).toBe(grid.columns * grid.rows - 1);
-  });
-
-  it('puts every polygon in exactly one chunk', () => {
-    const chunks = chunkPolygons(polygons, grid);
-    expect([...chunks.values()].reduce((sum, list) => sum + list.length, 0)).toBe(polygons.length);
-  });
-
-  it('cuts lines between chunks without losing or repeating a segment', () => {
-    const chunks = chunkLines(borders, grid);
-    const total = borders.reduce((sum, line) => sum + line.points.length / 2 - 1, 0);
-    let chunked = 0;
-    for (const spans of chunks.values())
-      for (const span of spans) {
-        expect(span.to).toBeGreaterThan(span.from);
-        chunked += span.to - span.from;
-        // A span lies between one pair of provinces.
-        for (let i = span.from; i < span.to; i++) {
-          expect(span.sides![i * 2]).toBe(span.sideA);
-          expect(span.sides![i * 2 + 1]).toBe(span.sideB);
-        }
-      }
-    expect(chunked).toBe(total);
-    expect(chunks.size).toBeGreaterThan(20);
   });
 });
 
@@ -341,19 +265,37 @@ describe('map colors', () => {
     );
   });
 
-  it('marks the selected province, its neighbors and the hovered province', () => {
-    const base = provinceBaseColors('provinces', world, colors, world.provinceCountry);
-    const shown = new Uint8Array(base.length);
+  it('marks the selected province, its neighbors and the hovered province with a highlight over the land', () => {
+    const shown = new Uint8Array(world.provinceIds.length * 4);
+    const alpha = (province: number) => shown[province * 4 + 3];
     const paris = world.provinceIndex.get('fra_ile_de_france')!;
     const neighbor = neighborsOf(world.provinceNeighbors, paris)[0];
     const far = world.provinceIndex.get('usa_texas_houston') ?? 0;
-    applyHighlight(base, shown, { selected: paris, hovered: far }, world, colors);
+    provinceHighlights(shown, { selected: paris, hovered: far }, world, colors);
+    // The selection: its color, as strongly as the data says (the land stays visible under it).
     expect(rgb(shown, paris)).toEqual([0xe8, 0xc8, 0x6a]);
-    expect(rgb(shown, neighbor)).not.toEqual(rgb(base, neighbor));
-    expect(rgb(shown, far)[0]).toBeGreaterThan(rgb(base, far)[0]);
-    // Clearing the highlight brings the base colors back.
-    applyHighlight(base, shown, { selected: null, hovered: null }, world, colors);
-    expect(shown).toEqual(base);
+    expect(alpha(paris)).toBe(Math.round(colors.selectedStrength * 255));
+    expect(alpha(neighbor)).toBe(Math.round(colors.neighborStrength * 255));
+    // Hover: brightened (white, lightly).
+    expect(rgb(shown, far)).toEqual([255, 255, 255]);
+    expect(alpha(far)).toBe(Math.round(colors.hoverBrighten * 255));
+    // Hovering the selected province: both, one over the other.
+    provinceHighlights(shown, { selected: paris, hovered: paris }, world, colors);
+    expect(alpha(paris)).toBeGreaterThan(Math.round(colors.selectedStrength * 255));
+    expect(rgb(shown, paris)[2]).toBeGreaterThan(0x6a);
+    // A picked country (F05): every province of it, and no other.
+    const france = world.countryIndex.get('FRA')!;
+    provinceHighlights(
+      shown,
+      { selected: null, hovered: null, country: { index: france, owners: world.provinceCountry } },
+      world,
+      colors,
+    );
+    expect(alpha(paris)).toBe(Math.round(colors.countryHighlightStrength * 255));
+    expect(alpha(far)).toBe(0);
+    // No highlight: nothing lies over the land.
+    provinceHighlights(shown, { selected: null, hovered: null }, world, colors);
+    expect(shown.every((value) => value === 0)).toBe(true);
   });
 
   it('shows a calm sea, and coastal or open sea in the sea zones map mode (no random shades)', () => {

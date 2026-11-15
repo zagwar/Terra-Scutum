@@ -76,6 +76,8 @@ Designer decision: the country screen works **like HOI4's**. As in HOI4 there ar
 | **Operational (middle)** | Terrain, rivers, coasts and forests in detail; cities with their districts; major infrastructure (rail lines, highways, ports, airfields, power plants); unit models standing in provinces; ships at sea |
 | **Close (near)** | Individual buildings, streets, rail yards, substations and power lines; units and bugs as detailed animated models; smoke, fires, disruption clouds, weather |
 
+- **Decided when F125 built the terrain (designer decisions, values [DEFAULT] in `data/map_view.json`):** the map mode's colors lie over the terrain and **fade as the view zooms in** (about 80 % at strategic zoom, 50 % at operational, 15 % at close zoom), so the terrain shows through; the **Provinces** map mode shows the natural terrain with no color at all; **rivers** appear from operational zoom, more of them the closer the view; the land is drawn higher than in reality (more so from far away); the sea stays flat and one even blue.
+
 #### Everything built is visible
 - **Every building is on the map.** Each building the player (or a corporation, or an AI country) builds appears as a 3D model in its province: farms, mines, oil wells, power plants, steel mills, factories, research centers, Xeno Labs, pilot academies, spaceports, refugee camps, military bases, fortifications.
 - **Cities grow.** Cities are built from districts (residential, industrial, commercial). As a province's population, buildings and wealth grow, its city visibly **expands**: new districts, taller buildings, more lights at night. When a city shrinks, is damaged or is abandoned, that shows too.

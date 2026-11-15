@@ -15,6 +15,7 @@ export * from './data/game-config';
 export * from './data/game-data';
 export * from './data/map-view-config';
 export * from './data/notifications-config';
+export * from './data/terrain-format';
 export * from './data/country-screen-config';
 export * from './politics/government-types';
 export * from './world/country-start';

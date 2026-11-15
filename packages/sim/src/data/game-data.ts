@@ -22,6 +22,7 @@ import {
 } from '../politics/government-types';
 import { type GameConfig, gameConfigSchema } from './game-config';
 import { type MapViewConfig, mapViewSchema } from './map-view-config';
+import { type TerrainTilesFile, terrainTilesFileSchema } from './terrain-format';
 import {
   type NotificationsConfig,
   checkNotifications,
@@ -56,6 +57,7 @@ export const DATA_FILES = {
   governmentTypes: { file: 'government_types.json', schema: governmentTypesFileSchema },
   countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
+  terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
   countryScreen: { file: 'country_screen.json', schema: countryScreenSchema },
   countryFlags: { file: 'country_flags.json', schema: countryFlagsSchema },
@@ -78,6 +80,8 @@ export interface GameData {
   readonly countryStart: CountryStartFile;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
+  /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
+  readonly terrainTiles: TerrainTilesFile;
   /** Message types and alert types of the UI shell (F122); used by the game, not by the sim's systems. */
   readonly notifications: NotificationsConfig;
   /** The lists the country screen shows (F138); used by the game, not by the sim's systems. */
@@ -119,7 +123,40 @@ export class DataValidationError extends Error {
 export type DataCrossCheck = (data: GameData, report: (issue: DataIssue) => void) => void;
 
 /** Cross-file checks. Features add theirs as their data files arrive. */
+/** The terrain tiles must have been made for the map's projection, and reach the level the game asks for. */
+const checkTerrainTiles: DataCrossCheck = (data, report) => {
+  const made = data.terrainTiles.projection;
+  const used = data.mapView.projection;
+  if (
+    made.type !== used.type ||
+    made.southLatitude !== used.southLatitude ||
+    made.northLatitude !== used.northLatitude
+  )
+    report({
+      file: 'terrain_tiles.json',
+      path: 'projection',
+      message:
+        'the terrain was made for another map projection than map_view.json: run `npm run import:terrain` again',
+    });
+  const { tileCells } = data.terrainTiles;
+  data.mapView.terrain.meshSteps.forEach((step, level) => {
+    if (tileCells % step !== 0)
+      report({
+        file: 'map_view.json',
+        path: `terrain.meshSteps.${level}`,
+        message: `a terrain tile has ${tileCells} cells along a side: ${step} doesn't divide it evenly`,
+      });
+  });
+  if (data.mapView.terrain.maxLevel >= data.terrainTiles.levels.length)
+    report({
+      file: 'map_view.json',
+      path: 'terrain.maxLevel',
+      message: `the terrain only has levels 0 to ${data.terrainTiles.levels.length - 1}`,
+    });
+};
+
 const CROSS_CHECKS: readonly DataCrossCheck[] = [
+  checkTerrainTiles,
   checkWorldData,
   checkGovernmentTypes,
   checkCountryStart,

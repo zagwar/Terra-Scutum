@@ -1,6 +1,6 @@
 import { Color4 } from '@babylonjs/core/Maths/math.color';
 import { Scene } from '@babylonjs/core/scene';
-import type { MapViewConfig, WorldMap } from '@terra-scutum/sim';
+import type { MapViewConfig, TerrainTilesFile, WorldMap } from '@terra-scutum/sim';
 import { type RendererPreference, type RendererType, createEngine } from './create-engine';
 import { type MapView, type MapViewEvents, createMapView } from './map/map-view';
 
@@ -14,7 +14,12 @@ export interface GameRenderer {
   /** The world map, once `showMap` has finished. */
   readonly map: MapView | null;
   /** Loads the map's shapes and puts the world map in the scene. */
-  showMap(world: WorldMap, config: MapViewConfig, events: MapViewEvents): Promise<MapView>;
+  showMap(
+    world: WorldMap,
+    config: MapViewConfig,
+    terrainTiles: TerrainTilesFile,
+    events: MapViewEvents,
+  ): Promise<MapView>;
   /** How many frames have been drawn (used by tests to know the scene is really rendering). */
   getFrameCount(): number;
   /** Frames per second, averaged over the last second or so. */
@@ -47,10 +52,10 @@ export async function createGameRenderer(
     get map() {
       return map;
     },
-    async showMap(world, config, events) {
+    async showMap(world, config, terrainTiles, events) {
       map?.dispose();
       map = null;
-      map = await createMapView(scene, world, config, events);
+      map = await createMapView(scene, world, config, terrainTiles, events);
       return map;
     },
     getFrameCount: () => frameCount,

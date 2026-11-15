@@ -23,7 +23,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "import:map": "tsx packages/tools/src/import-map.ts",
-    "import:starting-data": "tsx packages/tools/src/import-starting-data.ts"
+    "import:starting-data": "tsx packages/tools/src/import-starting-data.ts",
+    "import:terrain": "tsx packages/tools/src/import-terrain.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -99,38 +99,48 @@ export interface ProvinceHighlight {
 }
 
 /**
- * Copies `base` into `target` and marks the highlighted country, the selected
- * province, its neighbors and the hovered province.
+ * The highlight of every province, to lie over the land (F125): r, g, b and,
+ * in alpha, how strongly it covers whatever is under it (0 = no highlight).
+ * In order: the highlighted country, the selected province's neighbors, the
+ * selected province, the hovered province. Where several meet they are mixed
+ * one over the other, so the result looks the same as tinting a color step
+ * by step.
  */
-export function applyHighlight(
-  base: Uint8Array,
+export function provinceHighlights(
   target: Uint8Array,
   highlight: ProvinceHighlight,
   world: WorldMap,
   colors: Colors,
 ): void {
-  target.set(base);
-  const read = (index: number): Rgb => [
-    target[index * 4],
-    target[index * 4 + 1],
-    target[index * 4 + 2],
-  ];
+  target.fill(0);
+  // Per province while mixing: the color times its strength, and the strength.
+  const mixed = new Map<number, [number, number, number, number]>();
+  const cover = (province: number, color: Rgb, strength: number) => {
+    const now = mixed.get(province) ?? [0, 0, 0, 0];
+    mixed.set(province, [
+      now[0] * (1 - strength) + color[0] * strength,
+      now[1] * (1 - strength) + color[1] * strength,
+      now[2] * (1 - strength) + color[2] * strength,
+      1 - (1 - now[3]) * (1 - strength),
+    ]);
+  };
   if (highlight.country) {
     const { index, owners } = highlight.country;
     const tint = parseHexColor(colors.countryHighlight);
     for (let province = 0; province < owners.length; province++)
-      if (owners[province] === index)
-        write(target, province, mix(read(province), tint, colors.countryHighlightStrength));
+      if (owners[province] === index) cover(province, tint, colors.countryHighlightStrength);
   }
   if (highlight.selected !== null) {
     const neighborColor = parseHexColor(colors.neighbor);
     for (const neighbor of neighborsOf(world.provinceNeighbors, highlight.selected))
-      write(target, neighbor, mix(read(neighbor), neighborColor, colors.neighborStrength));
-    write(target, highlight.selected, parseHexColor(colors.selected));
+      cover(neighbor, neighborColor, colors.neighborStrength);
+    cover(highlight.selected, parseHexColor(colors.selected), colors.selectedStrength);
   }
-  if (highlight.hovered !== null) {
-    const white: Rgb = [255, 255, 255];
-    write(target, highlight.hovered, mix(read(highlight.hovered), white, colors.hoverBrighten));
+  if (highlight.hovered !== null) cover(highlight.hovered, [255, 255, 255], colors.hoverBrighten);
+  for (const [province, [r, g, b, strength]] of mixed) {
+    if (strength <= 0) continue;
+    write(target, province, [r / strength, g / strength, b / strength]);
+    target[province * 4 + 3] = Math.round(strength * 255);
   }
 }
 

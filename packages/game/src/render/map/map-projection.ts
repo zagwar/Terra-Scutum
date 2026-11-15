@@ -1,4 +1,5 @@
 import type { MapViewConfig } from '@terra-scutum/sim';
+import { projectLatitude, unprojectLatitude } from '@terra-scutum/sim';
 
 /**
  * Turns longitude/latitude into positions on the flat map and back.
@@ -22,28 +23,10 @@ export interface MapProjection {
   wrapX(x: number): number;
 }
 
-const DEGREES = 180 / Math.PI;
-
-type LatitudeMapping = { forward(latitude: number): number; inverse(z: number): number };
-
-const MAPPINGS: Record<MapViewConfig['projection']['type'], LatitudeMapping> = {
-  equirectangular: {
-    forward: (latitude) => latitude,
-    inverse: (z) => z,
-  },
-  // Miller cylindrical: a Mercator-like projection that stays finite at the poles.
-  miller: {
-    forward: (latitude) =>
-      1.25 * Math.log(Math.tan(Math.PI / 4 + (0.4 * latitude) / DEGREES)) * DEGREES,
-    inverse: (z) => 2.5 * (Math.atan(Math.exp((0.8 * z) / DEGREES)) - Math.PI / 4) * DEGREES,
-  },
-};
-
 export function createMapProjection(config: MapViewConfig['projection']): MapProjection {
-  const mapping = MAPPINGS[config.type];
   const width = 360;
-  const minZ = mapping.forward(config.southLatitude);
-  const maxZ = mapping.forward(config.northLatitude);
+  const minZ = projectLatitude(config.type, config.southLatitude);
+  const maxZ = projectLatitude(config.type, config.northLatitude);
   const wrapX = (x: number) => ((((x + width / 2) % width) + width) % width) - width / 2;
   return {
     width,
@@ -51,9 +34,12 @@ export function createMapProjection(config: MapViewConfig['projection']): MapPro
     maxZ,
     x: (longitude) => longitude,
     z: (latitude) =>
-      mapping.forward(Math.min(config.northLatitude, Math.max(config.southLatitude, latitude))),
+      projectLatitude(
+        config.type,
+        Math.min(config.northLatitude, Math.max(config.southLatitude, latitude)),
+      ),
     longitude: (x) => wrapX(x),
-    latitude: (z) => mapping.inverse(z),
+    latitude: (z) => unprojectLatitude(config.type, z),
     wrapX,
   };
 }

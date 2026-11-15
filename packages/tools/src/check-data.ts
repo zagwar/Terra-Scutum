@@ -6,9 +6,9 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DATA_FILES, DataValidationError, type GameData, formatDataIssue } from '@terra-scutum/sim';
-import { checkGeometry, checkMapNames } from './check-map-assets';
+import { checkGeometry, checkMapNames, checkRivers, checkTerrainTiles } from './check-map-assets';
 import { checkLocale } from './check-locale';
-import { DATA_DIR, LOCALES_DIR, loadGameDataFromDisk } from './load-data';
+import { DATA_DIR, LOCALES_DIR, REPO_ROOT, loadGameDataFromDisk } from './load-data';
 
 let problemCount = 0;
 const fail = (message: string) => {
@@ -82,6 +82,25 @@ if (data) {
   if (problemCount === before)
     console.log(
       '  ✓ every map item, government type, message type, alert type and country screen entry has a name, every map item a shape',
+    );
+}
+
+if (data) {
+  console.log('Checking the terrain…');
+  const before = problemCount;
+  for (const problem of checkTerrainTiles(data, join(REPO_ROOT, 'packages/game/public/terrain')))
+    fail(problem);
+  try {
+    const rivers: unknown = JSON.parse(
+      readFileSync(join(DATA_DIR, 'geometry/rivers.json'), 'utf8'),
+    );
+    for (const problem of checkRivers('data/geometry/rivers.json', rivers)) fail(problem);
+  } catch (error) {
+    fail(`data/geometry/rivers.json: missing or not valid JSON (${(error as Error).message})`);
+  }
+  if (problemCount === before)
+    console.log(
+      `  ✓ ${data.terrainTiles.levels.reduce((sum, level) => sum + level.tiles.length, 0)} terrain tiles in ${data.terrainTiles.levels.length} levels, and the rivers`,
     );
 }
 

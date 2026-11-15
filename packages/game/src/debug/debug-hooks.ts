@@ -32,6 +32,8 @@ export interface DebugApi {
     stats(): MapStats | null;
     /** The id of the province at a longitude/latitude; null for the sea. */
     provinceAt(longitude: number, latitude: number): string | null;
+    /** The height of the land as drawn right now at a longitude/latitude, in metres (0 at sea). */
+    heightAt(longitude: number, latitude: number): number | null;
     /** Where a longitude/latitude is on the page, in CSS pixels. */
     screenPosition(longitude: number, latitude: number): { x: number; y: number } | null;
     /** The longitude/latitude under a point of the page, in CSS pixels. */
@@ -105,6 +107,7 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
     map: {
       stats: () => renderer?.map?.getStats() ?? null,
       provinceAt: (longitude, latitude) => idOf(renderer?.map?.provinceAt(longitude, latitude)),
+      heightAt: (longitude, latitude) => renderer?.map?.heightAt(longitude, latitude) ?? null,
       screenPosition: (longitude, latitude) =>
         renderer?.map?.screenPosition(longitude, latitude) ?? null,
       placeAt: (x, y) => renderer?.map?.placeAt(x, y) ?? null,
