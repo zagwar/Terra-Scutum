@@ -23,7 +23,7 @@ import {
 import { type GameConfig, gameConfigSchema } from './game-config';
 import { type MapViewConfig, mapViewSchema } from './map-view-config';
 import { type TerrainTilesFile, terrainTilesFileSchema } from './terrain-format';
-import { type ModelsConfig, materialsOfModel, modelsSchema } from './models-config';
+import { type ModelsConfig, materialsOfModel, modelsSchema, treeOfClump } from './models-config';
 import {
   type NotificationsConfig,
   checkNotifications,
@@ -162,14 +162,25 @@ const checkTerrainTiles: DataCrossCheck = (data, report) => {
 /** Every material a model uses exists, and every model the map's scenery shows exists (F133). */
 const checkModels: DataCrossCheck = (data, report) => {
   const { materials, models } = data.models;
-  for (const [modelId, entry] of Object.entries(models))
-    for (const material of materialsOfModel(entry))
+  for (const [modelId, entry] of Object.entries(models)) {
+    if (
+      entry.source === 'generator' &&
+      entry.generator === 'treeClump' &&
+      !treeOfClump(entry.spec, models)
+    )
+      report({
+        file: 'models.json',
+        path: `models.${modelId}.spec.tree`,
+        message: `"${entry.spec.tree}" is not a tree model (a "tree" generator model in models.json)`,
+      });
+    for (const material of materialsOfModel(entry, models))
       if (!Object.hasOwn(materials, material))
         report({
           file: 'models.json',
           path: `models.${modelId}.spec`,
           message: `unknown material "${material}"`,
         });
+  }
   const { forests, capitals } = data.mapView.scenery;
   const need = (modelId: string, path: string) => {
     if (!Object.hasOwn(models, modelId))

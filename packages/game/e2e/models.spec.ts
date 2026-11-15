@@ -56,7 +56,7 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   // Panama: forests right by the sea, standing on the land as drawn.
   await lookAt(page, -79.5, 8.8, 18);
   const coast = await scenery(page);
-  expect(coast.trees).toBeGreaterThan(1000);
+  expect(coast.trees).toBeGreaterThan(300);
   expect(coast.treeDetail).not.toBeNull();
   // One draw call per model variant and material, however many trees.
   expect(coast.drawCalls).toBeLessThan(60);
@@ -88,7 +88,7 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   await lookAt(page, -3.7, 40.42, 60);
   const madrid = await scenery(page);
   expect(madrid.treeDetail).toBe('detailed');
-  expect(madrid.trees).toBeGreaterThan(20);
+  expect(madrid.trees).toBeGreaterThan(5);
   const buildings = (
     await page.evaluate(() => window.__terraScutum!.map.sceneryProbe(100_000)!)
   ).filter(
@@ -123,6 +123,8 @@ test('the model gallery shows every model in three detail levels, and a model fi
   expect(stats.map((model) => model.modelId)).toEqual([
     'treeConifer',
     'treeBroadleaf',
+    'treeClumpConifer',
+    'treeClumpBroadleaf',
     'boxBuilding',
   ]);
   for (const model of stats) {
@@ -133,7 +135,7 @@ test('the model gallery shows every model in three detail levels, and a model fi
     expect(simple!).toBeGreaterThan(icon!);
     expect(detailed!).toBeGreaterThan(simple!);
   }
-  await expect(page.locator('.model-gallery-label-model')).toHaveCount(3);
+  await expect(page.locator('.model-gallery-label-model')).toHaveCount(5);
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `${testInfo.project.name}-model-gallery.png`),
   });
@@ -147,11 +149,11 @@ test('the model gallery shows every model in three detail levels, and a model fi
   await page.waitForFunction(
     () =>
       window.__terraScutum!.gallery.isComplete() &&
-      window.__terraScutum!.gallery.stats()![2].source === 'file',
+      window.__terraScutum!.gallery.stats()![4].source === 'file',
     null,
     { timeout: 120_000 },
   );
-  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))![2];
+  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))![4];
   expect(replaced.variants).toBe(1);
   expect(replaced.triangles).toEqual({ icon: 12, simple: 12, detailed: 12 });
   expect(replaced.heightM).toBeCloseTo(12, 3);

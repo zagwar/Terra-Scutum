@@ -191,6 +191,8 @@
   "GALLERY_BACK": "Back to the game",
   "MODEL_TREECONIFER": "Conifer",
   "MODEL_TREEBROADLEAF": "Broadleaf tree",
+  "MODEL_TREECLUMPCONIFER": "Conifer clump",
+  "MODEL_TREECLUMPBROADLEAF": "Broadleaf clump",
   "MODEL_BOXBUILDING": "Box building",
   "ERROR_RENDERER_FAILED": "The 3D view could not start. Your browser or graphics driver may not support WebGL 2.",
   "ERROR_MAP_FAILED": "The world map could not be loaded.",

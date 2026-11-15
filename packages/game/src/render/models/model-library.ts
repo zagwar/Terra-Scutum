@@ -93,7 +93,8 @@ export function createModelLibrary(scene: Scene, config: ModelsConfig): ModelLib
       fileMaterials.push(...loaded.parts.map((part) => part.material));
       return loaded;
     }
-    const model = generateModel(entry, variantSeed(modelId, variant), detail);
+    const library = Object.fromEntries([...entries].map(([id, found]) => [id, found.entry]));
+    const model = generateModel(entry, variantSeed(modelId, variant), detail, library);
     return {
       parts: model.parts.map((part) => {
         const vertexData = new VertexData();

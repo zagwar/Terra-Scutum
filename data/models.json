@@ -70,6 +70,28 @@
         "leanDegrees": 5
       }
     },
+    "treeClumpConifer": {
+      "source": "generator",
+      "generator": "treeClump",
+      "variants": 6,
+      "spec": {
+        "tree": "treeConifer",
+        "trees": [3, 6],
+        "spread": [0.45, 0.7],
+        "sizeVariation": 0.2
+      }
+    },
+    "treeClumpBroadleaf": {
+      "source": "generator",
+      "generator": "treeClump",
+      "variants": 6,
+      "spec": {
+        "tree": "treeBroadleaf",
+        "trees": [3, 5],
+        "spread": [0.5, 0.75],
+        "sizeVariation": 0.2
+      }
+    },
     "boxBuilding": {
       "source": "generator",
       "generator": "boxBuilding",

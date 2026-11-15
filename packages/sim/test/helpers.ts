@@ -191,6 +191,8 @@ export function testMapView() {
       forests: {
         enabled: true,
         landCover: ['forest'],
+        minShare: 0.5,
+        regionKm: 10,
         models: [{ model: 'tree', latitudes: [0, 90] }],
         fromZoom: 4,
         fullZoom: 6,

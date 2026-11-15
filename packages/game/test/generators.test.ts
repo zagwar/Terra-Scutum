@@ -12,6 +12,7 @@ import { type MeshData, blob, box, frustum, gabledRoof } from '../src/generators
 import { mixSeed, seededRandom } from '../src/generators/seeded-random';
 
 const data = loadGameDataFromDisk();
+const models = data.models.models;
 const generated = Object.entries(data.models.models).filter(
   (entry): entry is [string, GeneratedModelEntry] => entry[1].source === 'generator',
 );
@@ -68,16 +69,19 @@ describe('the generators (F133)', () => {
     expect(generated.map(([id]) => id).sort()).toEqual([
       'boxBuilding',
       'treeBroadleaf',
+      'treeClumpBroadleaf',
+      'treeClumpConifer',
       'treeConifer',
     ]);
     for (const [id, entry] of generated) {
       for (let variant = 0; variant < entry.variants; variant++) {
         for (const detail of DETAIL_LEVELS) {
-          const model = generateModel(entry, variantSeed(id, variant), detail);
+          const model = generateModel(entry, variantSeed(id, variant), detail, models);
           expect(model.detail).toBe(detail);
           expect(model.parts.length).toBeGreaterThan(0);
           // Only the materials the spec names.
-          for (const part of model.parts) expect(materialsOfModel(entry)).toContain(part.material);
+          for (const part of model.parts)
+            expect(materialsOfModel(entry, models)).toContain(part.material);
           let lowest = Infinity;
           for (const part of model.parts)
             for (let i = 1; i < part.mesh.positions.length; i += 3)
@@ -94,29 +98,31 @@ describe('the generators (F133)', () => {
   it('give each detail level more faces than the one before, and keep the size across levels', () => {
     for (const [id, entry] of generated) {
       const [icon, simple, detailed] = DETAIL_LEVELS.map((detail) =>
-        generateModel(entry, variantSeed(id, 0), detail),
+        generateModel(entry, variantSeed(id, 0), detail, models),
       );
       expect(triangleCount(icon)).toBeLessThan(triangleCount(simple));
       expect(triangleCount(simple)).toBeLessThan(triangleCount(detailed));
       // Switching levels as the view zooms must not make the model jump in size.
       expect(simple.height / icon.height).toBeGreaterThan(0.85);
       expect(detailed.height / icon.height).toBeLessThan(1.2);
-      // Budgets for drawing thousands of copies [DEFAULT]: small far away, modest up close.
-      expect(triangleCount(icon)).toBeLessThanOrEqual(30);
-      expect(triangleCount(detailed)).toBeLessThanOrEqual(150);
+      // Budgets for drawing thousands of copies [DEFAULT]: small far away, modest up close
+      // (a clump of trees counts as one copy).
+      const clump = entry.generator === 'treeClump';
+      expect(triangleCount(icon)).toBeLessThanOrEqual(clump ? 160 : 30);
+      expect(triangleCount(detailed)).toBeLessThanOrEqual(clump ? 600 : 150);
     }
   });
 
   it('make the same model from the same seed, and different ones from different seeds', () => {
     for (const [id, entry] of generated) {
-      const a = generateModel(entry, variantSeed(id, 1), 'detailed');
-      const b = generateModel(entry, variantSeed(id, 1), 'detailed');
+      const a = generateModel(entry, variantSeed(id, 1), 'detailed', models);
+      const b = generateModel(entry, variantSeed(id, 1), 'detailed', models);
       expect(a.parts.map((p) => Array.from(p.mesh.positions))).toEqual(
         b.parts.map((p) => Array.from(p.mesh.positions)),
       );
       const heights = Array.from(
         { length: 6 },
-        (_, v) => generateModel(entry, variantSeed(id, v), 'simple').height,
+        (_, v) => generateModel(entry, variantSeed(id, v), 'simple', models).height,
       );
       expect(new Set(heights.map((h) => h.toFixed(3))).size).toBeGreaterThan(1);
     }
@@ -125,7 +131,7 @@ describe('the generators (F133)', () => {
   it('keep sizes within the ranges of the spec', () => {
     const [, conifer] = generated.find(([id]) => id === 'treeConifer')!;
     for (let seed = 0; seed < 50; seed++) {
-      const tree = generateModel(conifer, seed, 'simple');
+      const tree = generateModel(conifer, seed, 'simple', models);
       if (conifer.generator !== 'tree') throw new Error('not a tree');
       expect(tree.height).toBeGreaterThanOrEqual(conifer.spec.height[0] - 0.01);
       expect(tree.height).toBeLessThanOrEqual(conifer.spec.height[1] + 0.01);
@@ -133,12 +139,37 @@ describe('the generators (F133)', () => {
     const [, building] = generated.find(([id]) => id === 'boxBuilding')!;
     if (building.generator !== 'boxBuilding') throw new Error('not a building');
     for (let seed = 0; seed < 50; seed++) {
-      const made = generateModel(building, seed, 'icon');
+      const made = generateModel(building, seed, 'icon', models);
       const floors = made.height / building.spec.floorHeight;
       expect(floors).toBeGreaterThanOrEqual(building.spec.floors[0] - 0.01);
       // A pitched roof may add up to half a floor's worth above the top floor.
       expect(floors).toBeLessThanOrEqual(building.spec.floors[1] + 3);
     }
+  });
+
+  it('make tree clumps from a tree model, with their trees in the same spots at every level', () => {
+    const [, clump] = generated.find(([id]) => id === 'treeClumpConifer')!;
+    if (clump.generator !== 'treeClump') throw new Error('not a clump');
+    const tree = models[clump.spec.tree];
+    if (tree.source !== 'generator' || tree.generator !== 'tree') throw new Error('not a tree');
+    for (let seed = 0; seed < 20; seed++) {
+      const [icon, simple, detailed] = DETAIL_LEVELS.map((detail) =>
+        generateModel(clump, seed, detail, models),
+      );
+      // Several trees: wider than one tree, and about as tall.
+      expect(icon.radius).toBeGreaterThan(tree.spec.height[1] * tree.spec.crownRadius[0]);
+      expect(icon.height).toBeLessThan(tree.spec.height[1] * (1 + clump.spec.sizeVariation) + 0.5);
+      // The same trees in the same spots (the icon keeps the middle half of them).
+      expect(Math.abs(detailed.radius - simple.radius)).toBeLessThan(simple.radius * 0.35);
+      expect(icon.radius).toBeLessThanOrEqual(detailed.radius * 1.2);
+      expect(icon.parts.map((part) => part.material).sort()).toEqual(
+        [tree.spec.crownMaterial, tree.spec.trunkMaterial].sort(),
+      );
+    }
+    // A clump whose tree is not a tree model can't be made (the data check reports it too).
+    expect(() =>
+      generateModel({ ...clump, spec: { ...clump.spec, tree: 'boxBuilding' } }, 1, 'icon', models),
+    ).toThrow(/not a tree model/);
   });
 
   it('work from any spec in the data, so a new model needs no new code', () => {
@@ -160,7 +191,7 @@ describe('the generators (F133)', () => {
         rooftopUnits: [0, 0],
       },
     };
-    const shed = generateModel(entry, 7, 'simple');
+    const shed = generateModel(entry, 7, 'simple', models);
     expect(shed.radius).toBeCloseTo(15, 1);
     // One floor and a pitched roof.
     expect(shed.height).toBeGreaterThan(4);

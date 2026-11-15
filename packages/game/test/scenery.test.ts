@@ -112,8 +112,8 @@ describe('forest placement (F133)', () => {
     const out = createForestPlacement(100_000);
     const everywhere = { ...ground, forestShare: () => 1, onLand: () => true };
     placeForest(out, { minX: 0, maxX: 3, minZ: 0, maxZ: 80 }, 0.01, forests, VARIANTS, everywhere);
-    const broadleaf = forests.models.findIndex((m) => m.model === 'treeBroadleaf');
-    const conifer = forests.models.findIndex((m) => m.model === 'treeConifer');
+    const broadleaf = forests.models.findIndex((m) => m.model === 'treeClumpBroadleaf');
+    const conifer = forests.models.findIndex((m) => m.model === 'treeClumpConifer');
     for (let i = 0; i < out.count; i++) {
       if (out.z[i] < 39) expect(out.model[i]).toBe(broadleaf);
       if (out.z[i] > 53) expect(out.model[i]).toBe(conifer);

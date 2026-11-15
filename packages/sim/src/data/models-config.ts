@@ -95,9 +95,26 @@ export const boxBuildingSpecSchema = z.strictObject({
 });
 export type BoxBuildingSpec = z.infer<typeof boxBuildingSpecSchema>;
 
+/**
+ * The `treeClump` generator: a clump of trees (one of the tree models of this file) as one
+ * model, so a forest is drawn with fewer, fuller copies.
+ */
+export const treeClumpSpecSchema = z.strictObject({
+  /** The tree model (a `tree` generator model in this file) the clump is made of. */
+  tree: id,
+  /** How many trees a clump has. */
+  trees: range(1, 16),
+  /** How far the trees stand from the clump's middle, as a share of a tree's height. */
+  spread: range(0, 4),
+  /** Each tree is up to this much smaller or bigger than the clump's first one (0.2 = ±20 %). */
+  sizeVariation: fraction,
+});
+export type TreeClumpSpec = z.infer<typeof treeClumpSpecSchema>;
+
 /** Each generator's spec schema, by generator name. Add a generator: its schema here, its code in `packages/game/src/generators`. */
 export const GENERATOR_SPECS = {
   tree: treeSpecSchema,
+  treeClump: treeClumpSpecSchema,
   boxBuilding: boxBuildingSpecSchema,
 } as const;
 export type GeneratorName = keyof typeof GENERATOR_SPECS;
@@ -109,6 +126,12 @@ const generatedModel = z.discriminatedUnion('generator', [
     /** How many differently seeded versions are made; the map mixes them. */
     variants: z.number().int().min(1).max(16),
     spec: treeSpecSchema,
+  }),
+  z.strictObject({
+    source: z.literal('generator'),
+    generator: z.literal('treeClump'),
+    variants: z.number().int().min(1).max(16),
+    spec: treeClumpSpecSchema,
   }),
   z.strictObject({
     source: z.literal('generator'),
@@ -139,15 +162,34 @@ export const modelsSchema = z.strictObject({
 });
 export type ModelsConfig = z.infer<typeof modelsSchema>;
 
-/** The materials a model's spec uses (none for a model from a file). */
-export function materialsOfModel(entry: ModelEntry): string[] {
+/**
+ * The materials a model's spec uses (none for a model from a file). A tree clump uses its
+ * tree model's materials (looked up in `models`; none if that model is missing or not a tree).
+ */
+export function materialsOfModel(
+  entry: ModelEntry,
+  models: Readonly<Record<string, ModelEntry>>,
+): string[] {
   if (entry.source === 'file') return [];
   switch (entry.generator) {
     case 'tree':
       return [entry.spec.trunkMaterial, entry.spec.crownMaterial];
+    case 'treeClump': {
+      const tree = treeOfClump(entry.spec, models);
+      return tree ? [tree.trunkMaterial, tree.crownMaterial] : [];
+    }
     case 'boxBuilding':
       return [entry.spec.wallMaterial, entry.spec.roofMaterial, entry.spec.detailMaterial];
   }
+}
+
+/** The tree spec a clump is made of, or null if its `tree` is not a `tree` generator model. */
+export function treeOfClump(
+  spec: TreeClumpSpec,
+  models: Readonly<Record<string, ModelEntry>>,
+): TreeSpec | null {
+  const tree = Object.hasOwn(models, spec.tree) ? models[spec.tree] : undefined;
+  return tree?.source === 'generator' && tree.generator === 'tree' ? tree.spec : null;
 }
 
 /** The translation key of a model's name (the gallery shows it). */

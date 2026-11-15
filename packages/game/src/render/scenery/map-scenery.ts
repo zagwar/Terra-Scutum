@@ -150,8 +150,22 @@ export function createMapScenery(
   let placeMs = 0;
   let forestDetail: DetailLevel | null = null;
   let forestLook = '';
+  // Forest regions only: the share of forest at the place and four places `regionKm` around it.
+  const regionUnits = forests.regionKm / 111.32;
+  const forestShare = (x: number, z: number) => {
+    const share =
+      (ground.coverShareAt(x, z, forestClasses) +
+        ground.coverShareAt(x + regionUnits, z, forestClasses) +
+        ground.coverShareAt(x - regionUnits, z, forestClasses) +
+        ground.coverShareAt(x, z + regionUnits, forestClasses) +
+        ground.coverShareAt(x, z - regionUnits, forestClasses)) /
+      5;
+    if (share < forests.minShare) return 0;
+    // Half-dense at the edge of a forest region, fully dense where it is all forest.
+    return 0.5 + (0.5 * (share - forests.minShare)) / Math.max(0.001, 1 - forests.minShare);
+  };
   const forestGround = {
-    forestShare: (x: number, z: number) => ground.coverShareAt(x, z, forestClasses),
+    forestShare,
     heightM: (x: number, z: number) => ground.heightAt(x, z),
     onLand: (x: number, z: number) => ground.onLand(x, z),
     latitude: (z: number) => ground.latitude(z),

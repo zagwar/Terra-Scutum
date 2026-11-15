@@ -148,6 +148,13 @@ const scenerySchema = z.strictObject({
     enabled: z.boolean(),
     landCover: z.array(z.enum(LAND_COVER_CLASSES)).min(1),
     /**
+     * Trees grow only in forest regions, like the forests of strategy maps: where at least this
+     * share of the land within `regionKm` around is forest (small woods among fields and plains
+     * get no trees). Above it, the more forest, the denser the trees.
+     */
+    minShare: fraction,
+    regionKm: z.number().min(0).max(200),
+    /**
      * Which tree models grow where: each between two latitudes (north or south, in degrees).
      * Where ranges overlap, the models mix.
      */

@@ -103,9 +103,11 @@
     "forests": {
       "enabled": true,
       "landCover": ["forest", "mangrove"],
+      "minShare": 0.55,
+      "regionKm": 12,
       "models": [
-        { "model": "treeBroadleaf", "latitudes": [0, 52] },
-        { "model": "treeConifer", "latitudes": [40, 90] }
+        { "model": "treeClumpBroadleaf", "latitudes": [0, 52] },
+        { "model": "treeClumpConifer", "latitudes": [40, 90] }
       ],
       "fromZoom": 14,
       "fullZoom": 15.5,
@@ -115,7 +117,7 @@
         { "zoom": 80, "px": 15 }
       ],
       "referenceHeight": 11,
-      "spacingPx": 10,
+      "spacingPx": 18,
       "sizeVariation": 0.2,
       "tintVariation": 0.12,
       "placeMsPerFrame": 6,

@@ -51,7 +51,7 @@ export interface ModelGallery {
 /** The height every row is scaled to, in gallery units. */
 const ROW_HEIGHT = 10;
 /** From one detail level's row to the next, and the extra gap between two models, in gallery units. */
-const DETAIL_SPACING = 13;
+const MIN_DETAIL_SPACING = 13;
 const MODEL_GAP = 9;
 
 export function createModelGallery(
@@ -73,13 +73,13 @@ export function createModelGallery(
   camera.upperBetaLimit = Math.PI / 2 - 0.05;
   camera.wheelDeltaPercentage = 0.02;
   camera.minZ = 0.5;
-  camera.maxZ = 2000;
+  camera.maxZ = 5000;
   const canvas = scene.getEngine().getRenderingCanvas();
   if (canvas) camera.attachControl(canvas, true);
   scene.activeCamera = camera;
   const lights = createModelLights(scene, light.towardLight, light.ambient, light.sun);
 
-  const ground = CreateGround('gallery-ground', { width: 600, height: 600 }, scene);
+  const ground = CreateGround('gallery-ground', { width: 4000, height: 4000 }, scene);
   const groundMaterial = new StandardMaterial('gallery-ground-material', scene);
   groundMaterial.diffuseColor = new Color3(0.32, 0.36, 0.3);
   groundMaterial.specularColor = Color3.Black();
@@ -119,7 +119,7 @@ export function createModelGallery(
       new Vector3(
         narrow ? 0 : -visibleWidth * 0.15,
         0,
-        -deepest / 2 + (narrow ? deepest * 0.25 : 0),
+        -deepest * 0.6 + (narrow ? deepest * 0.25 : 0),
       ),
       false,
       false,
@@ -183,6 +183,8 @@ export function createModelGallery(
       const step = Math.max(4, ...sized.map((row) => row.radius * row.scale * 2.4));
       const columns = Math.max(1, ...sized.map((row) => row.variants));
       const totalWidth = step * columns;
+      // Rows far enough apart for the widest model (tree clumps are wide).
+      const DETAIL_SPACING = Math.max(MIN_DETAIL_SPACING, step);
       const blockDepth = DETAIL_LEVELS.length * DETAIL_SPACING + MODEL_GAP;
       widest = totalWidth;
       deepest = sized.length * blockDepth - MODEL_GAP;

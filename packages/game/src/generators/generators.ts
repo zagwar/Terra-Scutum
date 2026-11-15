@@ -1,7 +1,13 @@
-import type { DetailLevel, GeneratedModelEntry } from '@terra-scutum/sim';
+import {
+  type DetailLevel,
+  type GeneratedModelEntry,
+  type ModelEntry,
+  treeOfClump,
+} from '@terra-scutum/sim';
 import { generateBoxBuilding } from './box-building-generator';
 import type { GeneratedModel } from './model-types';
 import { hashText, mixSeed } from './seeded-random';
+import { generateTreeClump } from './tree-clump-generator';
 import { generateTree } from './tree-generator';
 
 /**
@@ -18,10 +24,17 @@ export function generateModel(
   entry: GeneratedModelEntry,
   seed: number,
   detail: DetailLevel,
+  models: Readonly<Record<string, ModelEntry>>,
 ): GeneratedModel {
   switch (entry.generator) {
     case 'tree':
       return generateTree(entry.spec, seed, detail);
+    case 'treeClump': {
+      // `models`: the other models of the library (a clump is made of one of its tree models).
+      const tree = treeOfClump(entry.spec, models);
+      if (!tree) throw new Error(`models.json: "${entry.spec.tree}" is not a tree model`);
+      return generateTreeClump(entry.spec, tree, seed, detail);
+    }
     case 'boxBuilding':
       return generateBoxBuilding(entry.spec, seed, detail);
   }
