@@ -5,6 +5,7 @@ import {
   testCountryScreen,
   testMapView,
   testNotifications,
+  testTerrainTiles,
   testWorld,
 } from './helpers';
 
@@ -18,6 +19,7 @@ const validConfig = {
 const world = {
   ...testWorld(),
   mapView: testMapView(),
+  terrainTiles: testTerrainTiles(),
   notifications: testNotifications(),
   countryScreen: testCountryScreen(),
   countryFlags: testCountryFlags(),
@@ -92,6 +94,7 @@ describe('game data validation', () => {
       'data/government_types.json: file is missing',
       'data/country_start.json: file is missing',
       'data/map_view.json: file is missing',
+      'data/terrain_tiles.json: file is missing',
       'data/notifications.json: file is missing',
       'data/country_screen.json: file is missing',
       'data/country_flags.json: file is missing',
@@ -176,6 +179,41 @@ describe('game data validation', () => {
       countryFlags: { flagSet: 'flag-icons', flags: { AAA: 'AA', BBB: 'bb' } },
     });
     expect(badCode.join('\n')).toContain('flags.AAA');
+  });
+
+  it('checks that the terrain fits the map (F125)', () => {
+    const raw = { ...world, gameConfig: validConfig };
+    expect(() => parseGameData(raw as never)).not.toThrow();
+    // Terrain made for another projection must be made again.
+    const otherProjection = {
+      ...testTerrainTiles(),
+      projection: { type: 'miller', southLatitude: -56, northLatitude: 85 },
+    };
+    expect(issuesOf({ ...raw, terrainTiles: otherProjection })).toEqual([
+      'data/terrain_tiles.json → projection: the terrain was made for another map projection than map_view.json: run `npm run import:terrain` again',
+    ]);
+    // The game can't ask for a finer level than the terrain has.
+    const mapView = testMapView();
+    mapView.terrain.maxLevel = 2;
+    expect(issuesOf({ ...raw, mapView })).toEqual([
+      'data/map_view.json → terrain.maxLevel: the terrain only has levels 0 to 1',
+    ]);
+    // The mesh must fit the tiles: a corner every 3 samples doesn't divide 256 cells.
+    const unevenMesh = testMapView();
+    unevenMesh.terrain.meshSteps = [8, 3];
+    expect(issuesOf({ ...raw, mapView: unevenMesh })).toEqual([
+      "data/map_view.json → terrain.meshSteps.1: a terrain tile has 256 cells along a side: 3 doesn't divide it evenly",
+    ]);
+    // Every land cover class needs its ground material; the color strengths go from far to close.
+    const noForest = testMapView();
+    delete (noForest.terrain.materials as Record<string, unknown>).forest;
+    expect(issuesOf({ ...raw, mapView: noForest })[0]).toContain('terrain.materials.forest');
+    const backwards = testMapView();
+    backwards.terrain.colorStrength.reverse();
+    expect(issuesOf({ ...raw, mapView: backwards })[0]).toContain('from the farthest zoom');
+    expect(
+      issuesOf({ ...raw, terrainTiles: { ...testTerrainTiles(), levels: [{ tiles: ['a'] }] } })[0],
+    ).toContain('column_row');
   });
 
   it('uses .json file names in snake_case for every data file', () => {

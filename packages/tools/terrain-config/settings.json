@@ -1,0 +1,26 @@
+{
+  "elevation": {
+    "tileUrl": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+    "zoom": 6
+  },
+  "landCover": {
+    "bucketUrl": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/",
+    "prefix": "v200/2021/map/",
+    "overviewSize": 562,
+    "tileDegrees": 3
+  },
+  "rivers": {
+    "source": "ne_10m_rivers_lake_centerlines_scale_rank",
+    "simplifyDegrees": 0.008,
+    "unitsPerDegree": 1000
+  },
+  "tiles": {
+    "baseCells": 1024,
+    "tileCells": 256,
+    "levels": 5,
+    "mixedCoverLevels": 3
+  },
+  "downloads": {
+    "concurrency": 24
+  }
+}

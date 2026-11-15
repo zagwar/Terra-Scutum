@@ -20,6 +20,9 @@ npm run import:map
 It downloads the Natural Earth files once (into `.cache/`, not committed), takes about a minute,
 and always gives the same result for the same inputs.
 
+**After the import changed the provinces, run `npm run import:terrain` too** (F125,
+`packages/tools/terrain-config/README.md`): the terrain tells land from sea by the province shapes.
+
 ## The files
 
 - **`countries.json`**: the curated country list. Every Natural Earth territory (by its code) must

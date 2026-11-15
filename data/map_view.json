@@ -20,10 +20,7 @@
     "rotateDegreesPerPixel": 0.3
   },
   "detail": {
-    "farSimplifyDegrees": 0.08,
-    "nearMaxDegreesPerPixel": 0.06,
-    "farChunkDegrees": 60,
-    "chunkDegrees": 30
+    "farSimplifyDegrees": 0.08
   },
   "colors": {
     "background": "#05080d",
@@ -37,6 +34,7 @@
     "seaSelectedStrength": 0.6,
     "regionVariation": 0.08,
     "selected": "#e8c86a",
+    "selectedStrength": 0.6,
     "neighbor": "#c8a85a",
     "neighborStrength": 0.45,
     "hoverBrighten": 0.2,
@@ -50,6 +48,51 @@
     "coast": { "color": "#c8dcf0", "opacity": 0.3, "widthPx": 1 },
     "seaZoneBorder": { "color": "#5f84a6", "opacity": 0.35, "widthPx": 1 },
     "seaZoneBorderEmphasis": { "color": "#a8c8e8", "opacity": 0.85, "widthPx": 1.6 },
-    "selection": { "color": "#fff2c0", "opacity": 1, "widthPx": 2.5 }
+    "selection": { "color": "#fff2c0", "opacity": 1, "widthPx": 2.5 },
+    "river": { "color": "#3f6f9c", "opacity": 0.75, "widthPx": 1 },
+    "riverMajor": { "color": "#3f6f9c", "opacity": 0.85, "widthPx": 1.6 },
+    "riverGreat": { "color": "#3f6f9c", "opacity": 0.9, "widthPx": 2.4 }
+  },
+  "terrain": {
+    "maxLevel": 4,
+    "pixelsPerSample": 1.6,
+    "meshSteps": [8, 4],
+    "simplifiedShapesMaxLevel": 1,
+    "exaggeration": 28,
+    "exaggerationNear": 6,
+    "lightAzimuthDegrees": 315,
+    "lightElevationDegrees": 45,
+    "shadingStrength": 1.15,
+    "shadeMin": 0.35,
+    "shadeMax": 1.6,
+    "colorStrength": [
+      { "zoom": 1, "strength": 0.8 },
+      { "zoom": 6, "strength": 0.5 },
+      { "zoom": 40, "strength": 0.15 }
+    ],
+    "naturalModes": ["provinces", "seaZones"],
+    "detailStrength": 0.07,
+    "detailWander": 1,
+    "cacheTiles": 72,
+    "buildMsPerFrame": 8,
+    "materials": {
+      "none": { "color": "#767c5c", "roughness": 0.3 },
+      "forest": { "color": "#344e2e", "roughness": 1 },
+      "shrubland": { "color": "#7a784e", "roughness": 0.6 },
+      "grassland": { "color": "#788652", "roughness": 0.35 },
+      "farmland": { "color": "#9c965e", "roughness": 0.5 },
+      "urban": { "color": "#84807c", "roughness": 0.7 },
+      "bare": { "color": "#c6b084", "roughness": 0.3 },
+      "snow": { "color": "#eef2f6", "roughness": 0.1 },
+      "water": { "color": "#1f3d58", "roughness": 0 },
+      "wetland": { "color": "#546c5e", "roughness": 0.4 },
+      "mangrove": { "color": "#325844", "roughness": 0.8 },
+      "tundra": { "color": "#8e8c74", "roughness": 0.4 }
+    },
+    "rivers": {
+      "minWeightByLevel": [null, null, 0.6, 0.3, 0.15],
+      "majorWeight": 0.4,
+      "greatWeight": 1
+    }
   }
 }

@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   type GameData,
   alertTypeNameKey,
@@ -70,5 +72,51 @@ export function checkGeometry(
       problems.push(`${file}: shape ${String(id)} is empty`);
   }
   for (const id of expectedIds) if (!seen.has(id)) problems.push(`${file}: no shape for ${id}`);
+  return problems;
+}
+
+/**
+ * The terrain (F125): every tile `data/terrain_tiles.json` lists has its file
+ * in `tileDir` (one folder per level), and there are no files it doesn't list.
+ */
+export function checkTerrainTiles(data: GameData, tileDir: string): string[] {
+  const problems: string[] = [];
+  const hint = 'run `npm run import:terrain` again';
+  data.terrainTiles.levels.forEach((level, index) => {
+    const dir = join(tileDir, String(index));
+    const listed = new Set(level.tiles.map((tile) => `${tile}.bin`));
+    const found = existsSync(dir) ? readdirSync(dir) : [];
+    let missing = 0;
+    for (const file of listed) if (!found.includes(file)) missing += 1;
+    const extra = found.filter((file) => !listed.has(file)).length;
+    if (missing > 0)
+      problems.push(`terrain level ${index}: ${missing} listed tile file(s) are missing (${hint})`);
+    if (extra > 0)
+      problems.push(`terrain level ${index}: ${extra} file(s) are not in the tile list (${hint})`);
+  });
+  return problems;
+}
+
+/** `data/geometry/rivers.json` (F125): whole numbers, an even count of them, at least two points per river. */
+export function checkRivers(file: string, content: unknown): string[] {
+  const rivers = content as {
+    unitsPerDegree?: unknown;
+    rivers?: { weight?: unknown; points?: unknown }[];
+  };
+  if (typeof rivers?.unitsPerDegree !== 'number' || !Array.isArray(rivers.rivers))
+    return [`${file}: not a rivers file`];
+  const problems: string[] = [];
+  rivers.rivers.forEach((river, index) => {
+    const { points } = river;
+    if (
+      typeof river.weight !== 'number' ||
+      !Array.isArray(points) ||
+      points.length < 4 ||
+      points.length % 2 !== 0 ||
+      !points.every((value) => Number.isInteger(value))
+    )
+      problems.push(`${file}: river ${index} is malformed`);
+  });
+  if (rivers.rivers.length === 0) problems.push(`${file}: has no rivers`);
   return problems;
 }

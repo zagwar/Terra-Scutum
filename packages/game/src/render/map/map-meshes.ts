@@ -24,21 +24,30 @@ export interface ColorTable {
   readonly texture: RawTexture;
   /** How many pixels wide the texture is (at least the number of items). */
   readonly width: number;
-  /** Replaces all colors: r, g, b, a bytes per item. */
-  update(colors: Uint8Array): void;
+  /** Replaces all colors of a row: r, g, b, a bytes per item. */
+  update(colors: Uint8Array, row?: number): void;
   dispose(): void;
 }
 
-export function createColorTable(name: string, scene: Scene, itemCount: number): ColorTable {
+/**
+ * `rows`: the land's table has two (F125): row 0 holds each province's map-mode
+ * color, row 1 its highlight (a color, and in alpha how strongly it covers the land).
+ */
+export function createColorTable(
+  name: string,
+  scene: Scene,
+  itemCount: number,
+  rows = 1,
+): ColorTable {
   let width = 64;
   while (width < itemCount) width *= 2;
   if (width > scene.getEngine().getCaps().maxTextureSize)
     throw new Error(`the map has too many items (${itemCount}) for one color table`);
-  const data = new Uint8Array(width * 4);
+  const data = new Uint8Array(width * rows * 4);
   const texture = new RawTexture(
     data,
     width,
-    1,
+    rows,
     Constants.TEXTUREFORMAT_RGBA,
     scene,
     false,
@@ -51,8 +60,8 @@ export function createColorTable(name: string, scene: Scene, itemCount: number):
   return {
     texture,
     width,
-    update(colors) {
-      data.set(colors);
+    update(colors, row = 0) {
+      data.set(colors, row * width * 4);
       texture.update(data);
     },
     dispose: () => texture.dispose(),
@@ -77,6 +86,29 @@ function finishMapMesh(mesh: Mesh, material: Material, renderingGroup: number): 
   mesh.material = material;
   mesh.renderingGroupId = renderingGroup;
   mesh.isPickable = false; // picking goes through the shape lookup, not the meshes
+}
+
+/** A texture made from rgba bytes, smoothly filtered, not repeating (the terrain tiles' pictures, F125). */
+export function createPictureTexture(
+  name: string,
+  scene: Scene,
+  pixels: Uint8Array,
+  side: number,
+): RawTexture {
+  const texture = new RawTexture(
+    pixels,
+    side,
+    side,
+    Constants.TEXTUREFORMAT_RGBA,
+    scene,
+    false,
+    false,
+    Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
+  );
+  texture.name = name;
+  texture.wrapU = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+  texture.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+  return texture;
 }
 
 export function createFillMesh(
@@ -115,6 +147,13 @@ export function createLineMesh(
   mesh.setVerticesData(VertexBuffer.PositionKind, geometry.positions);
   mesh.setVerticesBuffer(
     new VertexBuffer(engine, geometry.neighbors, 'neighbors', false, false, 4),
+  );
+  // Flat lines (the sea's) have no heights: zeros.
+  const neighborHeights =
+    (geometry as { neighborHeights?: Float32Array }).neighborHeights ??
+    new Float32Array(geometry.sideAndKind.length);
+  mesh.setVerticesBuffer(
+    new VertexBuffer(engine, neighborHeights, 'neighborHeights', false, false, 2),
   );
   // Province borders change kind when provinces change owner (see `uploadLineKinds`).
   const kindsCanChange = geometry.borders.length > 0;

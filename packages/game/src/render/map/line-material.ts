@@ -16,7 +16,9 @@ import { parseHexColor } from './map-colors';
  *
  * Lines keep the same width on screen at every zoom level: the mesh holds two
  * vertices per point (see `buildLineGeometry`), and this shader pushes them
- * apart by the line's width in pixels, with mitered corners.
+ * apart by the line's width in pixels, with mitered corners. Lines on the
+ * land (F125) carry their height; lines are never hidden by the land in front
+ * of them (they are drawn over it), so a border stays readable in mountains.
  *
  * One mesh can hold lines of several kinds (`LINE_*` flags per vertex). The
  * shader gives each its style: "coast" for coasts, "emphasis" for lines with
@@ -32,10 +34,12 @@ const VERTEX_GLSL = `
 precision highp float;
 attribute vec3 position;
 attribute vec4 neighbors;
+attribute vec2 neighborHeights;
 attribute vec2 sideAndKind;
 uniform mat4 world;
 uniform mat4 viewProjection;
 uniform vec2 resolution;
+uniform float heightScale;
 uniform vec3 lineWidths;
 uniform float emphasisFlag;
 uniform vec4 plainColor;
@@ -51,9 +55,10 @@ void main() {
   vColor = mix(mix(plainColor, emphasisColor, emphasis), coastColor, coast);
 
   mat4 transform = viewProjection * world;
-  vec4 current = transform * vec4(position, 1.0);
-  vec4 previous = transform * vec4(neighbors.x, position.y, neighbors.y, 1.0);
-  vec4 next = transform * vec4(neighbors.z, position.y, neighbors.w, 1.0);
+  // Heights are stored at real scale; the land's exaggeration of the moment raises them (F125).
+  vec4 current = transform * vec4(position.x, position.y * heightScale, position.z, 1.0);
+  vec4 previous = transform * vec4(neighbors.x, neighborHeights.x * heightScale, neighbors.y, 1.0);
+  vec4 next = transform * vec4(neighbors.z, neighborHeights.y * heightScale, neighbors.w, 1.0);
   vec2 halfSize = resolution * 0.5;
   vec2 currentPx = current.xy / current.w * halfSize;
   vec2 fromPrevious = currentPx - previous.xy / previous.w * halfSize;
@@ -90,8 +95,10 @@ const VERTEX_WGSL = `
 #include<meshUboDeclaration>
 attribute position: vec3f;
 attribute neighbors: vec4f;
+attribute neighborHeights: vec2f;
 attribute sideAndKind: vec2f;
 uniform resolution: vec2f;
+uniform heightScale: f32;
 uniform lineWidths: vec3f;
 uniform emphasisFlag: f32;
 uniform plainColor: vec4f;
@@ -110,9 +117,10 @@ fn main(input: VertexInputs) -> FragmentInputs {
 
   let transform: mat4x4f = scene.viewProjection * mesh.world;
   let point: vec3f = vertexInputs.position;
-  let current: vec4f = transform * vec4f(point, 1.0);
-  let previous: vec4f = transform * vec4f(vertexInputs.neighbors.x, point.y, vertexInputs.neighbors.y, 1.0);
-  let next: vec4f = transform * vec4f(vertexInputs.neighbors.z, point.y, vertexInputs.neighbors.w, 1.0);
+  let rise: f32 = uniforms.heightScale;
+  let current: vec4f = transform * vec4f(point.x, point.y * rise, point.z, 1.0);
+  let previous: vec4f = transform * vec4f(vertexInputs.neighbors.x, vertexInputs.neighborHeights.x * rise, vertexInputs.neighbors.y, 1.0);
+  let next: vec4f = transform * vec4f(vertexInputs.neighbors.z, vertexInputs.neighborHeights.y * rise, vertexInputs.neighbors.w, 1.0);
   let halfSize: vec2f = uniforms.resolution * 0.5;
   let currentPx: vec2f = current.xy / current.w * halfSize;
   let fromPrevious: vec2f = currentPx - previous.xy / previous.w * halfSize;
@@ -160,12 +168,15 @@ export interface LineStyles {
 export interface LineMaterial {
   readonly material: ShaderMaterial;
   setStyles(styles: LineStyles): void;
+  /** Lines on the land store heights at real scale; this is what they are multiplied by (F125). */
+  setHeightScale(scale: number): void;
   /** Call when the canvas size changes: line widths are in screen pixels. */
   updateResolution(): void;
 }
 
 const UNIFORMS = [
   'resolution',
+  'heightScale',
   'lineWidths',
   'emphasisFlag',
   'plainColor',
@@ -186,7 +197,7 @@ export function createLineMaterial(name: string, scene: Scene, styles: LineStyle
     scene,
     { vertex: SHADER_NAME, fragment: SHADER_NAME },
     {
-      attributes: ['position', 'neighbors', 'sideAndKind'],
+      attributes: ['position', 'neighbors', 'neighborHeights', 'sideAndKind'],
       uniforms: webGpu ? UNIFORMS : ['world', 'viewProjection', ...UNIFORMS],
       uniformBuffers: webGpu ? ['Scene', 'Mesh'] : undefined,
       needAlphaBlending: true,
@@ -222,5 +233,7 @@ export function createLineMaterial(name: string, scene: Scene, styles: LineStyle
     updateResolution();
   };
   setStyles(styles);
-  return { material, setStyles, updateResolution };
+  material.setFloat('heightScale', 1);
+  const setHeightScale = (scale: number) => material.setFloat('heightScale', scale);
+  return { material, setStyles, setHeightScale, updateResolution };
 }

@@ -163,6 +163,7 @@ export function createSimHost(
           saveFormatVersion: SAVE_FORMAT_VERSION,
           world: state.world,
           mapView: data.mapView,
+          terrainTiles: data.terrainTiles,
           countryStart: state.countryStart,
           time,
           daysPerSecond,

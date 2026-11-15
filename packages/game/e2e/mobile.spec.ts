@@ -119,9 +119,24 @@ test('the game can be played on a phone: compact layout, taps and pinch zoom', a
   expect(zoomBack!).toBeLessThan(zoomAfter! / 2);
   await expect(page.getByTestId('province-panel')).toHaveCount(0);
 
-  // A tap on a province opens its panel across the screen; the outliner and map mode box step aside.
-  const milan = await screenPosition(page, 9.19, 45.46);
-  await page.touchscreen.tap(milan.x, milan.y);
+  // Up close in the Alps the land is real terrain (F125): a tap still lands on the province under
+  // the finger. Its panel opens across the screen; the outliner and map mode box step aside.
+  await page.evaluate(() => window.__terraScutum!.map.lookAt(7.3, 45.5, 30));
+  await page.waitForFunction(() => window.__terraScutum!.map.stats()!.terrainPending === 0, null, {
+    timeout: 90_000,
+  });
+  const granParadiso = [7.27, 45.52] as const;
+  expect(
+    await page.evaluate(([lon, lat]) => window.__terraScutum!.map.heightAt(lon, lat), granParadiso),
+  ).toBeGreaterThan(1500);
+  const expected = await page.evaluate(
+    ([lon, lat]) => window.__terraScutum!.map.provinceAt(lon, lat),
+    granParadiso,
+  );
+  expect(expected).toMatch(/^ita_/);
+  const peak = await screenPosition(page, ...granParadiso);
+  await page.touchscreen.tap(peak.x, peak.y);
+  expect(await page.evaluate(() => window.__terraScutum!.map.selectedProvince())).toBe(expected);
   await expect(page.getByTestId('province-panel')).toBeVisible();
   await expect(page.getByTestId('outliner')).toBeHidden();
   await expect(page.getByTestId('map-mode-bar')).toBeHidden();

@@ -172,13 +172,20 @@ test('the map wraps east–west and shows full detail when zoomed in', async ({ 
   );
   await page.keyboard.up('ArrowRight');
 
-  // Zoomed in on the date line: the close-up level, with only the chunks on screen drawn.
+  // Zoomed in on the date line: the full shapes on finer terrain, with only the tiles on screen drawn.
   await page.evaluate(() => window.__terraScutum!.map.lookAt(178, 62, 8));
   await waitForFrames(page, 3);
+  // The finer terrain arrives a moment after the view asks for it.
+  await page.waitForFunction(() => window.__terraScutum!.map.stats()!.terrainPending === 0, null, {
+    timeout: 60_000,
+  });
+  await waitForFrames(page, 2);
   const zoomed = await map.stats();
   expect(zoomed.detail).toBe('near');
-  expect(zoomed.nearTriangles).toBeGreaterThan(400_000);
-  expect(zoomed.drawnTriangles).toBeLessThan(zoomed.nearTriangles! / 2);
+  expect(zoomed.terrainLevel).toBeGreaterThanOrEqual(2);
+  // Only the terrain tiles on screen are drawn: a zoomed-in view stays cheap.
+  expect(zoomed.terrainTiles).toBeLessThan(40);
+  expect(zoomed.drawnTriangles).toBeLessThan(500_000);
   // Chukotka lies on both sides of the date line and is one province on screen.
   const west = await screenPosition(page, 179.5, 67);
   const east = await screenPosition(page, -179.5, 67);
