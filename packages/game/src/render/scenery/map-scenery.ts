@@ -243,6 +243,8 @@ export function createMapScenery(
 
   const updateForests = (view: SceneryView): boolean => {
     if (!forests.enabled || view.zoom < forests.fromZoom) {
+      // No trees this far out: a search still running is no longer needed.
+      search = null;
       if (forestDetail === null) return false;
       for (const batches of forestBatches) for (const batch of batches) batch.count = 0;
       forestDetail = null;

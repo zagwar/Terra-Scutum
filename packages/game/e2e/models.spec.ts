@@ -51,6 +51,9 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   const far = await scenery(page);
   expect(far.trees).toBe(0);
   expect(far.capitalBuildings).toBe(0);
+  // A continent in view (zoom 5): still no trees (designer decision: they grow in from zoom 7).
+  await lookAt(page, 15, 60, 5);
+  expect((await scenery(page)).trees).toBe(0);
 
   // The Amazon: a forest of trees, standing on the land as drawn.
   await lookAt(page, -62, -4, 10);

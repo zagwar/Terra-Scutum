@@ -107,10 +107,10 @@
         { "model": "treeBroadleaf", "latitudes": [0, 52] },
         { "model": "treeConifer", "latitudes": [40, 90] }
       ],
-      "fromZoom": 4,
-      "fullZoom": 6,
+      "fromZoom": 7,
+      "fullZoom": 10,
       "sizePx": [
-        { "zoom": 4, "px": 9 },
+        { "zoom": 7, "px": 9 },
         { "zoom": 20, "px": 12 },
         { "zoom": 80, "px": 15 }
       ],
