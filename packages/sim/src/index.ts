@@ -19,6 +19,8 @@ export * from './data/notifications-config';
 export * from './data/terrain-format';
 export * from './data/country-screen-config';
 export * from './politics/government-types';
+export * from './stress/placeholder-load';
+export * from './stress/stress-config';
 export * from './world/country-start';
 export * from './world/ownership';
 export * from './world/world-data';

@@ -1,7 +1,10 @@
 # Checks that run automatically on every pull request (the green ✓ or red ✗ on the PR page):
-# typecheck, lint, data validation, unit tests, a short headless campaign, and browser tests.
+# typecheck, lint, data validation, unit tests, a short headless campaign, the sim stress test,
+# and the browser tests.
 # Browser tests (designer decision, to save Actions minutes): pull requests run them on WebGL 2 only;
 # a push to main (a merged pull request) runs them on WebGPU; starting the run by hand runs both.
+# Since F139 the browser tests are split into three parts that run at the same time on three
+# machines (about a third of the waiting each), next to the job with the other checks.
 name: CI
 
 on:
@@ -21,10 +24,9 @@ permissions:
 
 jobs:
   check:
-    name: Check, test and build
+    name: Check, unit tests and sim stress test
     runs-on: ubuntu-latest
-    # The browser tests draw the map in software and take most of the run.
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -45,6 +47,44 @@ jobs:
       - name: Headless campaign (two years, performance budget enforced)
         run: npm run runner -- --days 730 --seed 42 --strict
 
+      - name: Sim stress test (placeholder load, ten years, two seeds, budget enforced)
+        run: npm run runner -- --stress --days 3650 --seeds 2 --strict --json sim-stress.json
+
+      - name: Keep the sim stress test's numbers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-stress
+          path: sim-stress.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  browser:
+    name: Browser tests (part ${{ matrix.part }} of 3)
+    runs-on: ubuntu-latest
+    # The browser tests draw the map in software; each part takes about a third of them.
+    timeout-minutes: 20
+    strategy:
+      # One part failing doesn't stop the others, so a run shows every failing test.
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3]
+    env:
+      # Which renderer: WebGL 2 on pull requests, WebGPU on main, both when started by hand.
+      PROJECTS: >-
+        ${{ github.event_name == 'pull_request' && '--project=webgl2'
+        || github.event_name == 'push' && '--project=webgpu' || '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Cache the Playwright browser
         id: playwright-cache
         uses: actions/cache@v4
@@ -60,23 +100,14 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Build the game and run the browser tests (WebGL 2)
-        if: github.event_name == 'pull_request'
-        run: npm run test:e2e -- --project=webgl2
-
-      - name: Build the game and run the browser tests (WebGPU)
-        if: github.event_name == 'push'
-        run: npm run test:e2e -- --project=webgpu
-
-      - name: Build the game and run the browser tests (WebGL 2 and WebGPU)
-        if: github.event_name == 'workflow_dispatch'
-        run: npm run test:e2e
+      - name: Build the game and run the browser tests (part ${{ matrix.part }} of 3)
+        run: npm run test:e2e -- $PROJECTS --shard=${{ matrix.part }}/3
 
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-screenshots
+          name: e2e-screenshots-${{ matrix.part }}
           path: |
             packages/game/e2e/screenshots
             packages/game/test-results

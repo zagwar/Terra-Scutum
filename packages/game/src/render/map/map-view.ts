@@ -66,6 +66,7 @@ import { createModelLights } from '../models/instanced-models';
 import type { ModelLibrary } from '../models/model-library';
 import {
   type MapScenery,
+  type SceneryGround,
   type SceneryProbe,
   type SceneryStats,
   type SceneryView,
@@ -145,8 +146,17 @@ export interface MapStats {
   readonly scenery: SceneryStats;
 }
 
+/** Something drawn on the map that follows the view every frame (F139: the render stress test). */
+export interface MapLayer {
+  update(view: SceneryView): void;
+}
+
 export interface MapView {
   getStats(): MapStats;
+  /** Adds a layer; it is updated every frame, after the scenery. Returns a function that removes it. */
+  addLayer(layer: MapLayer): () => void;
+  /** The land as things standing on it see it (heights, provinces, positions). */
+  readonly ground: SceneryGround;
   setMode(mode: MapMode): void;
   /** Who owns each province now (country indices, from the sim's snapshot). */
   setProvinceOwners(provinceOwner: Uint16Array): void;
@@ -426,23 +436,25 @@ export async function createMapView(
   });
 
   // ── Scenery (F133): generated models standing on the land ─────────────────
+  const ground: SceneryGround = {
+    heightAt: (x, z) => terrain.heightAt(x, z),
+    coverShareAt: (x, z, classes) => terrain.coverShareAt(x, z, classes),
+    provinceAt: (x, z) => lookup.find(x, z),
+    terrainVersion: () => terrain.drawnVersion(),
+    latitude: (z) => projection.latitude(z),
+    x: (longitude) => projection.x(longitude),
+    z: (latitude) => projection.z(latitude),
+    longitude: (x) => projection.longitude(x),
+  };
   const scenery: MapScenery = createMapScenery(
     scene,
     models,
     config.scenery,
     world,
-    {
-      heightAt: (x, z) => terrain.heightAt(x, z),
-      coverShareAt: (x, z, classes) => terrain.coverShareAt(x, z, classes),
-      provinceAt: (x, z) => lookup.find(x, z),
-      terrainVersion: () => terrain.drawnVersion(),
-      latitude: (z) => projection.latitude(z),
-      x: (longitude) => projection.x(longitude),
-      z: (latitude) => projection.z(latitude),
-      longitude: (x) => projection.longitude(x),
-    },
+    ground,
     LAND_GROUP,
   );
+  const layers = new Set<MapLayer>();
   const lightAzimuth = (terrainConfig.lightAzimuthDegrees * Math.PI) / 180;
   const lightElevation = (terrainConfig.lightElevationDegrees * Math.PI) / 180;
   const modelLights = createModelLights(
@@ -1099,7 +1111,10 @@ export async function createMapView(
     stepCamera(seconds);
     // Terrain that arrived is built a little every frame; then the view may draw finer tiles.
     if (terrain.tick()) updateDetail();
-    if (sceneryView) scenery.update(sceneryView);
+    if (sceneryView) {
+      scenery.update(sceneryView);
+      for (const layer of layers) layer.update(sceneryView);
+    }
     if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
       setHovered(targetAtCanvasPoint(pointer.x, pointer.y));
@@ -1132,6 +1147,11 @@ export async function createMapView(
         scenery: scenery.stats(),
       };
     },
+    addLayer(layer) {
+      layers.add(layer);
+      return () => void layers.delete(layer);
+    },
+    ground,
     sceneryProbe: (count) => scenery.probe(count),
     setSceneryEnabled: (enabled) => scenery.setEnabled(enabled),
     setMode(next) {

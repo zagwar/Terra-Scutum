@@ -9,6 +9,7 @@ import type { GeneratedModel } from './model-types';
 import { hashText, mixSeed } from './seeded-random';
 import { generateTreeClump } from './tree-clump-generator';
 import { generateTree } from './tree-generator';
+import { generateBug, generateVehicle } from './unit-generators';
 
 /**
  * The generator framework (F133, section 12.6): a model's entry in
@@ -37,6 +38,10 @@ export function generateModel(
     }
     case 'boxBuilding':
       return generateBoxBuilding(entry.spec, seed, detail);
+    case 'vehicle':
+      return generateVehicle(entry.spec, seed, detail);
+    case 'bug':
+      return generateBug(entry.spec, seed, detail);
   }
 }
 

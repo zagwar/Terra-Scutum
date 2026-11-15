@@ -4,9 +4,11 @@ import { createAppStore } from './app-store';
 import { type DebugHooks, installDebugHooks } from './debug/debug-hooks';
 import { parseLaunchOptions } from './debug/scenarios';
 import { DemoControls, startUiDemo } from './debug/ui-demo';
+import { type StressTest, startStressTest } from './debug/stress-test';
 import { type GameRenderer, createGameRenderer } from './render/game-renderer';
 import { App } from './ui/app';
 import { ModelGalleryPage } from './ui/model-gallery-page';
+import { StressOverlay } from './ui/stress-overlay';
 import { t } from './ui/i18n';
 import { messageFromEvent } from './ui/shell/messages';
 import { createShellActions } from './ui/shell/shell-actions';
@@ -43,6 +45,8 @@ let debugHooks: DebugHooks | null = null;
 // the world's facts from the sim. Whichever arrives second starts the map.
 let renderer: GameRenderer | null = null;
 let ready: ReadyMessage | null = null;
+/** The render stress test (F139), once its load is on the map. */
+let stressTest: StressTest | null = null;
 
 function showMapWhenPossible(): void {
   if (!renderer || !ready) return;
@@ -80,6 +84,24 @@ function showMapWhenPossible(): void {
           map.setEdgeScrolling(launch.scenario.edgeScrolling);
           map.setSceneryEnabled(launch.scenario.scenery !== false);
         }
+        if (launch.scenario?.stress && ready && view.models) {
+          stressTest = startStressTest({
+            scene: view.scene,
+            renderer: view.type,
+            map,
+            library: view.models,
+            world: ready.world,
+            countryStart: ready.countryStart,
+            config: ready.renderStress,
+            scenery: ready.mapView.scenery,
+            budget: ready.performanceBudget,
+          });
+          debugHooks?.setStressTest(stressTest);
+          renderUi();
+          // The sim worker runs its placeholder load at top speed, as a late game at full speed would.
+          sim.changeTime({ kind: 'setSpeed', speed: 5 });
+          sim.changeTime({ kind: 'setPaused', paused: false });
+        }
         store.update({ map: 'ready' });
         if (launch.scenario?.uiDemo) startUiDemo(store, actions);
       },
@@ -111,7 +133,8 @@ const sim = createSimClient({
     });
     showMapWhenPossible();
   },
-  onUpdate(snapshot, events) {
+  onUpdate(snapshot, events, tickMs) {
+    if (tickMs !== undefined) stressTest?.recordTick(tickMs);
     // The owners only come along when they changed; otherwise the ones we have still hold.
     store.update({
       snapshot,
@@ -161,8 +184,7 @@ function renderGallery(gallery: Parameters<typeof ModelGalleryPage>[0]['gallery'
   );
 }
 
-if (launch.scenario?.modelGallery) renderGallery(null);
-else
+function renderUi(): void {
   uiRoot.render(
     <StrictMode>
       <App
@@ -171,14 +193,20 @@ else
         onChangeTime={changeTime}
         onSetMapMode={(mapMode) => store.update({ mapMode })}
         onResetView={() => renderer?.map?.resetView()}
-        demoControls={
+        debugControls={
           launch.scenario?.uiDemo ? (
             <DemoControls store={store} actions={actions} sim={sim} />
+          ) : launch.scenario?.stress ? (
+            <StressOverlay test={stressTest} />
           ) : undefined
         }
       />
     </StrictMode>,
   );
+}
+
+if (launch.scenario?.modelGallery) renderGallery(null);
+else renderUi();
 
 if (launch.scenarioName !== null && launch.scenario === null) {
   store.update({
@@ -188,7 +216,7 @@ if (launch.scenarioName !== null && launch.scenario === null) {
     error: { key: 'ERROR_DEBUG_SCENARIO_UNKNOWN', detail: `?debug=${launch.scenarioName}` },
   });
 } else {
-  sim.init(launch.scenario?.seed ?? randomSeed());
+  sim.init(launch.scenario?.seed ?? randomSeed(), { stressLoad: launch.scenario?.stress });
 
   createGameRenderer(requireElement('scene'), { preference: launch.renderer }).then(
     (created) => {

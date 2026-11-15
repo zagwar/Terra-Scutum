@@ -176,7 +176,8 @@ export function createModelGallery(
       const sized = ready.map((row) => {
         const height = Math.max(...row.made.map((m) => m.geometry.height), 0.001);
         const radius = Math.max(...row.made.map((m) => m.geometry.radius), 0.001);
-        return { ...row, height, scale: ROW_HEIGHT / height, radius };
+        // The same height, or the same width for models wider than tall (a factory hall, a tank).
+        return { ...row, height, scale: ROW_HEIGHT / Math.max(height, radius * 1.2), radius };
       });
       // One grid for all models: a block of three rows (the detail levels) per model, each row
       // the model's variants side by side; the blocks in a grid, `blocksAcross` per row.

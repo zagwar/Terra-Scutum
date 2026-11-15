@@ -28,8 +28,8 @@ export interface AppProps {
   readonly onSetMapMode: (mode: MapMode) => void;
   /** Brings the whole world back into view, north up. */
   readonly onResetView: () => void;
-  /** Extra controls of the UI demo (`?debug=ui-demo`); absent in a normal game. */
-  readonly demoControls?: ReactNode;
+  /** Extra controls of a debug scenario (the UI demo, the stress test's counter); absent in a normal game. */
+  readonly debugControls?: ReactNode;
 }
 
 /**
@@ -44,7 +44,7 @@ export function App({
   onChangeTime,
   onSetMapMode,
   onResetView,
-  demoControls,
+  debugControls,
 }: AppProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const { world, provinceOwner } = state;
@@ -125,7 +125,7 @@ export function App({
           <span>{t('LOADING_MAP')}</span>
         </div>
       )}
-      {demoControls}
+      {debugControls}
 
       {world && provinceOwner && state.hoveredProvince !== null && (
         <MapTooltip

@@ -27,6 +27,12 @@ export interface DebugScenario {
    * software, where thousands of trees make every frame take seconds.
    */
   readonly scenery?: boolean;
+  /**
+   * The render stress test (F139): the late-game load on the map, the
+   * on-screen counter, and the sim worker running the sim stress test's
+   * placeholder load at top speed.
+   */
+  readonly stress?: boolean;
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
@@ -40,6 +46,8 @@ export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
   'country-selection': { seed: 42, edgeScrolling: false, chooseCountry: true, scenery: false },
   /** The model gallery (F133): the generated 3D models up close, for the designer and the tests. */
   models: { seed: 42, edgeScrolling: false, modelGallery: true },
+  /** The render stress test (F139): a late-game map, the counter, the benchmark. For the designer and the tests. */
+  stress: { seed: 42, edgeScrolling: false, stress: true },
 };
 
 export interface LaunchOptions {

@@ -45,6 +45,7 @@ describe('loading game data from disk', () => {
       'data/country_screen.json: file is missing',
       'data/country_flags.json: file is missing',
       'data/models.json: file is missing',
+      'data/stress_test.json: file is missing',
     ]);
     const realCopy = (extra: Record<string, string>) => {
       const dir = tempDataDir(extra);

@@ -42,6 +42,7 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const a of screen.diplomaticActions)
     need(diplomaticActionNameKey(a.id), `diplomatic action ${a.id}`);
   for (const id of Object.keys(data.models.models)) need(modelNameKey(id), `model ${id}`);
+  for (const view of data.stressTest.render.views) need(view.name, `stress test view ${view.name}`);
   return problems;
 }
 

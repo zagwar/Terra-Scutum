@@ -4,6 +4,7 @@ import {
   type RawGameData,
   SAVE_FORMAT_VERSION,
   type SimSnapshot,
+  createPlaceholderLoad,
   createSnapshot,
   flagCodesByIndex,
   parseGameData,
@@ -86,8 +87,15 @@ export function createSimHost(
     const dayAt = startedAt - nextDayAt > interval / 2 ? startedAt : nextDayAt;
     guarded(() => {
       const current = requireState();
+      const tickStartedAt = clock.now();
       current.advanceDay();
-      post({ type: 'update', snapshot: snapshotOf(current), events: current.drainEvents() });
+      const tickMs = clock.now() - tickStartedAt;
+      post({
+        type: 'update',
+        snapshot: snapshotOf(current),
+        events: current.drainEvents(),
+        tickMs,
+      });
     });
     if (failed) return;
     // The next day is due one day's time after this one. If that moment has
@@ -152,7 +160,9 @@ export function createSimHost(
       case 'init': {
         const data = parseGameData(rawData);
         stopTimer();
-        state = new GameState({ data, seed: message.seed });
+        const load = message.stressLoad ? createPlaceholderLoad(data.stressTest.sim) : null;
+        state = new GameState({ data, seed: message.seed, systems: load?.systems });
+        load?.prepare(state);
         sent = undefined; // the first snapshot of a campaign is complete
         daysPerSecond = data.gameConfig.gameSpeed.daysPerSecond;
         // A new game starts paused.
@@ -177,6 +187,8 @@ export function createSimHost(
               data.governmentTypes.governmentTypes.map((g) => [g.id, g.kind]),
             ),
           },
+          renderStress: data.stressTest.render,
+          performanceBudget: data.gameConfig.performanceBudget,
         });
         return;
       }

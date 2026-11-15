@@ -6,6 +6,8 @@ import {
   testMapView,
   testModels,
   testNotifications,
+  testPerformanceBudget,
+  testStressTest,
   testTerrainTiles,
   testWorld,
 } from './helpers';
@@ -13,7 +15,7 @@ import {
 const validConfig = {
   startDate: '2025-01-01',
   playerCountry: 'AAA',
-  performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
+  performanceBudget: testPerformanceBudget(),
   gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
 };
 
@@ -25,6 +27,7 @@ const world = {
   countryScreen: testCountryScreen(),
   countryFlags: testCountryFlags(),
   models: testModels(),
+  stressTest: testStressTest(),
 };
 
 function issuesOf(raw: unknown): string[] {
@@ -50,7 +53,11 @@ describe('game data validation', () => {
       gameConfig: {
         startDate: '2025-02-30',
         playerCountry: 'AAA',
-        performanceBudget: { dailyTickAverageMs: 'fast', weeklyTickAverageMs: -1 },
+        performanceBudget: {
+          ...testPerformanceBudget(),
+          dailyTickAverageMs: 'fast',
+          weeklyTickAverageMs: -1,
+        },
         gameSpeed: validConfig.gameSpeed,
       },
     });
@@ -101,6 +108,7 @@ describe('game data validation', () => {
       'data/country_screen.json: file is missing',
       'data/country_flags.json: file is missing',
       'data/models.json: file is missing',
+      'data/stress_test.json: file is missing',
     ]);
   });
 
@@ -219,11 +227,14 @@ describe('game data validation', () => {
     ).toContain('column_row');
   });
 
-  it('checks the model library and the scenery that uses it (F133)', () => {
+  it('checks the model library and the scenery and stress test that use it (F133, F139)', () => {
     const raw = { ...world, gameConfig: validConfig };
     expect(issuesOf({ ...raw, models: { materials: {}, models: {} } })).toEqual([
       'data/map_view.json → scenery.forests.models.0.model: unknown model "tree" (not in models.json)',
       'data/map_view.json → scenery.capitals.model: unknown model "building" (not in models.json)',
+      'data/stress_test.json → render.buildingModels.0: unknown model "building" (not in models.json)',
+      'data/stress_test.json → render.unitModels.0: unknown model "building" (not in models.json)',
+      'data/stress_test.json → render.battle.bugModels.0: unknown model "tree" (not in models.json)',
     ]);
     // A model's materials must exist.
     const noBark = testModels();

@@ -39,6 +39,7 @@ import {
   countryFlagsSchema,
   countryScreenSchema,
 } from './country-screen-config';
+import { type StressTestConfig, stressTestSchema } from '../stress/stress-config';
 
 /**
  * The list of JSON data files in `data/`, each with the zod schema that
@@ -63,6 +64,7 @@ export const DATA_FILES = {
   countryScreen: { file: 'country_screen.json', schema: countryScreenSchema },
   countryFlags: { file: 'country_flags.json', schema: countryFlagsSchema },
   models: { file: 'models.json', schema: modelsSchema },
+  stressTest: { file: 'stress_test.json', schema: stressTestSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -92,6 +94,8 @@ export interface GameData {
   readonly countryFlags: CountryFlagsConfig;
   /** The 3D model library and procedural materials (F133); used by the game, not by the sim's systems. */
   readonly models: ModelsConfig;
+  /** The sizes of the performance stress tests (F139): the sim's placeholder load and what `?debug=stress` draws. */
+  readonly stressTest: StressTestConfig;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */
@@ -159,7 +163,7 @@ const checkTerrainTiles: DataCrossCheck = (data, report) => {
     });
 };
 
-/** Every material a model uses exists, and every model the map's scenery shows exists (F133). */
+/** Every material a model uses exists, and every model the scenery (F133) and the render stress test (F139) show exists. */
 const checkModels: DataCrossCheck = (data, report) => {
   const { materials, models } = data.models;
   for (const [modelId, entry] of Object.entries(models)) {
@@ -194,6 +198,20 @@ const checkModels: DataCrossCheck = (data, report) => {
     need(tree.model, `scenery.forests.models.${index}.model`),
   );
   need(capitals.model, 'scenery.capitals.model');
+  // The render stress test's models (F139).
+  const stress = data.stressTest.render;
+  const needStress = (list: readonly string[], path: string) =>
+    list.forEach((modelId, index) => {
+      if (!Object.hasOwn(models, modelId))
+        report({
+          file: 'stress_test.json',
+          path: `${path}.${index}`,
+          message: `unknown model "${modelId}" (not in models.json)`,
+        });
+    });
+  needStress(stress.buildingModels, 'render.buildingModels');
+  needStress(stress.unitModels, 'render.unitModels');
+  needStress(stress.battle.bugModels, 'render.battle.bugModels');
 };
 
 const CROSS_CHECKS: readonly DataCrossCheck[] = [

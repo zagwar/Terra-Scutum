@@ -101,6 +101,67 @@
         "size": 2,
         "strength": 0.2
       }
+    },
+    "factoryWall": {
+      "color": "#8d9498",
+      "roughness": 0.75,
+      "metallic": 0.1,
+      "pattern": {
+        "kind": "tiles",
+        "size": 4,
+        "strength": 0.25,
+        "accent": "#6d7478"
+      }
+    },
+    "armyGreen": {
+      "color": "#4b5a3a",
+      "roughness": 0.8,
+      "metallic": 0.1,
+      "pattern": {
+        "kind": "noise",
+        "size": 2.5,
+        "strength": 0.35
+      }
+    },
+    "gunMetal": {
+      "color": "#3c3f42",
+      "roughness": 0.5,
+      "metallic": 0.6,
+      "pattern": {
+        "kind": "noise",
+        "size": 1,
+        "strength": 0.15
+      }
+    },
+    "chitin": {
+      "color": "#6e2a4a",
+      "roughness": 0.45,
+      "metallic": 0.2,
+      "pattern": {
+        "kind": "noise",
+        "size": 1.5,
+        "strength": 0.4
+      }
+    },
+    "chitinDark": {
+      "color": "#3a1828",
+      "roughness": 0.5,
+      "metallic": 0.1,
+      "pattern": {
+        "kind": "plain",
+        "size": 1,
+        "strength": 0
+      }
+    },
+    "bugGlow": {
+      "color": "#ff6a3d",
+      "roughness": 0.2,
+      "metallic": 0,
+      "pattern": {
+        "kind": "plain",
+        "size": 1,
+        "strength": 0
+      }
     }
   },
   "models": {
@@ -255,6 +316,68 @@
         "gabledMaxFloors": 4,
         "setbackShare": 0.6,
         "rooftopUnits": [1, 3]
+      }
+    },
+    "factoryHall": {
+      "source": "generator",
+      "generator": "boxBuilding",
+      "variants": 4,
+      "spec": {
+        "wallMaterial": "factoryWall",
+        "roofMaterial": "rooftopMetal",
+        "detailMaterial": "rooftopMetal",
+        "floors": [1, 3],
+        "floorHeight": 5,
+        "width": [30, 60],
+        "depth": [20, 40],
+        "gabledShare": 0.5,
+        "gabledMaxFloors": 3,
+        "setbackShare": 0,
+        "rooftopUnits": [2, 6]
+      }
+    },
+    "unitTank": {
+      "source": "generator",
+      "generator": "vehicle",
+      "variants": 4,
+      "spec": {
+        "hullMaterial": "armyGreen",
+        "detailMaterial": "gunMetal",
+        "length": [6.5, 8],
+        "width": [3.2, 3.8],
+        "hullHeight": [1.6, 2.1],
+        "turretShare": 0.85,
+        "gunShare": [0.55, 0.75]
+      }
+    },
+    "bugWarrior": {
+      "source": "generator",
+      "generator": "bug",
+      "variants": 4,
+      "spec": {
+        "bodyMaterial": "chitin",
+        "legMaterial": "chitinDark",
+        "organMaterial": "bugGlow",
+        "length": [3, 5],
+        "segments": [3, 3],
+        "legPairs": [3, 3],
+        "legShare": [0.5, 0.7],
+        "organ": false
+      }
+    },
+    "bugInterceptor": {
+      "source": "generator",
+      "generator": "bug",
+      "variants": 4,
+      "spec": {
+        "bodyMaterial": "chitin",
+        "legMaterial": "chitinDark",
+        "organMaterial": "bugGlow",
+        "length": [4, 6],
+        "segments": [2, 3],
+        "legPairs": [2, 3],
+        "legShare": [0.45, 0.6],
+        "organ": true
       }
     }
   }

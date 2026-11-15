@@ -136,6 +136,11 @@ test('the model gallery shows every model in three detail levels, and a model fi
     'treeClumpPalm',
     'treeClumpAcacia',
     'boxBuilding',
+    // F139's placeholders for the render stress test.
+    'factoryHall',
+    'unitTank',
+    'bugWarrior',
+    'bugInterceptor',
   ]);
   for (const model of stats) {
     expect(model.source).toBe('generator');
@@ -145,7 +150,7 @@ test('the model gallery shows every model in three detail levels, and a model fi
     expect(simple!).toBeGreaterThan(icon!);
     expect(detailed!).toBeGreaterThan(simple!);
   }
-  await expect(page.locator('.model-gallery-label-model')).toHaveCount(11);
+  await expect(page.locator('.model-gallery-label-model')).toHaveCount(15);
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `${testInfo.project.name}-model-gallery.png`),
   });
@@ -159,11 +164,14 @@ test('the model gallery shows every model in three detail levels, and a model fi
   await page.waitForFunction(
     () =>
       window.__terraScutum!.gallery.isComplete() &&
-      window.__terraScutum!.gallery.stats()![10].source === 'file',
+      window.__terraScutum!.gallery.stats()!.find((m) => m.modelId === 'boxBuilding')!.source ===
+        'file',
     null,
     { timeout: 120_000 },
   );
-  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))![10];
+  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))!.find(
+    (model) => model.modelId === 'boxBuilding',
+  )!;
   expect(replaced.variants).toBe(1);
   expect(replaced.triangles).toEqual({ icon: 12, simple: 12, detailed: 12 });
   expect(replaced.heightM).toBeCloseTo(12, 3);

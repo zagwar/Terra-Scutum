@@ -1,5 +1,7 @@
 import type {
+  GameConfig,
   ModelsConfig,
+  RenderStressConfig,
   TerrainTilesFile,
   CommandResult,
   CountryScreenConfig,
@@ -30,8 +32,12 @@ export interface CountryScreenData {
  * sends requests and gets back snapshots and sim events.
  */
 export type ToSimWorker =
-  /** Start a new campaign with this seed. Answered with `ready`. */
-  | { readonly type: 'init'; readonly seed: number }
+  /**
+   * Start a new campaign with this seed. Answered with `ready`. `stressLoad`
+   * (the render stress test, F139): run the sim stress test's placeholder
+   * load (`data/stress_test.json` → `sim`) instead of the game's systems.
+   */
+  | { readonly type: 'init'; readonly seed: number; readonly stressLoad?: boolean }
   /** Apply a sim command. Answered with an `update` carrying the command's result. */
   | { readonly type: 'command'; readonly requestId: number; readonly command: SimCommand }
   /**
@@ -91,6 +97,10 @@ export type FromSimWorker =
       readonly notifications: NotificationsConfig;
       /** What the country screen (F138) needs from the data files. */
       readonly countryScreen: CountryScreenData;
+      /** What the render stress test (`?debug=stress`, F139) puts on the map (`data/stress_test.json` → `render`). */
+      readonly renderStress: RenderStressConfig;
+      /** The performance budgets (`data/game_config.json`), for the stress test's counter. */
+      readonly performanceBudget: GameConfig['performanceBudget'];
     }
   | {
       readonly type: 'update';
@@ -99,6 +109,8 @@ export type FromSimWorker =
       readonly snapshot: SimSnapshot;
       readonly events: readonly SimEvent[];
       readonly commandResult?: CommandResult;
+      /** For a day run at game speed: how long the daily tick took, in milliseconds. */
+      readonly tickMs?: number;
     }
   /** The game speed changed (or a change was asked for and it stayed the same). */
   | { readonly type: 'time'; readonly time: TimeState }

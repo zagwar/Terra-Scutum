@@ -233,8 +233,10 @@ test('the mouse wheel zooms, dragging moves the map, and a province picked from 
   await page.evaluate(() => window.__terraScutum!.map.settle());
   expect(await map.zoom()).toBeCloseTo(1.25 ** 8, 6);
   const placeAfter = await placeAt(mouse.x, mouse.y);
-  expect(placeAfter.longitude).toBeCloseTo(placeBefore.longitude, 3);
-  expect(placeAfter.latitude).toBeCloseTo(placeBefore.latitude, 3);
+  // Within 0.005° (about a tenth of a pixel at this zoom): finer terrain arriving during the
+  // zoom can lift the ground under the mouse a little (WebGPU once missed 0.0005° by 0.0002°).
+  expect(placeAfter.longitude).toBeCloseTo(placeBefore.longitude, 2);
+  expect(placeAfter.latitude).toBeCloseTo(placeBefore.latitude, 2);
 
   // So a tiny country can be reached by hand: aim at Rome, zoom in, aim again, click.
   await aimAt(...ROME);

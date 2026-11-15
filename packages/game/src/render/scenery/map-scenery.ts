@@ -101,6 +101,14 @@ export interface MapScenery {
 
 /** Trees are found for the view plus this share of its size on every side, so small moves need no new search. */
 const PLACE_MARGIN = 0.2;
+/**
+ * When frames are slow, the search may take this share of the last frame's
+ * time instead of `placeMsPerFrame` (F139): 6 ms is about a third of a
+ * 60 FPS frame, so a slow device (or the test browser) gets the same share
+ * and its trees don't take minutes to appear. At most `MAX_PLACE_MS`.
+ */
+const SLOW_FRAME_PLACE_SHARE = 0.35;
+const MAX_PLACE_MS = 200;
 
 const newBatch = (modelId: string, variant: number, colors: boolean): InstanceBatch => ({
   modelId,
@@ -221,13 +229,12 @@ export function createMapScenery(
   const continueSearch = (): boolean => {
     if (!search) return false;
     const start = performance.now();
-    const done = continueForestSearch(
-      search,
-      forests,
-      forestVariants,
-      forestGround,
-      start + forests.placeMsPerFrame,
+    const lastFrameMs = scene.getEngine().getDeltaTime();
+    const slice = Math.max(
+      forests.placeMsPerFrame,
+      Math.min(MAX_PLACE_MS, lastFrameMs * SLOW_FRAME_PLACE_SHARE),
     );
+    const done = continueForestSearch(search, forests, forestVariants, forestGround, start + slice);
     searchMs += performance.now() - start;
     if (!done) return false;
     [placement, nextPlacement] = [nextPlacement, placement];

@@ -18,7 +18,7 @@
 **Platform:** runs in the **web browser** (desktop app wrapper for Steam later) · **Language:** TypeScript · **3D:** Babylon.js · **UI:** React · **Simulation:** a separate pure TypeScript package (see `docs/13_technical.md`)
 **Development:** Claude Code cloud sessions (browser) on the GitHub repo `terra-scutum`; previews on Cloudflare Pages
 **Target platform:** Windows / Mac / Linux **[DEFAULT]**
-**Current milestone:** M1 (see `docs/12_feature_tracker.md`)
+**Current milestone:** M2 (see `docs/12_feature_tracker.md`)
 
 ---
 

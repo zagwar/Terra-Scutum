@@ -287,6 +287,70 @@ export function testTerrainTiles() {
   };
 }
 
+/** A valid performance budget (`game_config.json`). */
+export function testPerformanceBudget() {
+  return {
+    dailyTickAverageMs: 30,
+    weeklyTickAverageMs: 150,
+    worstDayMs: 100,
+    strategicFps: 60,
+    closeFps: 30,
+    tabMemoryMb: 2048,
+    loadSeconds: 20,
+  };
+}
+
+/** A valid, small `stress_test.json` (F139), using the models of `testModels`. */
+export function testStressTest() {
+  return {
+    sim: {
+      scale: 1,
+      goods: 5,
+      popGroupsPerProvince: 3,
+      needsPerPop: 2,
+      buildingsPerProvince: 2,
+      inputsPerBuilding: 2,
+      outputsPerBuilding: 1,
+      tradeRoutes: 4,
+      units: 10,
+      battles: 2,
+      unitsPerBattleSide: 3,
+      supplyPasses: 2,
+      corporations: 3,
+      investmentsPerCorporation: 2,
+      aiOptionsPerCountry: 3,
+    },
+    render: {
+      buildings: 10,
+      buildingModels: ['building'],
+      buildingSpacingKm: 3,
+      unitSpacingKm: 4,
+      units: 5,
+      unitModels: ['building'],
+      battle: {
+        longitude: 5,
+        latitude: 5,
+        bugs: 10,
+        bugModels: ['tree'],
+        defenders: 3,
+        lasers: 2,
+        explosions: 2,
+        sizeKm: 50,
+      },
+      infrastructure: {
+        road: { color: '#aaaaaa', widthPx: 1 },
+        rail: { color: '#444444', widthPx: 1 },
+        power: { color: '#dddddd', widthPx: 1 },
+      },
+      weather: { rainParticles: 10, clouds: 2, smokeParticles: 10, fireParticles: 10 },
+      sizePx: [{ zoom: 1, px: 4 }],
+      views: [{ name: 'STRESS_VIEW_WORLD', longitude: 0, latitude: 0, zoom: 1 }],
+      measureSeconds: 1,
+      settleSeconds: 1,
+    },
+  };
+}
+
 /** Valid raw data (as if read from the JSON files); tests change parts of it. */
 export function testRawData(
   overrides: { startDate?: string } = {},
@@ -295,7 +359,7 @@ export function testRawData(
     gameConfig: {
       startDate: overrides.startDate ?? '2025-01-01',
       playerCountry: 'AAA',
-      performanceBudget: { dailyTickAverageMs: 30, weeklyTickAverageMs: 150 },
+      performanceBudget: testPerformanceBudget(),
       gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
     },
     ...testWorld(),
@@ -305,6 +369,7 @@ export function testRawData(
     countryScreen: testCountryScreen(),
     countryFlags: testCountryFlags(),
     models: testModels(),
+    stressTest: testStressTest(),
   };
 }
 
