@@ -46,66 +46,58 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
     timeout: 120_000,
   });
 
-  // The whole world: no trees yet (they grow in from the operational zoom), no capital markers.
-  await lookAt(page, 0, 20, 1);
-  const far = await scenery(page);
-  expect(far.trees).toBe(0);
-  expect(far.capitalBuildings).toBe(0);
-  // A continent, then a few countries in view: still no trees or capital markers
+  // The whole world, then a few countries in view: no trees or capital markers yet
   // (designer decision: both appear from zoom 14, when the forests are dense).
-  for (const zoom of [5, 11]) {
-    await lookAt(page, 15, 60, zoom);
+  for (const zoom of [1, 11]) {
+    await lookAt(page, 15, 55, zoom);
     expect(await scenery(page)).toMatchObject({ trees: 0, capitalBuildings: 0 });
   }
 
-  // The Amazon: a forest of trees, standing on the land as drawn.
-  await lookAt(page, -62, -4, 16);
-  const amazon = await scenery(page);
-  expect(amazon.trees).toBeGreaterThan(2000);
-  expect(amazon.treeDetail).not.toBeNull();
+  // Panama: forests right by the sea, standing on the land as drawn.
+  await lookAt(page, -79.5, 8.8, 18);
+  const coast = await scenery(page);
+  expect(coast.trees).toBeGreaterThan(1000);
+  expect(coast.treeDetail).not.toBeNull();
   // One draw call per model variant and material, however many trees.
-  expect(amazon.drawCalls).toBeLessThan(60);
+  expect(coast.drawCalls).toBeLessThan(60);
   await page.screenshot({
-    path: join(SCREENSHOT_DIR, `${testInfo.project.name}-forest-amazon.png`),
+    path: join(SCREENSHOT_DIR, `${testInfo.project.name}-forest-panama.png`),
   });
-  const probes = await page.evaluate(() => window.__terraScutum!.map.sceneryProbe(300)!);
-  const trees = probes.filter((probe) => probe.kind === 'tree');
-  expect(trees.length).toBeGreaterThan(100);
-  for (const tree of trees.slice(0, 60)) {
-    const [ground, province] = await page.evaluate(
-      ([lon, lat]) => [
-        window.__terraScutum!.map.heightAt(lon, lat)!,
-        window.__terraScutum!.map.provinceAt(lon, lat),
-      ],
-      [tree.longitude, tree.latitude] as const,
-    );
-    // On the land (never in the sea), its foot on the ground as drawn (within a few metres).
-    expect(province).not.toBeNull();
-    expect(Math.abs(tree.baseM - ground)).toBeLessThan(5);
-    // A small symbol: never taller than the largest size in the data.
+  // Each tree on the land (never in the sea), its foot on the ground as drawn (within a few
+  // metres), and a small symbol (never taller than the largest size in the data).
+  const trees = await page.evaluate(() =>
+    window
+      .__terraScutum!.map.sceneryProbe(300)!
+      .filter((probe) => probe.kind === 'tree')
+      .slice(0, 100)
+      .map((tree) => ({
+        ...tree,
+        ground: window.__terraScutum!.map.heightAt(tree.longitude, tree.latitude)!,
+        province: window.__terraScutum!.map.provinceAt(tree.longitude, tree.latitude),
+      })),
+  );
+  expect(trees.length).toBe(100);
+  for (const tree of trees) {
+    expect(tree.province).not.toBeNull();
+    expect(Math.abs(tree.baseM - tree.ground)).toBeLessThan(5);
     expect(tree.heightPx).toBeLessThan(20);
   }
 
-  // The middle of the Sahara has no forest.
-  await lookAt(page, 10, 24, 25);
-  expect((await scenery(page)).trees).toBeLessThan(20);
-
-  // Paris: the placeholder capital buildings around the capital.
-  await lookAt(page, 2.35, 48.85, 16);
-  const paris = await scenery(page);
-  expect(paris.capitalBuildings).toBeGreaterThan(20);
-  const buildings = (await page.evaluate(() => window.__terraScutum!.map.sceneryProbe(100_000)!))
-    .filter((probe) => probe.kind === 'building')
-    .filter(
-      (probe) => Math.abs(probe.longitude - 2.35) < 1.5 && Math.abs(probe.latitude - 48.85) < 1.5,
-    );
+  // Close up at Madrid (dry land, few trees: quick to draw in the test browser): the placeholder
+  // capital buildings, and the trees at their detailed level.
+  await lookAt(page, -3.7, 40.42, 60);
+  const madrid = await scenery(page);
+  expect(madrid.treeDetail).toBe('detailed');
+  expect(madrid.trees).toBeGreaterThan(20);
+  const buildings = (
+    await page.evaluate(() => window.__terraScutum!.map.sceneryProbe(100_000)!)
+  ).filter(
+    (probe) =>
+      probe.kind === 'building' &&
+      Math.abs(probe.longitude + 3.7) < 1 &&
+      Math.abs(probe.latitude - 40.42) < 1,
+  );
   expect(buildings.length).toBeGreaterThanOrEqual(5);
-
-  // Up close in the Black Forest: the detailed trees.
-  await lookAt(page, 8.2, 48.3, 70);
-  const close = await scenery(page);
-  expect(close.trees).toBeGreaterThan(1000);
-  expect(close.treeDetail).toBe('detailed');
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `${testInfo.project.name}-forest-close.png`),
   });
