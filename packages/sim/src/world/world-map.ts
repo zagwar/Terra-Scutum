@@ -29,6 +29,8 @@ export interface WorldMap {
   readonly provinceCountry: Uint16Array;
   readonly provinceRegion: Uint16Array;
   readonly provinceAreaKm2: Float32Array;
+  /** Each province's label point: longitude and latitude, two numbers per province. */
+  readonly provinceCenter: Float32Array;
   /** 1 for a deep sea zone, 0 for a shallow one. */
   readonly seaZoneDeep: Uint8Array;
   /** 1 for a coast zone (the water along a shore), 0 for an open-sea zone. */
@@ -133,6 +135,7 @@ export function buildWorldMap(data: GameData): WorldMap {
     provinceCountry,
     provinceRegion,
     provinceAreaKm2,
+    provinceCenter: Float32Array.from(provinces.flatMap((p) => p.center)),
     seaZoneDeep: Uint8Array.from(seaZones, (s) => (s.depth === 'deep' ? 1 : 0)),
     seaZoneCoast: Uint8Array.from(seaZones, (s) => (s.kind === 'coast' ? 1 : 0)),
     seaZoneCenter: Float32Array.from(seaZones.flatMap((s) => s.center)),

@@ -4,6 +4,7 @@ import {
   testCountryFlags,
   testCountryScreen,
   testMapView,
+  testModels,
   testNotifications,
   testTerrainTiles,
   testWorld,
@@ -23,6 +24,7 @@ const world = {
   notifications: testNotifications(),
   countryScreen: testCountryScreen(),
   countryFlags: testCountryFlags(),
+  models: testModels(),
 };
 
 function issuesOf(raw: unknown): string[] {
@@ -98,6 +100,7 @@ describe('game data validation', () => {
       'data/notifications.json: file is missing',
       'data/country_screen.json: file is missing',
       'data/country_flags.json: file is missing',
+      'data/models.json: file is missing',
     ]);
   });
 
@@ -214,6 +217,40 @@ describe('game data validation', () => {
     expect(
       issuesOf({ ...raw, terrainTiles: { ...testTerrainTiles(), levels: [{ tiles: ['a'] }] } })[0],
     ).toContain('column_row');
+  });
+
+  it('checks the model library and the scenery that uses it (F133)', () => {
+    const raw = { ...world, gameConfig: validConfig };
+    expect(issuesOf({ ...raw, models: { materials: {}, models: {} } })).toEqual([
+      'data/map_view.json → scenery.forests.models.0.model: unknown model "tree" (not in models.json)',
+      'data/map_view.json → scenery.capitals.model: unknown model "building" (not in models.json)',
+    ]);
+    // A model's materials must exist.
+    const noBark = testModels();
+    delete (noBark.materials as Record<string, unknown>).bark;
+    expect(issuesOf({ ...raw, models: noBark })).toEqual([
+      'data/models.json → models.tree.spec: unknown material "bark"',
+    ]);
+    // A generator's spec is checked by that generator's schema.
+    const badSpec = testModels();
+    (badSpec.models.tree.spec as Record<string, unknown>).height = [12, 8];
+    expect(issuesOf({ ...raw, models: badSpec })[0]).toContain('models.tree');
+    const unknownGenerator = testModels();
+    (unknownGenerator.models.tree as Record<string, unknown>).generator = 'castle';
+    expect(issuesOf({ ...raw, models: unknownGenerator })[0]).toContain('models.tree');
+    // A model file lives under models/ and is a glTF file.
+    const badFile = testModels();
+    badFile.models.replaced.file = 'replaced.obj';
+    expect(issuesOf({ ...raw, models: badFile })[0]).toContain('models.replaced');
+    // Scenery sizes are listed from the farthest zoom to the closest.
+    const backwards = testMapView();
+    backwards.scenery.forests.sizePx = [
+      { zoom: 10, px: 12 },
+      { zoom: 4, px: 9 },
+    ];
+    expect(issuesOf({ ...raw, mapView: backwards })[0]).toContain('scenery.forests.sizePx');
+    const data = parseGameData(raw);
+    expect(Object.keys(data.models.models)).toEqual(['tree', 'building', 'replaced']);
   });
 
   it('uses .json file names in snake_case for every data file', () => {

@@ -6,6 +6,7 @@ import { parseLaunchOptions } from './debug/scenarios';
 import { DemoControls, startUiDemo } from './debug/ui-demo';
 import { type GameRenderer, createGameRenderer } from './render/game-renderer';
 import { App } from './ui/app';
+import { ModelGalleryPage } from './ui/model-gallery-page';
 import { t } from './ui/i18n';
 import { messageFromEvent } from './ui/shell/messages';
 import { createShellActions } from './ui/shell/shell-actions';
@@ -46,8 +47,15 @@ let ready: ReadyMessage | null = null;
 function showMapWhenPossible(): void {
   if (!renderer || !ready) return;
   const view = renderer;
+  if (launch.scenario?.modelGallery) {
+    // The model gallery (F133) takes the map's place; "map ready" means the 3D view is ready.
+    const gallery = view.showGallery(ready.models, ready.mapView);
+    renderGallery(gallery);
+    store.update({ map: 'ready' });
+    return;
+  }
   view
-    .showMap(ready.world, ready.mapView, ready.terrainTiles, {
+    .showMap(ready.world, ready.mapView, ready.terrainTiles, ready.models, {
       onHover: (target) =>
         store.update({
           hoveredProvince: target?.kind === 'province' ? target.index : null,
@@ -68,7 +76,10 @@ function showMapWhenPossible(): void {
         };
         store.subscribe(sync);
         sync();
-        if (launch.scenario) map.setEdgeScrolling(launch.scenario.edgeScrolling);
+        if (launch.scenario) {
+          map.setEdgeScrolling(launch.scenario.edgeScrolling);
+          map.setSceneryEnabled(launch.scenario.scenery !== false);
+        }
         store.update({ map: 'ready' });
         if (launch.scenario?.uiDemo) startUiDemo(store, actions);
       },
@@ -141,22 +152,33 @@ const actions = createShellActions({
 
 if (launch.scenarioName !== null) debugHooks = installDebugHooks(store, sim);
 
-createRoot(requireElement('ui')).render(
-  <StrictMode>
-    <App
-      store={store}
-      actions={actions}
-      onChangeTime={changeTime}
-      onSetMapMode={(mapMode) => store.update({ mapMode })}
-      onResetView={() => renderer?.map?.resetView()}
-      demoControls={
-        launch.scenario?.uiDemo ? (
-          <DemoControls store={store} actions={actions} sim={sim} />
-        ) : undefined
-      }
-    />
-  </StrictMode>,
-);
+const uiRoot = createRoot(requireElement('ui'));
+function renderGallery(gallery: Parameters<typeof ModelGalleryPage>[0]['gallery']): void {
+  uiRoot.render(
+    <StrictMode>
+      <ModelGalleryPage gallery={gallery} />
+    </StrictMode>,
+  );
+}
+
+if (launch.scenario?.modelGallery) renderGallery(null);
+else
+  uiRoot.render(
+    <StrictMode>
+      <App
+        store={store}
+        actions={actions}
+        onChangeTime={changeTime}
+        onSetMapMode={(mapMode) => store.update({ mapMode })}
+        onResetView={() => renderer?.map?.resetView()}
+        demoControls={
+          launch.scenario?.uiDemo ? (
+            <DemoControls store={store} actions={actions} sim={sim} />
+          ) : undefined
+        }
+      />
+    </StrictMode>,
+  );
 
 if (launch.scenarioName !== null && launch.scenario === null) {
   store.update({

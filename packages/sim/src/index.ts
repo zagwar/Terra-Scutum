@@ -14,6 +14,7 @@ export * from './core/systems';
 export * from './data/game-config';
 export * from './data/game-data';
 export * from './data/map-view-config';
+export * from './data/models-config';
 export * from './data/notifications-config';
 export * from './data/terrain-format';
 export * from './data/country-screen-config';

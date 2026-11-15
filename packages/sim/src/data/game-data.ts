@@ -23,6 +23,7 @@ import {
 import { type GameConfig, gameConfigSchema } from './game-config';
 import { type MapViewConfig, mapViewSchema } from './map-view-config';
 import { type TerrainTilesFile, terrainTilesFileSchema } from './terrain-format';
+import { type ModelsConfig, materialsOfModel, modelsSchema, treeOfClump } from './models-config';
 import {
   type NotificationsConfig,
   checkNotifications,
@@ -61,6 +62,7 @@ export const DATA_FILES = {
   notifications: { file: 'notifications.json', schema: notificationsSchema },
   countryScreen: { file: 'country_screen.json', schema: countryScreenSchema },
   countryFlags: { file: 'country_flags.json', schema: countryFlagsSchema },
+  models: { file: 'models.json', schema: modelsSchema },
 } as const satisfies Record<string, { file: string; schema: z.ZodType }>;
 
 export type DataFileKey = keyof typeof DATA_FILES;
@@ -88,6 +90,8 @@ export interface GameData {
   readonly countryScreen: CountryScreenConfig;
   /** Which flag each country shows (F138); used by the game, not by the sim's systems. */
   readonly countryFlags: CountryFlagsConfig;
+  /** The 3D model library and procedural materials (F133); used by the game, not by the sim's systems. */
+  readonly models: ModelsConfig;
 }
 
 /** One problem found in the data: which file, where in it, and what's wrong. */
@@ -155,8 +159,46 @@ const checkTerrainTiles: DataCrossCheck = (data, report) => {
     });
 };
 
+/** Every material a model uses exists, and every model the map's scenery shows exists (F133). */
+const checkModels: DataCrossCheck = (data, report) => {
+  const { materials, models } = data.models;
+  for (const [modelId, entry] of Object.entries(models)) {
+    if (
+      entry.source === 'generator' &&
+      entry.generator === 'treeClump' &&
+      !treeOfClump(entry.spec, models)
+    )
+      report({
+        file: 'models.json',
+        path: `models.${modelId}.spec.tree`,
+        message: `"${entry.spec.tree}" is not a tree model (a "tree" generator model in models.json)`,
+      });
+    for (const material of materialsOfModel(entry, models))
+      if (!Object.hasOwn(materials, material))
+        report({
+          file: 'models.json',
+          path: `models.${modelId}.spec`,
+          message: `unknown material "${material}"`,
+        });
+  }
+  const { forests, capitals } = data.mapView.scenery;
+  const need = (modelId: string, path: string) => {
+    if (!Object.hasOwn(models, modelId))
+      report({
+        file: 'map_view.json',
+        path,
+        message: `unknown model "${modelId}" (not in models.json)`,
+      });
+  };
+  forests.models.forEach((tree, index) =>
+    need(tree.model, `scenery.forests.models.${index}.model`),
+  );
+  need(capitals.model, 'scenery.capitals.model');
+};
+
 const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkTerrainTiles,
+  checkModels,
   checkWorldData,
   checkGovernmentTypes,
   checkCountryStart,

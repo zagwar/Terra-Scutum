@@ -6,6 +6,7 @@ import countryStart from '../../../../data/country_start.json';
 import gameConfig from '../../../../data/game_config.json';
 import governmentTypes from '../../../../data/government_types.json';
 import mapView from '../../../../data/map_view.json';
+import models from '../../../../data/models.json';
 import notifications from '../../../../data/notifications.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
@@ -30,4 +31,5 @@ export const RAW_GAME_DATA: RawGameData = {
   notifications,
   countryScreen,
   countryFlags,
+  models,
 };

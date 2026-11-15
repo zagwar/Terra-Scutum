@@ -62,6 +62,15 @@ import { createMapProjection } from './map-projection';
 import { type MapTarget, createShapeLookup, findTarget } from './shape-lookup';
 import { type TerrainShapes, createTerrainLand } from '../terrain/terrain-land';
 import { drapeLines } from '../terrain/terrain-mesh';
+import { createModelLights } from '../models/instanced-models';
+import type { ModelLibrary } from '../models/model-library';
+import {
+  type MapScenery,
+  type SceneryProbe,
+  type SceneryStats,
+  type SceneryView,
+  createMapScenery,
+} from '../scenery/map-scenery';
 
 export type { MapTarget } from './shape-lookup';
 
@@ -132,6 +141,8 @@ export interface MapStats {
   readonly loadMs: number;
   /** Time to build the map (the sea and the coarsest terrain level), in milliseconds. */
   readonly buildMs: number;
+  /** The scenery on the land (F133): trees and capital markers. */
+  readonly scenery: SceneryStats;
 }
 
 export interface MapView {
@@ -147,6 +158,10 @@ export interface MapView {
   provinceAt(longitude: number, latitude: number): number;
   /** The height of the land as drawn right now at a longitude/latitude, in metres (0 at sea). */
   heightAt(longitude: number, latitude: number): number;
+  /** Up to `count` of the scenery's models as drawn right now (tests check they stand on the land). */
+  sceneryProbe(count: number): SceneryProbe[];
+  /** Turns the scenery (F133) on or off. */
+  setSceneryEnabled(enabled: boolean): void;
   /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
   seaZoneAt(longitude: number, latitude: number): number;
   /** Where a longitude/latitude is on screen, in CSS pixels from the canvas's top-left corner. */
@@ -240,6 +255,7 @@ export async function createMapView(
   world: WorldMap,
   config: MapViewConfig,
   terrainTiles: TerrainTilesFile,
+  models: ModelLibrary,
   events: MapViewEvents,
 ): Promise<MapView> {
   const engine = scene.getEngine();
@@ -408,6 +424,39 @@ export async function createMapView(
     owners: () => owners,
     regionOf: world.provinceRegion,
   });
+
+  // ── Scenery (F133): generated models standing on the land ─────────────────
+  const scenery: MapScenery = createMapScenery(
+    scene,
+    models,
+    config.scenery,
+    world,
+    {
+      heightAt: (x, z) => terrain.heightAt(x, z),
+      coverShareAt: (x, z, classes) => terrain.coverShareAt(x, z, classes),
+      provinceAt: (x, z) => lookup.find(x, z),
+      terrainVersion: () => terrain.drawnVersion(),
+      latitude: (z) => projection.latitude(z),
+      x: (longitude) => projection.x(longitude),
+      z: (latitude) => projection.z(latitude),
+      longitude: (x) => projection.longitude(x),
+    },
+    LAND_GROUP,
+  );
+  const lightAzimuth = (terrainConfig.lightAzimuthDegrees * Math.PI) / 180;
+  const lightElevation = (terrainConfig.lightElevationDegrees * Math.PI) / 180;
+  const modelLights = createModelLights(
+    scene,
+    [
+      Math.sin(lightAzimuth) * Math.cos(lightElevation),
+      Math.sin(lightElevation),
+      Math.cos(lightAzimuth) * Math.cos(lightElevation),
+    ],
+    config.scenery.ambientLight,
+    config.scenery.sunLight,
+  );
+  /** What the screen showed the last time the detail was updated; the scenery follows it every frame. */
+  let sceneryView: SceneryView | null = null;
 
   // ── Colors and highlights ─────────────────────────────────────────────────
   let baseColors = provinceBaseColors(mode, world, config.colors, owners);
@@ -641,6 +690,7 @@ export async function createMapView(
     rect.minZ -= margin;
     rect.maxZ += margin;
     const changed = terrain.update({ rect, unitsPerPixel, centerX, centerZ });
+    sceneryView = { rect, unitsPerPixel, centerX, centerZ, zoom, heightUnits: units };
     // Up close, where the land cover's cells get big on screen: a surface pattern and wandering edges.
     const cellPixels = terrainCellSize(layout, terrain.stats().level) / unitsPerPixel;
     const closeness = Math.min(1, Math.max(0, (cellPixels - 2) / 3));
@@ -1049,6 +1099,7 @@ export async function createMapView(
     stepCamera(seconds);
     // Terrain that arrived is built a little every frame; then the view may draw finer tiles.
     if (terrain.tick()) updateDetail();
+    if (sceneryView) scenery.update(sceneryView);
     if (pointerMoved && pointer && !dragFrom) {
       pointerMoved = false;
       setHovered(targetAtCanvasPoint(pointer.x, pointer.y));
@@ -1078,8 +1129,11 @@ export async function createMapView(
         drawnMeshes: scene.getActiveMeshes().length,
         loadMs: Math.round(buildStart - loadStart),
         buildMs,
+        scenery: scenery.stats(),
       };
     },
+    sceneryProbe: (count) => scenery.probe(count),
+    setSceneryEnabled: (enabled) => scenery.setEnabled(enabled),
     setMode(next) {
       if (next === mode) return;
       mode = next;
@@ -1257,6 +1311,8 @@ export async function createMapView(
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       for (const mesh of [...allMeshes, ...selectionMeshes, ...seaSelectionMeshes]) mesh.dispose();
+      scenery.dispose();
+      modelLights.dispose();
       terrain.dispose();
       for (const material of lineMaterials) material.material.dispose();
       seaMaterial.dispose();

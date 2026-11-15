@@ -2,6 +2,8 @@ import type { CommandResult, SimCommand, SimEvent, SimSnapshot } from '@terra-sc
 import type { AppState, AppStore } from '../app-store';
 import type { GameRenderer } from '../render/game-renderer';
 import type { MapStats } from '../render/map/map-view';
+import type { GalleryModelStats } from '../render/models/model-gallery';
+import type { SceneryProbe } from '../render/scenery/map-scenery';
 import type { TimeChange, TimeState } from '../worker/protocol';
 import type { SimClient } from '../worker/sim-client';
 
@@ -61,6 +63,19 @@ export interface DebugApi {
     seaZoneAt(longitude: number, latitude: number): string | null;
     /** The id of the selected sea zone, or null. */
     selectedSeaZone(): string | null;
+    /** Up to `count` of the scenery's models as drawn right now (F133): where they stand and how tall on screen. */
+    sceneryProbe(count: number): SceneryProbe[] | null;
+  };
+  /** The model gallery (`?debug=models`, F133); these return null elsewhere. */
+  readonly gallery: {
+    /** True once every model is drawn. */
+    isComplete(): boolean | null;
+    stats(): GalleryModelStats[] | null;
+    /**
+     * Shows a glTF model file (any address, for example a blob: URL) in place of a model,
+     * as a data entry `{ "source": "file" }` would.
+     */
+    replaceWithFile(modelId: string, url: string): void;
   };
 }
 
@@ -130,6 +145,19 @@ export function installDebugHooks(store: AppStore, sim: SimClient): DebugHooks {
       seaZoneAt: (longitude, latitude) =>
         seaZoneIdOf(renderer?.map?.seaZoneAt(longitude, latitude)),
       selectedSeaZone: () => seaZoneIdOf(store.getState().selectedSeaZone),
+      sceneryProbe: (count) => renderer?.map?.sceneryProbe(count) ?? null,
+    },
+    gallery: {
+      isComplete: () => renderer?.gallery?.isComplete() ?? null,
+      stats: () => renderer?.gallery?.stats() ?? null,
+      replaceWithFile(modelId, url) {
+        renderer?.models?.replace(
+          modelId,
+          { source: 'file', file: 'models/debug.glb', scale: 1 },
+          url,
+        );
+        renderer?.gallery?.rebuild();
+      },
     },
   };
 

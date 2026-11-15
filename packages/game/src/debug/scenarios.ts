@@ -19,15 +19,27 @@ export interface DebugScenario {
    * it, the scenario plays as `playerCountry` from `data/game_config.json`.
    */
   readonly chooseCountry?: boolean;
+  /** Shows the model gallery (F133) instead of the map: every generated model in its detail levels and variants. */
+  readonly modelGallery?: boolean;
+  /**
+   * Shows the scenery on the map (F133: forests, capital markers); on unless set to false.
+   * Off in the scenarios of tests that are about something else: the test browser draws in
+   * software, where thousands of trees make every frame take seconds.
+   */
+  readonly scenery?: boolean;
 }
 
 export const DEBUG_SCENARIOS: Readonly<Record<string, DebugScenario>> = {
   /** The basics: the world map and a new campaign. */
-  foundation: { seed: 42, edgeScrolling: false },
+  foundation: { seed: 42, edgeScrolling: false, scenery: false },
+  /** The map with its scenery (F133): forests and capital markers. */
+  scenery: { seed: 42, edgeScrolling: false },
   /** The UI shell with sample alerts, outliner entries and messages, for trying it on the preview link. */
   'ui-demo': { seed: 42, edgeScrolling: true, uiDemo: true },
   /** A new game's country selection (F05). */
-  'country-selection': { seed: 42, edgeScrolling: false, chooseCountry: true },
+  'country-selection': { seed: 42, edgeScrolling: false, chooseCountry: true, scenery: false },
+  /** The model gallery (F133): the generated 3D models up close, for the designer and the tests. */
+  models: { seed: 42, edgeScrolling: false, modelGallery: true },
 };
 
 export interface LaunchOptions {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CLIMATES } from '../world/world-data';
 
 /**
  * `data/map_view.json`: how the world map is drawn (projection, the fixed
@@ -108,6 +109,98 @@ const terrainSchema = z
     message: 'colorStrength must be listed from the farthest zoom to the closest',
   });
 export type TerrainViewConfig = z.infer<typeof terrainSchema>;
+
+/** A value that changes with the zoom: at each `zoom` it is `px`; in between it changes evenly per zoom step. */
+const pixelStops = z
+  .array(z.strictObject({ zoom: z.number().min(1), px: z.number().min(0).max(200) }))
+  .min(1)
+  .refine((stops) => stops.every((stop, i) => i === 0 || stop.zoom > stops[i - 1].zoom), {
+    message: 'list the stops from the farthest zoom to the closest',
+  });
+
+const modelId = z.string().regex(/^[a-z][a-zA-Z0-9]*$/, 'model ids are written in camelCase');
+
+/** How the models of one kind of scenery appear as the view zooms in, and how big they are drawn. */
+const sceneryLook = {
+  /** They start to grow in at `fromZoom` and are full size from `fullZoom`. */
+  fromZoom: z.number().min(1),
+  fullZoom: z.number().min(1),
+  /**
+   * How tall a model of `referenceHeight` model units is drawn on screen, in pixels, by zoom.
+   * Real size would be far too small to see, so models are drawn as oversized symbols, like the land's heights.
+   */
+  sizePx: pixelStops,
+  referenceHeight: z.number().positive(),
+};
+
+/** Scenery on the map (F133): generated models standing on the land, drawn with thin instances. */
+const scenerySchema = z.strictObject({
+  /**
+   * Which detail level a model is drawn with, by how tall it is on screen: below `simplePx`
+   * pixels the icon, from `detailedPx` the detailed model, the simple one in between.
+   */
+  simplePx: z.number().min(0),
+  detailedPx: z.number().min(0),
+  /** How the models are lit (the light comes from where the land's does): the even light from the sky, and the sun. */
+  ambientLight: z.number().min(0).max(2),
+  sunLight: z.number().min(0).max(2),
+  /** Trees on the land cover classes listed, from the land cover of the terrain tiles drawn. */
+  forests: z.strictObject({
+    enabled: z.boolean(),
+    landCover: z.array(z.enum(LAND_COVER_CLASSES)).min(1),
+    /**
+     * Trees grow only in forest regions, like the forests of strategy maps: where at least this
+     * share of the land within `regionKm` around is forest (small woods among fields and plains
+     * get no trees). Above it, the more forest, the denser the trees.
+     */
+    minShare: fraction,
+    regionKm: z.number().min(0).max(200),
+    /**
+     * Which tree models grow where. A model grows where every condition it lists holds: the
+     * region's climate is one of `climates` (section 4.1), the latitude (north or south, in
+     * degrees) is within `latitudes`, the land's height (metres) within `heightsM`. Where several
+     * models fit, they mix by `weight`.
+     */
+    models: z
+      .array(
+        z.strictObject({
+          model: modelId,
+          weight: z.number().positive(),
+          climates: z.array(z.enum(CLIMATES)).min(1).optional(),
+          latitudes: z.tuple([z.number().min(0).max(90), z.number().min(0).max(90)]).optional(),
+          heightsM: z.tuple([z.number(), z.number()]).optional(),
+        }),
+      )
+      .min(1),
+    /** How long a tree takes to grow in when it appears (no sudden pop-in), in seconds. */
+    growSeconds: z.number().min(0).max(10),
+    ...sceneryLook,
+    /** Trees stand about this many pixels apart on fully forested land; zooming in adds trees between them. */
+    spacingPx: z.number().min(2).max(200),
+    /** Each tree is drawn up to this much bigger or smaller than the others (0.2 = ±20 %). */
+    sizeVariation: fraction,
+    /** Each tree's color is up to this much lighter or darker. */
+    tintVariation: fraction,
+    /** Time spent per frame on finding the trees for a new view, in milliseconds (spread over frames, so it never stutters). */
+    placeMsPerFrame: z.number().min(0.5).max(100),
+    /** The most trees drawn at once (a safety cap for weak machines). */
+    maxInstances: z.number().int().min(0).max(1_000_000),
+  }),
+  /**
+   * Placeholder capital markers [DEFAULT]: a small cluster of buildings at each country's capital,
+   * until cities are built (F126, M2).
+   */
+  capitals: z.strictObject({
+    enabled: z.boolean(),
+    model: modelId,
+    /** Buildings per capital. */
+    buildings: z.number().int().min(1).max(64),
+    /** How far the cluster spreads from the capital, in pixels on screen. */
+    clusterPx: z.number().min(0).max(200),
+    ...sceneryLook,
+  }),
+});
+export type SceneryConfig = z.infer<typeof scenerySchema>;
 
 export const mapViewSchema = z.strictObject({
   projection: z
@@ -223,6 +316,8 @@ export const mapViewSchema = z.strictObject({
   }),
   /** The terrain (F125): relief, ground materials, how map-mode colors lie over it, rivers. */
   terrain: terrainSchema,
+  /** Scenery (F133): forests and the placeholder capital markers. */
+  scenery: scenerySchema,
 });
 
 export type MapViewConfig = z.infer<typeof mapViewSchema>;
