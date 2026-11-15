@@ -160,6 +160,8 @@ export interface MapView {
   heightAt(longitude: number, latitude: number): number;
   /** Up to `count` of the scenery's models as drawn right now (tests check they stand on the land). */
   sceneryProbe(count: number): SceneryProbe[];
+  /** Turns the scenery (F133) on or off. */
+  setSceneryEnabled(enabled: boolean): void;
   /** The sea zone index at a longitude/latitude, or -1 for land (or outside the map). */
   seaZoneAt(longitude: number, latitude: number): number;
   /** Where a longitude/latitude is on screen, in CSS pixels from the canvas's top-left corner. */
@@ -1131,6 +1133,7 @@ export async function createMapView(
       };
     },
     sceneryProbe: (count) => scenery.probe(count),
+    setSceneryEnabled: (enabled) => scenery.setEnabled(enabled),
     setMode(next) {
       if (next === mode) return;
       mode = next;

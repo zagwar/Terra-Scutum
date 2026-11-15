@@ -76,7 +76,10 @@ function showMapWhenPossible(): void {
         };
         store.subscribe(sync);
         sync();
-        if (launch.scenario) map.setEdgeScrolling(launch.scenario.edgeScrolling);
+        if (launch.scenario) {
+          map.setEdgeScrolling(launch.scenario.edgeScrolling);
+          map.setSceneryEnabled(launch.scenario.scenery !== false);
+        }
         store.update({ map: 'ready' });
         if (launch.scenario?.uiDemo) startUiDemo(store, actions);
       },

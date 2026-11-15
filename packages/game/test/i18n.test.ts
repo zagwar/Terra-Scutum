@@ -60,7 +60,7 @@ describe('launch options', () => {
     });
     expect(parseLaunchOptions('?debug=foundation&renderer=webgl2')).toEqual({
       scenarioName: 'foundation',
-      scenario: { seed: 42, edgeScrolling: false },
+      scenario: { seed: 42, edgeScrolling: false, scenery: false },
       renderer: 'webgl2',
     });
     expect(parseLaunchOptions('?debug=nope&renderer=fast')).toEqual({

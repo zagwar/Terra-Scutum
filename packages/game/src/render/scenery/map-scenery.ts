@@ -90,6 +90,8 @@ export interface MapScenery {
   stats(): SceneryStats;
   /** Up to `count` drawn models, for tests. */
   probe(count: number): SceneryProbe[];
+  /** Turns all scenery on or off (some test scenarios turn it off: the test browser draws in software). */
+  setEnabled(enabled: boolean): void;
   dispose(): void;
 }
 
@@ -330,10 +332,15 @@ export function createMapScenery(
   const allBatches: InstanceBatch[] = [...forestBatches.flat(), ...capitalBatches];
   const capitalSet = new Set(capitalBatches);
   let lastView: SceneryView | null = null;
+  let enabled = true;
 
   return {
     update(view) {
       lastView = view;
+      if (!enabled) {
+        drawn.show([], () => 'icon');
+        return;
+      }
       updateForests(view);
       updateCapitals(view);
       // Hand the batches over every frame: models that finished loading appear.
@@ -351,7 +358,14 @@ export function createMapScenery(
         drawCalls: counted.drawCalls,
         triangles: counted.triangles,
         placeMs: Math.round(placeMs * 10) / 10,
-        searching: search !== null,
+        // Also while a new search is due (the view's zoom level or the terrain changed since the last one).
+        searching:
+          enabled &&
+          (search !== null ||
+            (forestDetail !== null &&
+              lastView !== null &&
+              (finestGridLevel(lastView.unitsPerPixel, forests.spacingPx) !== placedLevel ||
+                ground.terrainVersion() !== placedTerrain))),
       };
     },
     probe(count) {
@@ -376,6 +390,9 @@ export function createMapScenery(
         }
       }
       return found;
+    },
+    setEnabled(next) {
+      enabled = next;
     },
     dispose() {
       drawn.dispose();

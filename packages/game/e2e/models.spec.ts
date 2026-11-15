@@ -41,7 +41,7 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   page.on('console', (message) => {
     if (message.type() === 'error') problems.push(message.text());
   });
-  await page.goto('/?debug=foundation');
+  await page.goto('/?debug=scenery');
   await page.waitForFunction(() => window.__terraScutum?.isReady() === true, null, {
     timeout: 120_000,
   });
