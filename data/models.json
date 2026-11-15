@@ -4,37 +4,103 @@
       "color": "#5b4532",
       "roughness": 0.95,
       "metallic": 0,
-      "pattern": { "kind": "bark", "size": 1.5, "strength": 0.35 }
+      "pattern": {
+        "kind": "bark",
+        "size": 1.5,
+        "strength": 0.35
+      }
     },
     "coniferNeedles": {
       "color": "#3d6339",
       "roughness": 0.9,
       "metallic": 0,
-      "pattern": { "kind": "foliage", "size": 3, "strength": 0.35 }
+      "pattern": {
+        "kind": "foliage",
+        "size": 3,
+        "strength": 0.35
+      }
     },
     "broadleafLeaves": {
       "color": "#5a7d3a",
       "roughness": 0.85,
       "metallic": 0,
-      "pattern": { "kind": "foliage", "size": 4, "strength": 0.3 }
+      "pattern": {
+        "kind": "foliage",
+        "size": 4,
+        "strength": 0.3
+      }
+    },
+    "jungleLeaves": {
+      "color": "#2f5a28",
+      "roughness": 0.85,
+      "metallic": 0,
+      "pattern": {
+        "kind": "foliage",
+        "size": 4,
+        "strength": 0.35
+      }
+    },
+    "palmLeaves": {
+      "color": "#4f7d33",
+      "roughness": 0.85,
+      "metallic": 0,
+      "pattern": {
+        "kind": "foliage",
+        "size": 2,
+        "strength": 0.3
+      }
+    },
+    "palmBark": {
+      "color": "#8a785a",
+      "roughness": 0.9,
+      "metallic": 0,
+      "pattern": {
+        "kind": "bark",
+        "size": 1,
+        "strength": 0.3
+      }
+    },
+    "acaciaLeaves": {
+      "color": "#6d7c3a",
+      "roughness": 0.85,
+      "metallic": 0,
+      "pattern": {
+        "kind": "foliage",
+        "size": 3,
+        "strength": 0.3
+      }
     },
     "concreteWall": {
       "color": "#a29b90",
       "roughness": 0.8,
       "metallic": 0,
-      "pattern": { "kind": "windows", "size": 3.2, "strength": 0.75, "accent": "#36424f" }
+      "pattern": {
+        "kind": "windows",
+        "size": 3.2,
+        "strength": 0.75,
+        "accent": "#36424f"
+      }
     },
     "roofing": {
       "color": "#6d5a50",
       "roughness": 0.7,
       "metallic": 0,
-      "pattern": { "kind": "tiles", "size": 1.2, "strength": 0.3, "accent": "#4e3f38" }
+      "pattern": {
+        "kind": "tiles",
+        "size": 1.2,
+        "strength": 0.3,
+        "accent": "#4e3f38"
+      }
     },
     "rooftopMetal": {
       "color": "#8c9296",
       "roughness": 0.45,
       "metallic": 0.6,
-      "pattern": { "kind": "noise", "size": 2, "strength": 0.2 }
+      "pattern": {
+        "kind": "noise",
+        "size": 2,
+        "strength": 0.2
+      }
     }
   },
   "models": {
@@ -70,6 +136,54 @@
         "leanDegrees": 5
       }
     },
+    "treeJungle": {
+      "source": "generator",
+      "generator": "tree",
+      "variants": 4,
+      "spec": {
+        "kind": "broadleaf",
+        "trunkMaterial": "bark",
+        "crownMaterial": "jungleLeaves",
+        "height": [14, 18],
+        "trunkShare": [0.55, 0.65],
+        "trunkRadius": [0.02, 0.03],
+        "crownRadius": [0.3, 0.4],
+        "crownParts": [3, 4],
+        "leanDegrees": 4
+      }
+    },
+    "treePalm": {
+      "source": "generator",
+      "generator": "tree",
+      "variants": 4,
+      "spec": {
+        "kind": "palm",
+        "trunkMaterial": "palmBark",
+        "crownMaterial": "palmLeaves",
+        "height": [9, 13],
+        "trunkShare": [0.85, 0.9],
+        "trunkRadius": [0.015, 0.022],
+        "crownRadius": [0.28, 0.36],
+        "crownParts": [6, 8],
+        "leanDegrees": 10
+      }
+    },
+    "treeAcacia": {
+      "source": "generator",
+      "generator": "tree",
+      "variants": 4,
+      "spec": {
+        "kind": "broadleaf",
+        "trunkMaterial": "bark",
+        "crownMaterial": "acaciaLeaves",
+        "height": [6, 9],
+        "trunkShare": [0.5, 0.6],
+        "trunkRadius": [0.03, 0.045],
+        "crownRadius": [0.5, 0.65],
+        "crownParts": [2, 3],
+        "leanDegrees": 8
+      }
+    },
     "treeClumpConifer": {
       "source": "generator",
       "generator": "treeClump",
@@ -89,6 +203,39 @@
         "tree": "treeBroadleaf",
         "trees": [3, 5],
         "spread": [0.5, 0.75],
+        "sizeVariation": 0.2
+      }
+    },
+    "treeClumpJungle": {
+      "source": "generator",
+      "generator": "treeClump",
+      "variants": 6,
+      "spec": {
+        "tree": "treeJungle",
+        "trees": [4, 6],
+        "spread": [0.35, 0.55],
+        "sizeVariation": 0.2
+      }
+    },
+    "treeClumpPalm": {
+      "source": "generator",
+      "generator": "treeClump",
+      "variants": 6,
+      "spec": {
+        "tree": "treePalm",
+        "trees": [2, 3],
+        "spread": [0.4, 0.6],
+        "sizeVariation": 0.2
+      }
+    },
+    "treeClumpAcacia": {
+      "source": "generator",
+      "generator": "treeClump",
+      "variants": 6,
+      "spec": {
+        "tree": "treeAcacia",
+        "trees": [1, 3],
+        "spread": [0.6, 1.0],
         "sizeVariation": 0.2
       }
     },

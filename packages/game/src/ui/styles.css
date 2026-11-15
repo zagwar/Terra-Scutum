@@ -2084,7 +2084,7 @@ body {
 }
 
 .model-gallery-label-model {
-  transform: translate(-100%, -50%);
+  transform: translate(-50%, -50%);
   color: var(--color-accent);
   font-weight: 600;
 }

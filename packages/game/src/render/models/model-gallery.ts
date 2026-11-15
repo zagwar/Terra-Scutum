@@ -63,13 +63,13 @@ export function createModelGallery(
   const camera = new ArcRotateCamera(
     'gallery-camera',
     -Math.PI / 2,
-    0.75,
+    0.5,
     120,
     Vector3.Zero(),
     scene,
   );
   camera.lowerRadiusLimit = 10;
-  camera.upperRadiusLimit = 400;
+  camera.upperRadiusLimit = 2000;
   camera.upperBetaLimit = Math.PI / 2 - 0.05;
   camera.wheelDeltaPercentage = 0.02;
   camera.minZ = 0.5;
@@ -103,7 +103,7 @@ export function createModelGallery(
     framed = true;
     const engine = scene.getEngine();
     const aspect = engine.getRenderWidth() / Math.max(1, engine.getRenderHeight());
-    const across = widest * 1.1;
+    const across = widest * 1.15;
     const halfFov = camera.fov / 2;
     const narrow = aspect < 1;
     // On a wide screen the panel covers about the left 30 %: fit the models into the rest.
@@ -117,7 +117,7 @@ export function createModelGallery(
     // Keep the camera's turn and tilt (setting `target` directly would aim it anew).
     camera.setTarget(
       new Vector3(
-        narrow ? 0 : -visibleWidth * 0.15,
+        narrow ? 0 : -visibleWidth * 0.17,
         0,
         -deepest * 0.6 + (narrow ? deepest * 0.25 : 0),
       ),
@@ -178,27 +178,37 @@ export function createModelGallery(
         const radius = Math.max(...row.made.map((m) => m.geometry.radius), 0.001);
         return { ...row, height, scale: ROW_HEIGHT / height, radius };
       });
-      // One grid for all models: a block of three rows (the detail levels) per model,
-      // each row the model's variants side by side.
+      // One grid for all models: a block of three rows (the detail levels) per model, each row
+      // the model's variants side by side; the blocks in a grid, `blocksAcross` per row.
       const step = Math.max(4, ...sized.map((row) => row.radius * row.scale * 2.4));
       const columns = Math.max(1, ...sized.map((row) => row.variants));
-      const totalWidth = step * columns;
+      const blockWidth = step * columns;
       // Rows far enough apart for the widest model (tree clumps are wide).
       const DETAIL_SPACING = Math.max(MIN_DETAIL_SPACING, step);
-      const blockDepth = DETAIL_LEVELS.length * DETAIL_SPACING + MODEL_GAP;
-      widest = totalWidth;
-      deepest = sized.length * blockDepth - MODEL_GAP;
-      sized.forEach((row, rowIndex) => {
-        const blockZ = -rowIndex * blockDepth;
-        DETAIL_LEVELS.forEach((detail, d) =>
-          labelSpots.push({
-            kind: 'detail',
-            id: `${row.modelId}:${detail}`,
-            at: new Vector3(totalWidth / 2 + 1, ROW_HEIGHT * 0.3, blockZ - d * DETAIL_SPACING),
-          }),
-        );
+      const blockDepth = DETAIL_LEVELS.length * DETAIL_SPACING + MODEL_GAP + ROW_HEIGHT;
+      const blocksAcross = Math.max(1, Math.round(Math.sqrt(sized.length)));
+      const blockGap = step * 2;
+      const blockRows = Math.ceil(sized.length / blocksAcross);
+      widest = blocksAcross * (blockWidth + blockGap) - blockGap;
+      deepest = blockRows * blockDepth;
+      sized.forEach((row, index) => {
+        const blockX = -widest / 2 + (index % blocksAcross) * (blockWidth + blockGap);
+        const blockZ = -Math.floor(index / blocksAcross) * blockDepth;
+        // The detail levels' names to the right of the last block of each row of blocks.
+        if (index % blocksAcross === blocksAcross - 1 || index === sized.length - 1)
+          DETAIL_LEVELS.forEach((detail, d) =>
+            labelSpots.push({
+              kind: 'detail',
+              id: `${row.modelId}:${detail}`,
+              at: new Vector3(
+                blockX + blockWidth + 1,
+                ROW_HEIGHT * 0.3,
+                blockZ - d * DETAIL_SPACING,
+              ),
+            }),
+          );
         for (const { detail, variant, geometry } of row.made) {
-          const x = -totalWidth / 2 + (variant + 0.5) * step;
+          const x = blockX + (variant + 0.5) * step;
           const z = blockZ - DETAIL_LEVELS.indexOf(detail) * DETAIL_SPACING;
           const batch = {
             modelId: row.modelId,
@@ -212,19 +222,20 @@ export function createModelGallery(
           writeInstanceMatrix(batch.matrices, 0, x, 0, z, row.scale, 0.6);
           batches.push(batch);
           if (variant === 0) {
-            const index = ids.indexOf(row.modelId);
-            const stats = modelStats[index];
-            modelStats[index] = {
+            const at = ids.indexOf(row.modelId);
+            const stats = modelStats[at];
+            modelStats[at] = {
               ...stats,
               triangles: { ...stats.triangles, [detail]: geometry.triangles },
               heightM: row.height,
             };
           }
         }
+        // The model's name above its block.
         labelSpots.push({
           kind: 'model',
           id: row.modelId,
-          at: new Vector3(-totalWidth / 2 - 1, ROW_HEIGHT * 0.3, blockZ - DETAIL_SPACING),
+          at: new Vector3(blockX + blockWidth / 2, ROW_HEIGHT * 1.4, blockZ + DETAIL_SPACING * 0.6),
         });
       });
       if (!framed) frame();

@@ -1,4 +1,4 @@
-import type { DetailLevel, SceneryConfig } from '@terra-scutum/sim';
+import { CLIMATES, type DetailLevel, type SceneryConfig } from '@terra-scutum/sim';
 import { mixSeed, seededRandom } from '../../generators/seeded-random';
 
 /**
@@ -36,6 +36,8 @@ export interface ForestGround {
   onLand(x: number, z: number): boolean;
   /** The latitude of a map z, in degrees. */
   latitude(z: number): number;
+  /** The climate of the region at a place (its position in `CLIMATES`), or -1 if not known. */
+  climate(x: number, z: number): number;
 }
 
 /** The trees found for a view, one entry per tree in each array. */
@@ -47,6 +49,8 @@ export interface ForestPlacement {
   readonly groundM: Float32Array;
   /** The grid level the tree belongs to (it grows in with its level). */
   readonly level: Uint8Array;
+  /** The tree's grid cell as a number, the same every time (to know which trees are new). */
+  readonly key: Uint32Array;
   /** Which entry of `forests.models` the tree is, and which variant of that model. */
   readonly model: Uint8Array;
   readonly variant: Uint8Array;
@@ -63,6 +67,7 @@ export function createForestPlacement(capacity: number): ForestPlacement {
     z: new Float32Array(capacity),
     groundM: new Float32Array(capacity),
     level: new Uint8Array(capacity),
+    key: new Uint32Array(capacity),
     model: new Uint8Array(capacity),
     variant: new Uint8Array(capacity),
     size: new Float32Array(capacity),
@@ -195,26 +200,44 @@ export function continueForestSearch(
     // The same cell on every copy of the world gets the same tree.
     const wrapped = ((column % cellsAround) + cellsAround) % cellsAround;
     state = mixSeed(level, wrapped, row + 1_000_000);
+    const key = state;
     const x = (column + next()) * cell;
     const z = (row + next()) * cell;
     if (x < rect.minX || x > rect.maxX || z < rect.minZ || z > rect.maxZ) continue;
     const grows = next();
     const share = ground.forestShare(x, z);
     if (share <= 0 || grows >= share || !ground.onLand(x, z)) continue;
-    // Which tree models grow at this latitude.
+    // Which tree models grow here: climate, latitude and height (weighted where several fit).
     const latitude = Math.abs(ground.latitude(z));
+    const groundM = ground.heightM(x, z);
+    const climate = ground.climate(x, z);
     fits.length = 0;
+    let totalWeight = 0;
     for (let m = 0; m < forests.models.length; m++) {
-      const range = forests.models[m].latitudes;
-      if (latitude >= range[0] && latitude <= range[1]) fits.push(m);
+      const rule = forests.models[m];
+      if (rule.latitudes && (latitude < rule.latitudes[0] || latitude > rule.latitudes[1]))
+        continue;
+      if (rule.heightsM && (groundM < rule.heightsM[0] || groundM > rule.heightsM[1])) continue;
+      if (rule.climates && (climate < 0 || !rule.climates.includes(CLIMATES[climate]))) continue;
+      fits.push(m);
+      totalWeight += rule.weight;
     }
     if (fits.length === 0) continue;
-    const model = fits[Math.floor(next() * fits.length)];
+    let pick = next() * totalWeight;
+    let model = fits[fits.length - 1];
+    for (const m of fits) {
+      pick -= forests.models[m].weight;
+      if (pick < 0) {
+        model = m;
+        break;
+      }
+    }
     const i = out.count;
     out.x[i] = x;
     out.z[i] = z;
-    out.groundM[i] = ground.heightM(x, z);
+    out.groundM[i] = groundM;
     out.level[i] = level;
+    out.key[i] = key;
     out.model[i] = model;
     out.variant[i] = Math.floor(next() * variants[model]);
     out.size[i] = 1 + (next() * 2 - 1) * forests.sizeVariation;

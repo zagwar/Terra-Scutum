@@ -55,7 +55,7 @@ export type ModelMaterial = z.infer<typeof materialSchema>;
 
 /** The `tree` generator: a trunk and a crown, conifer (stacked cones) or broadleaf (rounded clumps). */
 export const treeSpecSchema = z.strictObject({
-  kind: z.enum(['conifer', 'broadleaf']),
+  kind: z.enum(['conifer', 'broadleaf', 'palm']),
   trunkMaterial: id,
   crownMaterial: id,
   /** The whole tree's height, in model units (metres). */

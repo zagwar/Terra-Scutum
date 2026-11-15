@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CLIMATES } from '../world/world-data';
 
 /**
  * `data/map_view.json`: how the world map is drawn (projection, the fixed
@@ -155,17 +156,24 @@ const scenerySchema = z.strictObject({
     minShare: fraction,
     regionKm: z.number().min(0).max(200),
     /**
-     * Which tree models grow where: each between two latitudes (north or south, in degrees).
-     * Where ranges overlap, the models mix.
+     * Which tree models grow where. A model grows where every condition it lists holds: the
+     * region's climate is one of `climates` (section 4.1), the latitude (north or south, in
+     * degrees) is within `latitudes`, the land's height (metres) within `heightsM`. Where several
+     * models fit, they mix by `weight`.
      */
     models: z
       .array(
         z.strictObject({
           model: modelId,
-          latitudes: z.tuple([z.number().min(0).max(90), z.number().min(0).max(90)]),
+          weight: z.number().positive(),
+          climates: z.array(z.enum(CLIMATES)).min(1).optional(),
+          latitudes: z.tuple([z.number().min(0).max(90), z.number().min(0).max(90)]).optional(),
+          heightsM: z.tuple([z.number(), z.number()]).optional(),
         }),
       )
       .min(1),
+    /** How long a tree takes to grow in when it appears (no sudden pop-in), in seconds. */
+    growSeconds: z.number().min(0).max(10),
     ...sceneryLook,
     /** Trees stand about this many pixels apart on fully forested land; zooming in adds trees between them. */
     spacingPx: z.number().min(2).max(200),

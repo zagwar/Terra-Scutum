@@ -8,11 +8,14 @@ import { generateTree } from './tree-generator';
  * The `treeClump` generator (F133, placeholder [DEFAULT]): a clump of trees
  * as one model, so forests are drawn with fewer, fuller copies (like the
  * forests of strategy maps). Each tree is the clump's tree model (`spec.tree`)
- * with its own seed, one detail level simpler than the clump (icon: half the
- * trees at their icon level; simple: all at their icon level; detailed: all
- * at their simple level), turned, a little bigger or
- * smaller, and placed around the middle so the trees don't stand inside one
- * another. The parts are merged by material (one draw call each).
+ * with its own seed, turned, a little bigger or smaller, and placed around
+ * the middle so the trees don't stand inside one another. In a clump each
+ * tree is small on screen, so the trees are one detail level simpler than
+ * the clump, except the middle one (so every level adds detail):
+ * - icon: the middle half of the trees, all at their icon level;
+ * - simple: all trees, the middle one at its simple level, the others at their icon level;
+ * - detailed: all trees, the middle one at its detailed level, the others at their simple level.
+ * The parts are merged by material (one draw call each).
  */
 export function generateTreeClump(
   spec: TreeClumpSpec,
@@ -41,13 +44,13 @@ export function generateTreeClump(
       }
     }
   }
-  // In a clump each tree is small on screen: its trees are one level simpler than the clump
-  // (the icon level keeps only the first half of the trees, the middle ones).
-  const treeDetail: DetailLevel = detail === 'detailed' ? 'simple' : 'icon';
+  // Each tree's detail level (see above).
+  const treeDetail = (index: number): DetailLevel =>
+    index === 0 ? detail : detail === 'detailed' ? 'simple' : 'icon';
   const shown = detail === 'icon' ? spots.slice(0, Math.ceil(spots.length / 2)) : spots;
   const builders = new Map<string, MeshBuilder>();
   shown.forEach(([x, z], index) => {
-    const model = generateTree(tree, mixSeed(seed, index), treeDetail);
+    const model = generateTree(tree, mixSeed(seed, index), treeDetail(index));
     const scale = index === 0 ? 1 : 1 + random.between(-1, 1) * spec.sizeVariation;
     const turn = makeTransform([x, 0, z], random.between(0, Math.PI * 2));
     for (const part of model.parts) {

@@ -47,19 +47,21 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
   });
 
   // The whole world, then a few countries in view: no trees or capital markers yet
-  // (designer decision: both appear from zoom 14, when the forests are dense).
+  // (designer decisions: capital markers appear from zoom 14, trees from zoom 20).
   for (const zoom of [1, 11]) {
     await lookAt(page, 15, 55, zoom);
     expect(await scenery(page)).toMatchObject({ trees: 0, capitalBuildings: 0 });
   }
+  await lookAt(page, 15, 55, 17);
+  expect((await scenery(page)).trees).toBe(0);
 
-  // Panama: forests right by the sea, standing on the land as drawn.
-  await lookAt(page, -79.5, 8.8, 18);
+  // Panama: jungle right by the sea, standing on the land as drawn.
+  await lookAt(page, -79.5, 8.8, 26);
   const coast = await scenery(page);
   expect(coast.trees).toBeGreaterThan(300);
   expect(coast.treeDetail).not.toBeNull();
   // One draw call per model variant and material, however many trees.
-  expect(coast.drawCalls).toBeLessThan(60);
+  expect(coast.drawCalls).toBeLessThan(150);
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `${testInfo.project.name}-forest-panama.png`),
   });
@@ -77,7 +79,9 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
       })),
   );
   expect(trees.length).toBe(100);
+  // A tropical region: jungle trees and palms, never conifers.
   for (const tree of trees) {
+    expect(['treeClumpJungle', 'treeClumpPalm']).toContain(tree.model);
     expect(tree.province).not.toBeNull();
     expect(Math.abs(tree.baseM - tree.ground)).toBeLessThan(5);
     expect(tree.heightPx).toBeLessThan(20);
@@ -85,7 +89,7 @@ test('forests and capital markers stand on the land (F133)', async ({ page }, te
 
   // Close up at Madrid (dry land, few trees: quick to draw in the test browser): the placeholder
   // capital buildings, and the trees at their detailed level.
-  await lookAt(page, -3.7, 40.42, 60);
+  await lookAt(page, -3.7, 40.42, 75);
   const madrid = await scenery(page);
   expect(madrid.treeDetail).toBe('detailed');
   expect(madrid.trees).toBeGreaterThan(5);
@@ -123,8 +127,14 @@ test('the model gallery shows every model in three detail levels, and a model fi
   expect(stats.map((model) => model.modelId)).toEqual([
     'treeConifer',
     'treeBroadleaf',
+    'treeJungle',
+    'treePalm',
+    'treeAcacia',
     'treeClumpConifer',
     'treeClumpBroadleaf',
+    'treeClumpJungle',
+    'treeClumpPalm',
+    'treeClumpAcacia',
     'boxBuilding',
   ]);
   for (const model of stats) {
@@ -135,7 +145,7 @@ test('the model gallery shows every model in three detail levels, and a model fi
     expect(simple!).toBeGreaterThan(icon!);
     expect(detailed!).toBeGreaterThan(simple!);
   }
-  await expect(page.locator('.model-gallery-label-model')).toHaveCount(5);
+  await expect(page.locator('.model-gallery-label-model')).toHaveCount(11);
   await page.screenshot({
     path: join(SCREENSHOT_DIR, `${testInfo.project.name}-model-gallery.png`),
   });
@@ -149,11 +159,11 @@ test('the model gallery shows every model in three detail levels, and a model fi
   await page.waitForFunction(
     () =>
       window.__terraScutum!.gallery.isComplete() &&
-      window.__terraScutum!.gallery.stats()![4].source === 'file',
+      window.__terraScutum!.gallery.stats()![10].source === 'file',
     null,
     { timeout: 120_000 },
   );
-  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))![4];
+  const replaced = (await page.evaluate(() => window.__terraScutum!.gallery.stats()))![10];
   expect(replaced.variants).toBe(1);
   expect(replaced.triangles).toEqual({ icon: 12, simple: 12, detailed: 12 });
   expect(replaced.heightM).toBeCloseTo(12, 3);

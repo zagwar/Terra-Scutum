@@ -434,7 +434,7 @@ export async function createMapView(
     {
       heightAt: (x, z) => terrain.heightAt(x, z),
       coverShareAt: (x, z, classes) => terrain.coverShareAt(x, z, classes),
-      onLand: (x, z) => lookup.find(x, z) >= 0,
+      provinceAt: (x, z) => lookup.find(x, z),
       terrainVersion: () => terrain.drawnVersion(),
       latitude: (z) => projection.latitude(z),
       x: (longitude) => projection.x(longitude),

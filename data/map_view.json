@@ -96,8 +96,8 @@
     }
   },
   "scenery": {
-    "simplePx": 11,
-    "detailedPx": 14,
+    "simplePx": 8.5,
+    "detailedPx": 10.5,
     "ambientLight": 0.85,
     "sunLight": 0.6,
     "forests": {
@@ -106,21 +106,92 @@
       "minShare": 0.55,
       "regionKm": 12,
       "models": [
-        { "model": "treeClumpBroadleaf", "latitudes": [0, 52] },
-        { "model": "treeClumpConifer", "latitudes": [40, 90] }
+        {
+          "model": "treeClumpJungle",
+          "weight": 5,
+          "climates": ["tropical"],
+          "heightsM": [-500, 1500]
+        },
+        {
+          "model": "treeClumpPalm",
+          "weight": 1,
+          "climates": ["tropical"],
+          "heightsM": [-500, 300]
+        },
+        {
+          "model": "treeClumpBroadleaf",
+          "weight": 2,
+          "climates": ["tropical"],
+          "heightsM": [1500, 9000]
+        },
+        { "model": "treeClumpAcacia", "weight": 1, "climates": ["arid"] },
+        {
+          "model": "treeClumpBroadleaf",
+          "weight": 3,
+          "climates": ["temperate"],
+          "heightsM": [-500, 1200]
+        },
+        {
+          "model": "treeClumpConifer",
+          "weight": 1,
+          "climates": ["temperate"],
+          "heightsM": [-500, 1200]
+        },
+        {
+          "model": "treeClumpConifer",
+          "weight": 1,
+          "climates": ["temperate", "continental", "highland"],
+          "latitudes": [25, 90],
+          "heightsM": [1200, 9000]
+        },
+        {
+          "model": "treeClumpBroadleaf",
+          "weight": 1,
+          "climates": ["continental"],
+          "latitudes": [0, 55],
+          "heightsM": [-500, 1200]
+        },
+        {
+          "model": "treeClumpConifer",
+          "weight": 3,
+          "climates": ["continental"],
+          "heightsM": [-500, 1200]
+        },
+        { "model": "treeClumpConifer", "weight": 1, "climates": ["polar"] },
+        {
+          "model": "treeClumpBroadleaf",
+          "weight": 2,
+          "climates": ["highland"],
+          "latitudes": [0, 25]
+        },
+        {
+          "model": "treeClumpBroadleaf",
+          "weight": 1,
+          "climates": ["highland"],
+          "latitudes": [25, 90],
+          "heightsM": [-500, 1200]
+        },
+        {
+          "model": "treeClumpConifer",
+          "weight": 1,
+          "climates": ["highland"],
+          "latitudes": [25, 90],
+          "heightsM": [-500, 1200]
+        }
       ],
-      "fromZoom": 14,
-      "fullZoom": 15.5,
+      "fromZoom": 20,
+      "fullZoom": 22,
       "sizePx": [
-        { "zoom": 14, "px": 10 },
-        { "zoom": 20, "px": 12 },
-        { "zoom": 80, "px": 15 }
+        { "zoom": 20, "px": 7 },
+        { "zoom": 40, "px": 9 },
+        { "zoom": 80, "px": 11 }
       ],
       "referenceHeight": 11,
-      "spacingPx": 18,
+      "spacingPx": 13,
       "sizeVariation": 0.2,
       "tintVariation": 0.12,
       "placeMsPerFrame": 6,
+      "growSeconds": 0.6,
       "maxInstances": 40000
     },
     "capitals": {

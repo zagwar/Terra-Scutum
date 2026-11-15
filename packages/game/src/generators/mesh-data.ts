@@ -320,6 +320,29 @@ function normalize(v: readonly number[]): Vec3 {
   return [v[0] / length, v[1] / length, v[2] / length];
 }
 
+/**
+ * A diamond (an octahedron, 8 faces): the cheapest rounded crown, for far away.
+ * `radius` sideways, `radius × stretch` up and down, centered at `center`.
+ */
+export function diamond(radius: number, center: Vec3, stretch = 1, turn = 0): MeshData {
+  const b = new MeshBuilder();
+  const [cx, cy, cz] = center;
+  const top: Vec3 = [cx, cy + radius * stretch, cz];
+  const bottom: Vec3 = [cx, cy - radius * stretch, cz];
+  const ring: Vec3[] = [0, 1, 2, 3].map((i) => {
+    const angle = turn + (i * Math.PI) / 2;
+    return [cx + Math.cos(angle) * radius, cy, cz - Math.sin(angle) * radius];
+  });
+  for (let i = 0; i < 4; i++) {
+    const a = ring[i];
+    const c = ring[(i + 1) % 4];
+    const uv = (p: Vec3): [number, number] => [p[0] + p[2], p[1]];
+    b.triangle(a, c, top, uv(a), uv(c), uv(top));
+    b.triangle(c, a, bottom, uv(c), uv(a), uv(bottom));
+  }
+  return b.build();
+}
+
 /** A pitched roof over a `width` × `depth` rectangle: the ridge runs along x, `height` above `bottom`. */
 export function gabledRoof(width: number, depth: number, height: number, bottom: number): MeshData {
   const b = new MeshBuilder();

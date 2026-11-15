@@ -1,3 +1,4 @@
+import { CLIMATES } from '@terra-scutum/sim';
 import { describe, expect, it } from 'vitest';
 import { loadGameDataFromDisk } from '../../tools/src/load-data';
 import {
@@ -25,6 +26,7 @@ const ground = {
   heightM: () => 100,
   onLand: (_x: number, z: number) => z > 0,
   latitude: (z: number) => z,
+  climate: () => 0,
 };
 
 describe('forest placement (F133)', () => {
@@ -108,16 +110,34 @@ describe('forest placement (F133)', () => {
     );
   });
 
-  it('chooses the tree model by latitude', () => {
-    const out = createForestPlacement(100_000);
+  it('chooses the tree model by climate, latitude and height: no conifers in the jungle', () => {
     const everywhere = { ...ground, forestShare: () => 1, onLand: () => true };
-    placeForest(out, { minX: 0, maxX: 3, minZ: 0, maxZ: 80 }, 0.01, forests, VARIANTS, everywhere);
-    const broadleaf = forests.models.findIndex((m) => m.model === 'treeClumpBroadleaf');
-    const conifer = forests.models.findIndex((m) => m.model === 'treeClumpConifer');
-    for (let i = 0; i < out.count; i++) {
-      if (out.z[i] < 39) expect(out.model[i]).toBe(broadleaf);
-      if (out.z[i] > 53) expect(out.model[i]).toBe(conifer);
-    }
+    const modelsAt = (climate: string, heightM: number, latitude = 10) => {
+      const out = createForestPlacement(100_000);
+      placeForest(
+        out,
+        { minX: 0, maxX: 3, minZ: latitude, maxZ: latitude + 3 },
+        0.01,
+        forests,
+        forests.models.map(() => 4),
+        {
+          ...everywhere,
+          heightM: () => heightM,
+          climate: () => CLIMATES.indexOf(climate as (typeof CLIMATES)[number]),
+        },
+      );
+      expect(out.count).toBeGreaterThan(50);
+      return new Set(Array.from(out.model.subarray(0, out.count), (m) => forests.models[m].model));
+    };
+    expect(modelsAt('tropical', 100)).toEqual(new Set(['treeClumpJungle', 'treeClumpPalm']));
+    expect(modelsAt('tropical', 800)).toEqual(new Set(['treeClumpJungle']));
+    expect(modelsAt('arid', 400)).toEqual(new Set(['treeClumpAcacia']));
+    expect(modelsAt('polar', 200, 70)).toEqual(new Set(['treeClumpConifer']));
+    // Temperate lowlands mix broadleaf trees and conifers; the mountains have conifers only.
+    expect(modelsAt('temperate', 300, 48)).toEqual(
+      new Set(['treeClumpBroadleaf', 'treeClumpConifer']),
+    );
+    expect(modelsAt('temperate', 1800, 48)).toEqual(new Set(['treeClumpConifer']));
   });
 });
 

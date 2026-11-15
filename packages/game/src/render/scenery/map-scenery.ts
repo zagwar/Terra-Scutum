@@ -1,5 +1,6 @@
 import type { Scene } from '@babylonjs/core/scene';
 import {
+  CLIMATES,
   type DetailLevel,
   LAND_COVER_CLASSES,
   type SceneryConfig,
@@ -20,6 +21,7 @@ import {
   startForestSearch,
   valueAtZoom,
   writeInstanceMatrix,
+  smoothstep,
   zoomFade,
 } from './scenery-placement';
 
@@ -51,8 +53,8 @@ export interface SceneryGround {
   /** The land's height in metres (real scale) at a map position. */
   heightAt(x: number, z: number): number;
   coverShareAt(x: number, z: number, classes: ArrayLike<boolean>): number;
-  /** True inside a province. */
-  onLand(x: number, z: number): boolean;
+  /** The province (index) at a map position, or -1 at sea. */
+  provinceAt(x: number, z: number): number;
   /** Changes whenever the terrain drawn changes. */
   terrainVersion(): number;
   latitude(z: number): number;
@@ -78,6 +80,8 @@ export interface SceneryStats {
 /** One drawn model for tests: where it stands and the height of its base as drawn (metres at real scale). */
 export interface SceneryProbe {
   readonly kind: 'tree' | 'building';
+  /** The model drawn (an id from `data/models.json`). */
+  readonly model: string;
   readonly longitude: number;
   readonly latitude: number;
   readonly baseM: number;
@@ -164,12 +168,33 @@ export function createMapScenery(
     // Half-dense at the edge of a forest region, fully dense where it is all forest.
     return 0.5 + (0.5 * (share - forests.minShare)) / Math.max(0.001, 1 - forests.minShare);
   };
+  // The province at the last place asked about: the search asks for the land and then the climate of one place.
+  let askedX = NaN;
+  let askedZ = NaN;
+  let askedProvince = -1;
+  const provinceAt = (x: number, z: number) => {
+    if (x !== askedX || z !== askedZ) {
+      askedX = x;
+      askedZ = z;
+      askedProvince = ground.provinceAt(x, z);
+    }
+    return askedProvince;
+  };
+  const regionClimate = world.regionClimate.map((climate) => CLIMATES.indexOf(climate));
   const forestGround = {
     forestShare,
     heightM: (x: number, z: number) => ground.heightAt(x, z),
-    onLand: (x: number, z: number) => ground.onLand(x, z),
+    onLand: (x: number, z: number) => provinceAt(x, z) >= 0,
     latitude: (z: number) => ground.latitude(z),
+    climate: (x: number, z: number) => {
+      const province = provinceAt(x, z);
+      return province < 0 ? -1 : regionClimate[world.provinceRegion[province]];
+    },
   };
+  // When each tree (by its grid cell) first appeared: new trees grow in over `growSeconds`.
+  let bornAt = new Map<number, number>();
+  let growingUntil = 0;
+  const growMs = forests.growSeconds * 1000;
   const contains = (outer: ViewRect | null, inner: ViewRect) =>
     outer !== null &&
     inner.minX >= outer.minX &&
@@ -206,6 +231,16 @@ export function createMapScenery(
     searchMs += performance.now() - start;
     if (!done) return false;
     [placement, nextPlacement] = [nextPlacement, placement];
+    // Trees that were there before keep their age; new ones start growing now.
+    const now = performance.now();
+    const born = new Map<number, number>();
+    for (let i = 0; i < placement.count; i++) {
+      const key = placement.key[i];
+      const at = bornAt.get(key) ?? now;
+      born.set(key, at);
+      if (at === now) growingUntil = now + growMs;
+    }
+    bornAt = born;
     placedRect = search.rect;
     placedLevel = search.finest;
     placedTerrain = searchTerrain;
@@ -225,8 +260,11 @@ export function createMapScenery(
     // Only the trees on screen are drawn (the others were found in case the view moves).
     const edge = sizePx * view.unitsPerPixel;
     const { minX, maxX, minZ, maxZ } = view.rect;
+    const now = performance.now();
     for (let i = 0; i < placement.count; i++) {
-      const weight = weights[placement.level[i]] ?? 0;
+      let weight = weights[placement.level[i]] ?? 0;
+      if (growMs > 0 && now < growingUntil)
+        weight *= smoothstep((now - (bornAt.get(placement.key[i]) ?? 0)) / growMs);
       if (weight < 0.02) continue;
       const x = placement.x[i];
       const z = placement.z[i];
@@ -274,7 +312,9 @@ export function createMapScenery(
       startSearch(view);
     const placed = continueSearch();
     const look = `${view.rect.minX}|${view.rect.minZ}|${view.rect.maxX}|${view.rect.maxZ}|${view.unitsPerPixel}|${view.heightUnits}|${view.zoom}`;
-    if (!placed && look === forestLook) return false;
+    // While new trees grow in, they are drawn again every frame.
+    const growing = performance.now() < growingUntil + 50;
+    if (!placed && !growing && look === forestLook) return false;
     forestLook = look;
     drawTrees(view);
     return true;
@@ -398,6 +438,7 @@ export function createMapScenery(
           const scale = Math.hypot(batch.matrices[o], batch.matrices[o + 2]);
           found.push({
             kind,
+            model: batch.modelId,
             longitude: ground.longitude(x),
             latitude: ground.latitude(z),
             baseM: units > 0 ? batch.matrices[o + 13] / units : 0,

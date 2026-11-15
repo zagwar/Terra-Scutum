@@ -193,7 +193,7 @@ export function testMapView() {
         landCover: ['forest'],
         minShare: 0.5,
         regionKm: 10,
-        models: [{ model: 'tree', latitudes: [0, 90] }],
+        models: [{ model: 'tree', weight: 1, latitudes: [0, 90] }],
         fromZoom: 4,
         fullZoom: 6,
         sizePx: [{ zoom: 4, px: 9 }],
@@ -202,6 +202,7 @@ export function testMapView() {
         sizeVariation: 0.2,
         tintVariation: 0.1,
         placeMsPerFrame: 6,
+        growSeconds: 0.5,
         maxInstances: 1000,
       },
       capitals: {
