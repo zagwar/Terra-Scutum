@@ -80,3 +80,41 @@ export function formatMoneyMillions(millions: number): string {
 export function formatMoney(dollars: number): string {
   return t('MONEY_VALUE', { amount: Math.round(dollars).toLocaleString('en') });
 }
+
+/** A number of people in a table: "1.46B", "83.5M", "365k", "842". */
+export function formatPeopleShort(people: number): string {
+  if (people >= 1e9) return t('NUMBER_SHORT_BILLION', { value: threeDigits(people / 1e9) });
+  if (people >= 1e6) return t('NUMBER_SHORT_MILLION', { value: threeDigits(people / 1e6) });
+  if (people >= 1e4) return t('NUMBER_SHORT_THOUSAND', { value: threeDigits(people / 1e3) });
+  return Math.round(people).toLocaleString('en');
+}
+
+/** An amount of money in a table: "$1.2M", "$64.7k", "$518". */
+export function formatMoneyShort(dollars: number): string {
+  const amount =
+    dollars >= 1e6
+      ? t('NUMBER_SHORT_MILLION', { value: threeDigits(dollars / 1e6) })
+      : dollars >= 1e4
+        ? t('NUMBER_SHORT_THOUSAND', { value: threeDigits(dollars / 1e3) })
+        : Math.round(dollars).toLocaleString('en');
+  return t('MONEY_VALUE', { amount });
+}
+
+/** A share (0–1) as a percentage: "4.2 %", or "100 %" without decimals when asked. */
+export function formatPercent(share: number, decimals = 1): string {
+  return t('PERCENT_VALUE', {
+    value: (share * 100).toLocaleString('en', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }),
+  });
+}
+
+/** People per km²: "237 per km²", "3.4 per km²", "0.03 per km²". */
+export function formatDensity(perKm2: number): string {
+  const value =
+    perKm2 >= 100
+      ? Math.round(perKm2).toLocaleString('en')
+      : perKm2.toLocaleString('en', { maximumSignificantDigits: 2 });
+  return t('DENSITY_VALUE', { value });
+}

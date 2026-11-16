@@ -52,7 +52,7 @@ describe('sim host (the logic inside the sim worker)', () => {
     const { host, posted } = hostWith();
     host.handle({ type: 'init', seed: 42 });
     host.handle({ type: 'step', requestId: 5, days: 31 });
-    expect(posted[1]).toEqual({
+    expect(posted[1]).toMatchObject({
       type: 'update',
       requestId: 5,
       snapshot: {
@@ -64,6 +64,43 @@ describe('sim host (the logic inside the sim worker)', () => {
       },
       events: [],
     });
+    // The owners haven't changed, so they aren't sent again; the population has (F06).
+    const update = posted[1];
+    if (update.type !== 'update') throw new Error('expected an update');
+    expect(update.snapshot.provinceOwner).toBeUndefined();
+    expect(update.snapshot.population?.provincePopulation).toHaveLength(1294);
+  });
+
+  it('sends the pop groups once and the population only when it changed (F06)', () => {
+    const { host, posted } = hostWith();
+    host.handle({ type: 'init', seed: 42 });
+    const ready = posted[0];
+    if (ready.type !== 'ready') throw new Error('expected "ready"');
+    expect(ready.pops.groups.map((group) => group.id)).toEqual([
+      'laborers',
+      'skilled_workers',
+      'professionals',
+      'owners',
+      'officials',
+      'soldiers',
+    ]);
+    const people = (snapshot: typeof ready.snapshot) =>
+      snapshot.population?.countryPopulation[ready.playerCountry];
+    expect(people(ready.snapshot)).toBeCloseTo(345_332_000, -4);
+    const snapshotOf = (message: FromSimWorker) => {
+      if (message.type !== 'update') throw new Error(`expected "update", got "${message.type}"`);
+      return message.snapshot;
+    };
+    // A command that changes nothing about the people: no population in the answer.
+    host.handle({ type: 'command', requestId: 1, command: { type: 'debugPing', token: 1 } });
+    expect(snapshotOf(posted[1]).population).toBeUndefined();
+    expect(snapshotOf(posted[1]).populationVersion).toBe(ready.snapshot.populationVersion);
+    // A day passes: people were born and died.
+    host.handle({ type: 'step', requestId: 2, days: 1 });
+    expect(snapshotOf(posted[2]).populationVersion).toBeGreaterThan(
+      ready.snapshot.populationVersion,
+    );
+    expect(people(snapshotOf(posted[2]))).toBeGreaterThan(people(ready.snapshot)!);
   });
 
   it('sends the province owners again only when they changed', () => {
@@ -347,7 +384,12 @@ describe('game speed (F04): the sim worker runs the days by itself', () => {
     running.time.advance(1_000);
     const stepped = timedHost();
     stepped.host.handle({ type: 'step', requestId: 1, days: 10 });
-    expect(lastSnapshot(running.posted)).toEqual(lastSnapshot(stepped.posted));
+    // (The population's version counts how often it was sent, which differs; its numbers don't.)
+    const { populationVersion: _a, ...ran } = lastSnapshot(running.posted);
+    const { populationVersion: _b, ...stepping } = lastSnapshot(stepped.posted);
+    void [_a, _b];
+    expect(ran).toEqual(stepping);
+    expect(ran.population?.countryPopulation).toBeDefined();
     expect(lastSnapshot(running.posted)).toMatchObject({ day: 10, date: { month: 1, day: 11 } });
   });
 

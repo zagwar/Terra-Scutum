@@ -40,6 +40,12 @@ import {
   countryScreenSchema,
 } from './country-screen-config';
 import { type StressTestConfig, stressTestSchema } from '../stress/stress-config';
+import { type PopsConfig, checkPops, popsSchema } from '../economy/pops-data';
+import {
+  type ProvinceStartFile,
+  checkProvinceStart,
+  provinceStartFileSchema,
+} from '../world/province-start';
 
 /**
  * The list of JSON data files in `data/`, each with the zod schema that
@@ -58,6 +64,8 @@ export const DATA_FILES = {
   seaZones: { file: 'sea_zones.json', schema: seaZonesFileSchema },
   governmentTypes: { file: 'government_types.json', schema: governmentTypesFileSchema },
   countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
+  provinceStart: { file: 'province_start.json', schema: provinceStartFileSchema },
+  pops: { file: 'pops.json', schema: popsSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
@@ -82,6 +90,10 @@ export interface GameData {
   readonly governmentTypes: GovernmentTypesFile;
   /** Each country's real-world starting data (F71). */
   readonly countryStart: CountryStartFile;
+  /** Each province's starting population (F06). */
+  readonly provinceStart: ProvinceStartFile;
+  /** Pop groups, needs, growth and job changes (F06). */
+  readonly pops: PopsConfig;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
   /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
@@ -220,6 +232,8 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkWorldData,
   checkGovernmentTypes,
   checkCountryStart,
+  checkProvinceStart,
+  checkPops,
   checkNotifications,
   checkPlayerCountry,
   checkCountryScreen,

@@ -96,6 +96,9 @@ function runOne(data: GameData, days: number, seed: number): boolean {
   console.log(describeTicks('Daily ticks   ', summary.dailyTicks));
   console.log(describeTicks('Weekly ticks  ', summary.weeklyTicks));
   printSystems(summary.systemTimings);
+  console.log(
+    `World population ${(summary.startPopulation / 1e9).toFixed(3)} → ${(summary.endPopulation / 1e9).toFixed(3)} billion`,
+  );
   console.log(`State hash      ${summary.stateHash}`);
   return summary.dailyTicks.withinBudget && summary.weeklyTicks.withinBudget;
 }
@@ -123,14 +126,14 @@ function runStress(
   const usedScale = scale ?? load.scale;
   const provinces = data.provinces.provinces.length;
   const countries = data.countries.countries.length;
-  console.log('Terra Scutum sim stress test (F139, placeholder load)');
-  console.log('─────────────────────────────────────────────────────');
+  console.log('Terra Scutum sim stress test (placeholder load, with the real pops since F06)');
+  console.log('────────────────────────────────────────────────────────────────────────────');
   console.log(
     `Map             ${provinces} provinces, ${countries} countries, all simulated every day`,
   );
   console.log(
     `Load (×${usedScale})       ` +
-      `${Math.round(provinces * load.popGroupsPerProvince * usedScale)} pop groups, ` +
+      `${provinces * data.pops.groups.length} pops (the real ones, F06), ` +
       `${Math.round(provinces * load.buildingsPerProvince * usedScale)} buildings, ` +
       `${countries} markets × ${load.goods} goods, ` +
       `${Math.round(load.tradeRoutes * usedScale)} trade routes, ` +

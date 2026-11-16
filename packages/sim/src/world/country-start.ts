@@ -9,7 +9,9 @@ import type { WorldMap } from './world-map';
  * `packages/tools/starting-data/` plus hand-written government types; never
  * edit the output by hand.
  *
- * First pass: population, economy size (GDP) and government type. The
+ * First pass: population, economy size (GDP) and government type; since F06
+ * also the demographics the population model starts from (birth and death
+ * rates, labor force, unemployment, armed forces). The
  * numbers are where the campaign STARTS: once population (F06), the economy
  * (F65) and politics change during a campaign, the current values move into
  * `GameState` and these remain only the starting point.
@@ -49,6 +51,16 @@ export const countryStartFileSchema = z.strictObject({
       gdpSource: sourceKey,
       /** Present when the GDP figure is from an earlier year than `year` (no newer one exists). */
       gdpYear: z.int().optional(),
+      /** Births and deaths in a year per 1,000 people (F06). */
+      birthsPerThousand: z.number().min(0).max(60),
+      deathsPerThousand: z.number().min(0).max(40),
+      /** The labor force (people who work or look for work) as a share of the population (F06). */
+      laborForceShare: z.number().min(0.1).max(0.9),
+      /** The share of the labor force without a job (F06). */
+      unemploymentRate: z.number().min(0).max(0.6),
+      /** The armed forces as a share of the labor force (F06). */
+      armedForcesShare: z.number().min(0).max(0.3),
+      demographicsSource: sourceKey,
       /** Notes on how the numbers or the government type were chosen (for developers, not shown in the game). */
       notes: z.array(z.string().min(1)).optional(),
     }),
@@ -102,6 +114,8 @@ export const checkCountryStart: DataCrossCheck = (data, report) => {
       issue(`${at}.populationSource`, `unknown source "${c.populationSource}"`);
     if (!Object.hasOwn(start.sources, c.gdpSource))
       issue(`${at}.gdpSource`, `unknown source "${c.gdpSource}"`);
+    if (!Object.hasOwn(start.sources, c.demographicsSource))
+      issue(`${at}.demographicsSource`, `unknown source "${c.demographicsSource}"`);
     const perPerson = (c.gdpMillionUsd * 1e6) / c.population;
     if (perPerson < GDP_PER_PERSON_RANGE_USD.min || perPerson > GDP_PER_PERSON_RANGE_USD.max) {
       issue(
@@ -127,6 +141,15 @@ export interface CountryStartTable {
   readonly gdpMillionUsd: Float64Array;
   /** Government type id of each country. */
   readonly governmentType: readonly string[];
+  /** Births and deaths in a year per 1,000 people (F06). */
+  readonly birthsPerThousand: Float64Array;
+  readonly deathsPerThousand: Float64Array;
+  /** The labor force as a share of the population (F06). */
+  readonly laborForceShare: Float64Array;
+  /** The share of the labor force without a job (F06). */
+  readonly unemploymentRate: Float64Array;
+  /** The armed forces as a share of the labor force (F06). */
+  readonly armedForcesShare: Float64Array;
 }
 
 export function buildCountryStartTable(
@@ -137,12 +160,32 @@ export function buildCountryStartTable(
   const population = new Float64Array(count);
   const gdpMillionUsd = new Float64Array(count);
   const governmentType: string[] = new Array<string>(count).fill('');
+  const birthsPerThousand = new Float64Array(count);
+  const deathsPerThousand = new Float64Array(count);
+  const laborForceShare = new Float64Array(count);
+  const unemploymentRate = new Float64Array(count);
+  const armedForcesShare = new Float64Array(count);
   for (const c of start.countries) {
     const index = world.countryIndex.get(c.id);
     if (index === undefined) throw new Error(`Country start data: unknown country "${c.id}"`);
     population[index] = c.population;
     gdpMillionUsd[index] = c.gdpMillionUsd;
     governmentType[index] = c.governmentType;
+    birthsPerThousand[index] = c.birthsPerThousand;
+    deathsPerThousand[index] = c.deathsPerThousand;
+    laborForceShare[index] = c.laborForceShare;
+    unemploymentRate[index] = c.unemploymentRate;
+    armedForcesShare[index] = c.armedForcesShare;
   }
-  return { year: start.year, population, gdpMillionUsd, governmentType };
+  return {
+    year: start.year,
+    population,
+    gdpMillionUsd,
+    governmentType,
+    birthsPerThousand,
+    deathsPerThousand,
+    laborForceShare,
+    unemploymentRate,
+    armedForcesShare,
+  };
 }

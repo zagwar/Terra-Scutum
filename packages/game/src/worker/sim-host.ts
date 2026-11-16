@@ -176,6 +176,7 @@ export function createSimHost(
           terrainTiles: data.terrainTiles,
           models: data.models,
           countryStart: state.countryStart,
+          pops: data.pops,
           time,
           daysPerSecond,
           playerCountry: state.playerCountry,

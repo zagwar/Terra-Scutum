@@ -1,3 +1,4 @@
+import { populationSystem } from '../economy/population';
 import type { GameState } from './game-state';
 
 /**
@@ -57,4 +58,6 @@ export type SystemRegistry = Readonly<Partial<Record<SystemId, SimSystem>>>;
  * The game's systems. Each feature adds its system here under its slot, for
  * example `population: populationSystem`. Slots without a system are skipped.
  */
-export const SYSTEMS: SystemRegistry = {};
+export const SYSTEMS: SystemRegistry = {
+  population: populationSystem,
+};

@@ -34,6 +34,18 @@ on this same model.
 - **Growth:** births minus deaths. Deaths rise with famine, war casualties, Swarm attacks and fallout.
 - **Casualties are real.** Soldiers killed and civilians lost come out of the population permanently.
 
+#### How the population model works (built in F06) [DEFAULT]
+All numbers are in `data/pops.json` unless said otherwise; the starting figures are real (2025).
+- **Starting population:** each country's population (World Bank) is shared among its provinces by where people really live (a world population grid, `data/province_start.json`). Each province's people are split into **dependents** (children, the elderly and others who don't work) and the **workforce** (the country's real labor force share); the workforce into the six pop groups: **soldiers** by the country's real armed forces, the others by how rich the country is (GDP per person): poorer countries are mostly laborers, richer ones have more skilled workers and professionals.
+- **Growth (daily):** births and deaths at the country's real rates (a dependent is 4× likelier to die than a worker); each day some dependents enter the workforce and some workers retire after about 45 working years. New workers join the pop groups in the proportions the province has now. There is no migration between provinces or countries yet (F108).
+- **Jobs:** each pop has a number of jobs; people without one are **unemployed**. Until buildings offer the jobs (F07), a stand-in economy does: it starts at the country's real unemployment rate and keeps pace with the workforce. Owners and soldiers are never unemployed.
+- **Changing jobs (weekly):** people move to another pop group when it has open jobs and they are unemployed or would earn more. Moving **down** (a professional or official taking skilled work, a skilled worker taking laborer work) is quick (up to 5 % of the group a week); moving **up** needs training and is slow (laborers → skilled workers 0.4 % a week, skilled workers → professionals 0.2 %, professionals or skilled workers → officials). The education budget will speed training up (F09). Nobody becomes an owner or a soldier this way (corporations, F89; conscription, F15).
+- **Wages:** paid per worker; a worker's wage also feeds the dependents. Until buildings pay wages (F07): a country's pops earn 60 % of its real GDP between them, with skilled workers paid 1.6×, officials 1.8×, professionals 2.6×, owners 6× and soldiers 1.2× a laborer's wage.
+- **Needs** in three tiers, bought in order: **basic** (food, housing, energy), **everyday** (consumer goods, services), **luxury** (luxury goods). Each has a cost per person per day. Until markets set prices (F65), a province's prices follow how rich its country is (poorer countries are cheaper). *Safety*, the fourth need of this section, isn't bought: it comes with the Swarm (distance to the front, F10 and M7).
+- **Standard of living** (0–100): 40 for basic needs fully met, 35 more for everyday needs, 25 more for luxuries; in proportion when a tier is only partly affordable. It feeds happiness and stability (F10) and pop ideology (F118).
+- **Casualties** remove people for good (from one pop, or from everyone in a province); wars, the Swarm, famine and fallout will use this.
+- **Not in F06:** refugees (F33), conscription (F15), ideology mixes and interest groups (F118, F119), famine deaths (F08), welfare for the unemployed (F09).
+
 ### 8.2 Economy and Budget
 - **GDP** is the total output of all sectors.
 - **Revenue** = GDP × tax rate. Higher taxes lower happiness and business confidence.

@@ -1,5 +1,6 @@
 /**
- * `npm run import:starting-data`: builds `data/country_start.json` (F71) and
+ * `npm run import:starting-data`: builds `data/country_start.json` (F71),
+ * `data/province_start.json` (F06: where in each country its people live) and
  * `packages/tools/starting-data/report.md` from the source tables in
  * `packages/tools/starting-data/sources/` and the hand-written
  * `packages/tools/starting-data/countries.json`. Works offline.
@@ -9,17 +10,19 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type CountryStartFile, countryNameKey } from '@terra-scutum/sim';
+import { type CountryStartFile, type ProvinceStartFile, countryNameKey } from '@terra-scutum/sim';
 import { DATA_DIR, LOCALES_DIR, REPO_ROOT, loadGameDataFromDisk } from './load-data';
 import {
   type ImfSnapshot,
   type MapCountry,
   type WorldBankSnapshot,
+  buildProvinceStart,
   buildStartingData,
   imfSnapshotSchema,
   startingDataConfigSchema,
   worldBankSnapshotSchema,
 } from './starting-data/build-starting-data';
+import { provincePopulationSnapshotSchema } from './starting-data/province-population';
 import { writeStartingDataReport } from './starting-data/report';
 import { snapshotSources } from './starting-data/snapshot-sources';
 
@@ -28,6 +31,7 @@ const SOURCES_DIR = join(CONFIG_DIR, 'sources');
 const RAW_DIR = join(REPO_ROOT, '.cache/starting-data');
 const IMF_FILE = join(SOURCES_DIR, 'imf-weo.json');
 const WORLD_BANK_FILE = join(SOURCES_DIR, 'world-bank-wdi.json');
+const PROVINCE_POPULATION_FILE = join(SOURCES_DIR, 'province-population.json');
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as unknown;
 
@@ -57,6 +61,24 @@ function main(): void {
   }
 
   writeFileSync(join(DATA_DIR, 'country_start.json'), formatCountryStart(result.file));
+
+  // Province populations (F06): each country's people shared among its provinces.
+  const counted = provincePopulationSnapshotSchema.parse(readJson(PROVINCE_POPULATION_FILE));
+  const mapProvinces = (
+    readJson(join(DATA_DIR, 'provinces.json')) as {
+      provinces: { id: string; country: string; areaKm2: number }[];
+    }
+  ).provinces;
+  const provinceStart = buildProvinceStart(
+    result.file,
+    counted,
+    mapProvinces,
+    config.provinceEstimates,
+  );
+  if (provinceStart.errors.length > 0) {
+    throw new Error(provinceStart.errors.map((e) => `  - ${e}`).join('\n'));
+  }
+  writeFileSync(join(DATA_DIR, 'province_start.json'), formatProvinceStart(provinceStart.file));
   // Check the result with the game's own schema and cross-checks (throws a list of problems).
   loadGameDataFromDisk();
   const names = readJson(join(LOCALES_DIR, 'en.map.json')) as Record<string, string>;
@@ -87,6 +109,14 @@ function formatCountryStart(file: CountryStartFile): string {
   const head = JSON.stringify(rest, null, 2).slice(0, -2);
   const lines = countries.map((c) => `    ${JSON.stringify(c)}`);
   return `${head},\n  "countries": [\n${lines.join(',\n')}\n  ]\n}\n`;
+}
+
+/** One province per line. */
+function formatProvinceStart(file: ProvinceStartFile): string {
+  const { provinces, ...rest } = file;
+  const head = JSON.stringify(rest, null, 2).slice(0, -2);
+  const lines = provinces.map((p) => `    ${JSON.stringify(p)}`);
+  return `${head},\n  "provinces": [\n${lines.join(',\n')}\n  ]\n}\n`;
 }
 
 try {

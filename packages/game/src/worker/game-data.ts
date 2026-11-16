@@ -8,6 +8,8 @@ import governmentTypes from '../../../../data/government_types.json';
 import mapView from '../../../../data/map_view.json';
 import models from '../../../../data/models.json';
 import notifications from '../../../../data/notifications.json';
+import pops from '../../../../data/pops.json';
+import provinceStart from '../../../../data/province_start.json';
 import provinces from '../../../../data/provinces.json';
 import regions from '../../../../data/regions.json';
 import seaZones from '../../../../data/sea_zones.json';
@@ -27,6 +29,8 @@ export const RAW_GAME_DATA: RawGameData = {
   seaZones,
   governmentTypes,
   countryStart,
+  provinceStart,
+  pops,
   mapView,
   terrainTiles,
   notifications,

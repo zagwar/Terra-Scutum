@@ -14,7 +14,7 @@
 > - **Section numbers are the same in every file**, so "section 8.3" always means the same thing. Use the table below to find which file holds a section.
 
 **Title:** *Terra Scutum: The Last Line of Earth* (short form: *Terra Scutum*)
-**Last updated:** 2026-11-15
+**Last updated:** 2026-11-16
 **Platform:** runs in the **web browser** (desktop app wrapper for Steam later) · **Language:** TypeScript · **3D:** Babylon.js · **UI:** React · **Simulation:** a separate pure TypeScript package (see `docs/13_technical.md`)
 **Development:** Claude Code cloud sessions (browser) on the GitHub repo `terra-scutum`; previews on Cloudflare Pages
 **Target platform:** Windows / Mac / Linux **[DEFAULT]**
@@ -84,6 +84,8 @@ In January 2025 an unknown object is detected heading for Earth. The player lead
 | **Disruption** | The heavy-metal cloud that weakens laser coverage (0–100, decays fast) |
 | **Pollution** / **fallout** | Long-lasting land contamination from heavy metals / nukes |
 | **Pop** | A population group in a province (laborers, skilled workers, professionals, owners, officials, soldiers) |
+| **Workforce** / **dependents** | The people of a province who work or look for work (split into pops) / everyone else: children, the elderly and others who don't work |
+| **Needs** / **standard of living** | What pops buy, in three tiers (basic, everyday, luxury) / how many of its needs a pop can afford, 0–100 |
 | **Ideology** | A political belief with stances on laws, government types and economic systems |
 | **Interest group** | A political group (Armed Forces, Corporate Lobby…) with clout, approval and a leader |
 | **Clout** / **legitimacy** / **political capital** | An interest group's power / how accepted the government is / the resource spent on laws and reforms |

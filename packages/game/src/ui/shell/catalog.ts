@@ -28,7 +28,8 @@ export type LensId = (typeof LENS_IDS)[number];
 
 export interface ScreenInfo {
   readonly lens: LensId;
-  readonly comesWith: ComesWith;
+  /** The feature that builds the screen, or null once it is built. */
+  readonly comesWith: ComesWith | null;
 }
 
 export const at = (feature: string, milestone: string): ComesWith => ({ feature, milestone });
@@ -57,7 +58,8 @@ export const SCREENS = {
   treaties: { lens: 'diplomacy', comesWith: at('F24', 'M6') },
   unitedNations: { lens: 'diplomacy', comesWith: at('F41', 'M6') },
   intelligence: { lens: 'diplomacy', comesWith: at('F66', 'M6') },
-  population: { lens: 'society', comesWith: at('F06', 'M2') },
+  // Built in F06 (a first pass; F11 fills it out).
+  population: { lens: 'society', comesWith: null },
   ideology: { lens: 'society', comesWith: at('F118', 'M3') },
   publicOpinion: { lens: 'society', comesWith: at('F21', 'M5') },
   refugees: { lens: 'society', comesWith: at('F33', 'M9') },
@@ -103,16 +105,16 @@ export const LENS_SCREENS: Readonly<Record<LensId, readonly ScreenId[]>> = {
 
 /**
  * The map mode each lens switches to when opened (section 12.2: the Economy
- * lens shows the industry map mode…). None of those map modes exist yet, so
- * every lens leaves the map mode alone for now [DEFAULT]; fill these in as
- * the map modes arrive.
+ * lens shows the industry map mode…). The Society lens shows the population
+ * map mode (F06); the other lenses leave the map mode alone until their map
+ * modes exist [DEFAULT]: fill these in as the map modes arrive.
  */
 export const LENS_MAP_MODE: Readonly<Record<LensId, MapMode | null>> = {
   economy: null,
   politics: null,
   military: null,
   diplomacy: null,
-  society: null,
+  society: 'population',
   science: null,
   space: null,
   swarm: null,

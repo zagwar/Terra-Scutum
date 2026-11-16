@@ -39,7 +39,16 @@
     "neighborStrength": 0.45,
     "hoverBrighten": 0.2,
     "countryHighlight": "#fff2c4",
-    "countryHighlightStrength": 0.45
+    "countryHighlightStrength": 0.45,
+    "populationDensity": [
+      { "perKm2": 1, "color": "#f3edc8" },
+      { "perKm2": 5, "color": "#f4d67c" },
+      { "perKm2": 25, "color": "#f2a94e" },
+      { "perKm2": 100, "color": "#e3692f" },
+      { "perKm2": 400, "color": "#bd2b2e" },
+      { "perKm2": 1500, "color": "#7a153c" },
+      { "perKm2": 6000, "color": "#3d0c3c" }
+    ]
   },
   "lines": {
     "provinceBorder": { "color": "#0a0e14", "opacity": 0.4, "widthPx": 1 },

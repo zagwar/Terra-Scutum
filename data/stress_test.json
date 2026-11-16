@@ -2,7 +2,6 @@
   "sim": {
     "scale": 1,
     "goods": 50,
-    "popGroupsPerProvince": 24,
     "needsPerPop": 8,
     "buildingsPerProvince": 16,
     "inputsPerBuilding": 3,

@@ -1,0 +1,67 @@
+{
+  "groups": [
+    { "id": "laborers", "wage": 1 },
+    { "id": "skilled_workers", "wage": 1.6 },
+    { "id": "professionals", "wage": 2.6 },
+    { "id": "owners", "wage": 6, "alwaysEmployed": true },
+    { "id": "officials", "wage": 1.8 },
+    { "id": "soldiers", "wage": 1.2, "alwaysEmployed": true, "military": true }
+  ],
+  "startingShares": [
+    {
+      "gdpPerPerson": 1000,
+      "shares": {
+        "laborers": 0.8,
+        "skilled_workers": 0.1,
+        "professionals": 0.04,
+        "owners": 0.02,
+        "officials": 0.04
+      }
+    },
+    {
+      "gdpPerPerson": 10000,
+      "shares": {
+        "laborers": 0.58,
+        "skilled_workers": 0.22,
+        "professionals": 0.1,
+        "owners": 0.03,
+        "officials": 0.07
+      }
+    },
+    {
+      "gdpPerPerson": 60000,
+      "shares": {
+        "laborers": 0.36,
+        "skilled_workers": 0.29,
+        "professionals": 0.23,
+        "owners": 0.04,
+        "officials": 0.08
+      }
+    }
+  ],
+  "needs": [
+    { "id": "food", "tier": "basic", "costPerDay": 1.2 },
+    { "id": "housing", "tier": "basic", "costPerDay": 0.9 },
+    { "id": "energy", "tier": "basic", "costPerDay": 0.4 },
+    { "id": "consumer_goods", "tier": "everyday", "costPerDay": 8 },
+    { "id": "services", "tier": "everyday", "costPerDay": 12 },
+    { "id": "luxury_goods", "tier": "luxury", "costPerDay": 150 }
+  ],
+  "standardOfLiving": { "basic": 40, "everyday": 35, "luxury": 25 },
+  "growth": { "workingYears": 45, "dependentMortality": 4 },
+  "jobChanges": [
+    { "from": "professionals", "to": "skilled_workers", "weeklyShare": 0.05, "training": false },
+    { "from": "officials", "to": "skilled_workers", "weeklyShare": 0.05, "training": false },
+    { "from": "skilled_workers", "to": "laborers", "weeklyShare": 0.05, "training": false },
+    { "from": "laborers", "to": "skilled_workers", "weeklyShare": 0.004, "training": true },
+    { "from": "skilled_workers", "to": "professionals", "weeklyShare": 0.002, "training": true },
+    { "from": "professionals", "to": "officials", "weeklyShare": 0.004, "training": true },
+    { "from": "skilled_workers", "to": "officials", "weeklyShare": 0.002, "training": true }
+  ],
+  "placeholderEconomy": {
+    "incomeShareOfGdp": 0.6,
+    "priceLevelExponent": 0.35,
+    "priceReferenceGdpPerPerson": 85000,
+    "jobsFollowWeekly": 0.05
+  }
+}

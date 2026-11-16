@@ -24,6 +24,7 @@
     "format": "prettier --write .",
     "import:map": "tsx packages/tools/src/import-map.ts",
     "import:starting-data": "tsx packages/tools/src/import-starting-data.ts",
+    "import:province-population": "tsx packages/tools/src/import-province-population.ts",
     "import:terrain": "tsx packages/tools/src/import-terrain.ts"
   },
   "devDependencies": {

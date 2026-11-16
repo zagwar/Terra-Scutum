@@ -13,6 +13,9 @@ describe('campaign runner', () => {
     expect(summary.endDate).toEqual({ year: 2027, month: 1, day: 1 });
     expect(summary.dailyTicks.count + summary.weeklyTicks.count).toBe(730);
     expect(summary.weeklyTicks.count).toBe(104);
+    // The world's people (F06): about 8.2 billion, growing.
+    expect(summary.startPopulation / 1e9).toBeCloseTo(8.21, 1);
+    expect(summary.endPopulation).toBeGreaterThan(summary.startPopulation * 1.01);
   });
 
   it('gives the same state hash for the same seed and a different one for another seed', () => {

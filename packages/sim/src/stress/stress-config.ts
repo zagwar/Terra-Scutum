@@ -11,7 +11,7 @@ import { z } from 'zod';
  *   do every day and every week, with every country simulated. It is not the
  *   game's rules, only work of a similar size and shape (typed arrays, loops
  *   over provinces, pops, buildings, markets, units and the adjacency graph).
- *   F140 replaces it with the real economy.
+ *   Since F06 its pops are the real ones. F140 replaces the rest with the real economy.
  * - `render`: what `?debug=stress` puts on the map (used by the game, not by the sim).
  */
 const count = z.int().min(0).max(1_000_000);
@@ -21,9 +21,7 @@ export const simStressSchema = z.strictObject({
   scale: z.number().positive().max(20),
   /** Kinds of goods traded on every country's market. */
   goods: z.int().min(2).max(500),
-  /** Pop groups in each province (pop types × cultures × religions…). */
-  popGroupsPerProvince: count,
-  /** Goods each pop group buys every day. */
+  /** Goods each pop buys every day (the pops themselves are the real ones since F06). */
   needsPerPop: z.int().min(1).max(50),
   /** Buildings in each province (each with a level and a recipe). */
   buildingsPerProvince: count,

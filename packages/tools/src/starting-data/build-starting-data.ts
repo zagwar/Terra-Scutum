@@ -1,5 +1,6 @@
-import type { CountryStartFile } from '@terra-scutum/sim';
+import type { CountryStartFile, ProvinceStartFile } from '@terra-scutum/sim';
 import { z } from 'zod';
+import { type ProvincePopulationSnapshot, shareWholeNumbers } from './province-population';
 
 /**
  * Builds `data/country_start.json` (F71) from the source tables saved in
@@ -18,6 +19,16 @@ import { z } from 'zod';
  *   China): their population and GDP are added, from the same sources (the
  *   GDP from any recent year), or from `territoryEstimates`. Territories with
  *   no figures are tiny or uninhabited and are left out (listed in the report).
+ * - **Demographics** (F06): births and deaths per 1,000 people, the labor
+ *   force as a share of the population, the unemployment rate and the armed
+ *   forces as a share of the labor force, from the World Bank's latest
+ *   figures; a hand-written `demographics` entry fills in what the World
+ *   Bank doesn't have (Taiwan, Kosovo, the microstates). Merged territories
+ *   take their country's rates.
+ * - **Province populations** (F06): each country's population is shared
+ *   among its provinces in proportion to the people the population grid
+ *   counted in them (`sources/province-population.json`), as whole numbers
+ *   that add up to the country's figure.
  */
 
 const countryCode = z.string().regex(/^[A-Z]{3}$/);
@@ -38,6 +49,15 @@ export const startingDataConfigSchema = z.strictObject({
       note: z.string(),
     }),
   ),
+  /**
+   * Hand-written populations for provinces the population grid gets wrong
+   * (F06): provinces drawn bigger than they are (Gibraltar's disc also covers
+   * Spanish towns) or whose shape misses their city. The rest of the country
+   * shares what is left.
+   */
+  provinceEstimates: z
+    .record(z.string(), z.strictObject({ population: z.int().nonnegative(), note: z.string() }))
+    .default({}),
   countries: z.record(
     countryCode,
     z.strictObject({
@@ -52,6 +72,17 @@ export const startingDataConfigSchema = z.strictObject({
       /** Take the World Bank's latest GDP instead of the IMF's (when the IMF's is unusable). */
       gdp: z.literal('worldBank').optional(),
       gdpNote: z.string().optional(),
+      /** Hand-written demographic figures (F06), each used when the World Bank has none. */
+      demographics: z
+        .strictObject({
+          birthsPerThousand: z.number().min(0).optional(),
+          deathsPerThousand: z.number().min(0).optional(),
+          laborForceShare: z.number().min(0).max(1).optional(),
+          unemploymentRate: z.number().min(0).max(1).optional(),
+          armedForcesShare: z.number().min(0).max(1).optional(),
+          note: z.string(),
+        })
+        .optional(),
     }),
   ),
 });
@@ -75,8 +106,24 @@ export const worldBankSnapshotSchema = z.object({
   population: z.record(z.string(), z.number()),
   populationYear: z.int(),
   gdpLatest: z.record(z.string(), z.tuple([z.int(), z.number()])),
+  /**
+   * The latest figure (year, value) per country code of: births and deaths
+   * per 1,000 people (SP.DYN.CBRT.IN, SP.DYN.CDRT.IN), the labor force in
+   * people (SL.TLF.TOTL.IN), unemployment in percent of the labor force
+   * (SL.UEM.TOTL.ZS, modeled ILO estimate) and armed forces personnel
+   * (MS.MIL.TOTL.P1).
+   */
+  demographics: z.strictObject({
+    birthRate: z.record(z.string(), z.tuple([z.int(), z.number()])),
+    deathRate: z.record(z.string(), z.tuple([z.int(), z.number()])),
+    laborForce: z.record(z.string(), z.tuple([z.int(), z.number()])),
+    unemployment: z.record(z.string(), z.tuple([z.int(), z.number()])),
+    armedForces: z.record(z.string(), z.tuple([z.int(), z.number()])),
+  }),
 });
 export type WorldBankSnapshot = z.infer<typeof worldBankSnapshotSchema>;
+
+const round = (value: number, decimals: number) => Number(value.toFixed(decimals));
 
 /** A country of the curated list (map-config `countries.json`). */
 export interface MapCountry {
@@ -172,6 +219,45 @@ export function buildStartingData(
       continue;
     }
 
+    // Demographics (F06): the World Bank's latest figures, else the hand-written ones.
+    const wb = worldBankCode(country.id);
+    const hand = entry.demographics;
+    const figures = worldBank.demographics;
+    const laborForce = figures.laborForce[wb]?.[1];
+    const demographics = {
+      birthsPerThousand: figures.birthRate[wb]?.[1] ?? hand?.birthsPerThousand,
+      deathsPerThousand: figures.deathRate[wb]?.[1] ?? hand?.deathsPerThousand,
+      laborForceShare:
+        laborForce !== undefined && wbPopulation !== undefined
+          ? laborForce / wbPopulation
+          : hand?.laborForceShare,
+      unemploymentRate:
+        figures.unemployment[wb] !== undefined
+          ? figures.unemployment[wb][1] / 100
+          : hand?.unemploymentRate,
+      armedForcesShare:
+        figures.armedForces[wb] !== undefined && laborForce !== undefined
+          ? figures.armedForces[wb][1] / laborForce
+          : hand?.armedForcesShare,
+    };
+    const missing = Object.entries(demographics)
+      .filter(([, value]) => value === undefined)
+      .map(([key]) => key);
+    if (missing.length > 0) {
+      errors.push(
+        `${country.id}: no ${missing.join(', ')} in the World Bank's figures; add them under "demographics" in starting-data/countries.json`,
+      );
+      continue;
+    }
+    const usedHand =
+      hand !== undefined &&
+      (figures.birthRate[wb] === undefined ||
+        figures.deathRate[wb] === undefined ||
+        laborForce === undefined ||
+        figures.unemployment[wb] === undefined ||
+        figures.armedForces[wb] === undefined);
+    if (usedHand) notes.push(`Demographics: ${hand.note}`);
+
     // Merged territories, each counted once (Guernsey and Jersey are one "Channel Islands" entry).
     const added: string[] = [];
     const seenCodes = new Set<string>();
@@ -216,6 +302,12 @@ export function buildStartingData(
       populationSource,
       gdpSource,
       ...(gdpYear !== undefined ? { gdpYear } : {}),
+      birthsPerThousand: round(demographics.birthsPerThousand, 3),
+      deathsPerThousand: round(demographics.deathsPerThousand, 3),
+      laborForceShare: round(demographics.laborForceShare!, 4),
+      unemploymentRate: round(demographics.unemploymentRate!, 4),
+      armedForcesShare: round(demographics.armedForcesShare!, 4),
+      demographicsSource: usedHand ? 'estimate' : 'worldBank',
       ...(notes.length > 0 ? { notes } : {}),
     });
   }
@@ -232,7 +324,7 @@ export function buildStartingData(
         },
         worldBank: {
           title:
-            'World Bank, World Development Indicators: population (SP.POP.TOTL) and GDP in current US$ (NY.GDP.MKTP.CD)',
+            'World Bank, World Development Indicators: population (SP.POP.TOTL), GDP in current US$ (NY.GDP.MKTP.CD), births and deaths per 1,000 people (SP.DYN.CBRT.IN, SP.DYN.CDRT.IN), labor force (SL.TLF.TOTL.IN), unemployment (SL.UEM.TOTL.ZS) and armed forces personnel (MS.MIL.TOTL.P1)',
           url: 'https://data.worldbank.org',
           edition: `updated ${worldBank.lastUpdated}, downloaded ${worldBank.downloaded}`,
         },
@@ -245,5 +337,78 @@ export function buildStartingData(
     },
     errors,
     skippedTerritories,
+  };
+}
+
+/** A province of the map (`data/provinces.json`). */
+export interface MapProvince {
+  readonly id: string;
+  readonly country: string;
+  readonly areaKm2: number;
+}
+
+/**
+ * Builds `data/province_start.json` (F06): every country's population shared
+ * among its provinces in proportion to the people counted in them; a country
+ * the population grid has nobody for is shared by area.
+ */
+export function buildProvinceStart(
+  countryStart: CountryStartFile,
+  counted: ProvincePopulationSnapshot,
+  provinces: readonly MapProvince[],
+  estimates: StartingDataConfig['provinceEstimates'] = {},
+): { file: ProvinceStartFile; errors: string[] } {
+  const errors: string[] = [];
+  const known = new Set(provinces.map((p) => p.id));
+  for (const id of Object.keys(estimates))
+    if (!known.has(id)) errors.push(`provinceEstimates lists "${id}", which is not a province`);
+  for (const id of Object.keys(counted.provinces))
+    if (!known.has(id))
+      errors.push(
+        `sources/province-population.json lists "${id}", which is not a province: run \`npm run import:province-population\` again`,
+      );
+  const result = new Map<string, number>();
+  for (const country of countryStart.countries) {
+    const own = provinces.filter((p) => p.country === country.id);
+    for (const province of own)
+      if (counted.provinces[province.id] === undefined)
+        errors.push(
+          `sources/province-population.json has no count for "${province.id}": run \`npm run import:province-population\` again`,
+        );
+    // Provinces with a hand-written population keep it; the others share the rest.
+    const fixed = own.filter((p) => estimates[p.id] !== undefined);
+    const shared = own.filter((p) => estimates[p.id] === undefined);
+    const fixedPeople = fixed.reduce((sum, p) => sum + estimates[p.id].population, 0);
+    if (
+      fixedPeople > country.population ||
+      (shared.length === 0 && fixedPeople !== country.population)
+    ) {
+      errors.push(
+        `${country.id}: its provinceEstimates hold ${fixedPeople} people, but the country has ${country.population}`,
+      );
+      continue;
+    }
+    for (const province of fixed) result.set(province.id, estimates[province.id].population);
+    const shares = shareWholeNumbers(
+      country.population - fixedPeople,
+      shared.map((p) => counted.provinces[p.id] ?? 0),
+      shared.map((p) => p.areaKm2),
+    );
+    shared.forEach((province, index) => result.set(province.id, shares[index]));
+  }
+  return {
+    file: {
+      year: countryStart.year,
+      source: {
+        title: counted.title,
+        url: counted.url,
+        licence: counted.licence,
+        edition: `${counted.edition}, downloaded ${counted.downloaded}`,
+      },
+      provinces: [...provinces]
+        .sort((a, b) => (a.id < b.id ? -1 : 1))
+        .map((p) => ({ id: p.id, population: result.get(p.id) ?? 0 })),
+    },
+    errors,
   };
 }

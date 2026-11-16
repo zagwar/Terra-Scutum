@@ -87,6 +87,12 @@ export function testWorld() {
           governmentType: 'parliamentary_democracy',
           populationSource: 'worldBank',
           gdpSource: 'imfWeo',
+          birthsPerThousand: 10,
+          deathsPerThousand: 9,
+          laborForceShare: 0.5,
+          unemploymentRate: 0.05,
+          armedForcesShare: 0.01,
+          demographicsSource: 'worldBank',
         },
         {
           id: 'BBB',
@@ -96,8 +102,67 @@ export function testWorld() {
           populationSource: 'worldBank',
           gdpSource: 'worldBank',
           gdpYear: 2022,
+          birthsPerThousand: 35,
+          deathsPerThousand: 10,
+          laborForceShare: 0.35,
+          unemploymentRate: 0.1,
+          armedForcesShare: 0.02,
+          demographicsSource: 'worldBank',
         },
       ],
+    },
+    provinceStart: {
+      year: 2025,
+      source: { title: 'Test grid', url: '', licence: 'none', edition: 'test' },
+      provinces: [
+        { id: 'alpha_west', population: 1_200_000 },
+        { id: 'alpha_east', population: 800_000 },
+        { id: 'beta_main', population: 500_000 },
+      ],
+    },
+  };
+}
+
+/** A valid `pops.json` (F06): the six pop groups with round numbers. */
+export function testPops() {
+  const shares = (laborers: number, skilled: number, professionals: number) => ({
+    laborers,
+    skilled_workers: skilled,
+    professionals,
+    owners: 0.02,
+    officials: 0.08,
+  });
+  return {
+    groups: [
+      { id: 'laborers', wage: 1 },
+      { id: 'skilled_workers', wage: 2 },
+      { id: 'professionals', wage: 3 },
+      { id: 'owners', wage: 6, alwaysEmployed: true },
+      { id: 'officials', wage: 2 },
+      { id: 'soldiers', wage: 1.5, alwaysEmployed: true, military: true },
+    ],
+    startingShares: [
+      { gdpPerPerson: 1000, shares: shares(0.7, 0.15, 0.05) },
+      { gdpPerPerson: 50000, shares: shares(0.4, 0.3, 0.2) },
+    ],
+    needs: [
+      { id: 'food', tier: 'basic', costPerDay: 2 },
+      { id: 'housing', tier: 'basic', costPerDay: 1 },
+      { id: 'consumer_goods', tier: 'everyday', costPerDay: 20 },
+      { id: 'luxury_goods', tier: 'luxury', costPerDay: 100 },
+    ],
+    standardOfLiving: { basic: 40, everyday: 35, luxury: 25 },
+    growth: { workingYears: 45, dependentMortality: 4 },
+    jobChanges: [
+      { from: 'skilled_workers', to: 'laborers', weeklyShare: 0.05, training: false },
+      { from: 'laborers', to: 'skilled_workers', weeklyShare: 0.01, training: true },
+      { from: 'skilled_workers', to: 'professionals', weeklyShare: 0.005, training: true },
+    ],
+    placeholderEconomy: {
+      incomeShareOfGdp: 0.6,
+      priceLevelExponent: 0.35,
+      priceReferenceGdpPerPerson: 85000,
+      jobsFollowWeekly: 0.05,
     },
   };
 }
@@ -141,6 +206,11 @@ export function testMapView() {
       hoverBrighten: 0.2,
       countryHighlight: '#ffffff',
       countryHighlightStrength: 0.4,
+      populationDensity: [
+        { perKm2: 1, color: '#ffffff' },
+        { perKm2: 100, color: '#ff0000' },
+        { perKm2: 10000, color: '#000000' },
+      ],
     },
     lines: {
       provinceBorder: line,
@@ -306,7 +376,6 @@ export function testStressTest() {
     sim: {
       scale: 1,
       goods: 5,
-      popGroupsPerProvince: 3,
       needsPerPop: 2,
       buildingsPerProvince: 2,
       inputsPerBuilding: 2,
@@ -363,6 +432,7 @@ export function testRawData(
       gameSpeed: { daysPerSecond: [0.5, 1, 2, 5, 10], startSpeed: 2 },
     },
     ...testWorld(),
+    pops: testPops(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

@@ -160,6 +160,8 @@ export interface MapView {
   setMode(mode: MapMode): void;
   /** Who owns each province now (country indices, from the sim's snapshot). */
   setProvinceOwners(provinceOwner: Uint16Array): void;
+  /** Everyone living in each province (from the sim's snapshot, F06), for the population map mode. */
+  setProvincePopulation(provincePopulation: Float64Array): void;
   setSelectedProvince(province: number | null): void;
   setSelectedSeaZone(seaZone: number | null): void;
   /** Tints every province of a country (index), or none (null): the country picked while choosing (F05). */
@@ -471,7 +473,10 @@ export async function createMapView(
   let sceneryView: SceneryView | null = null;
 
   // ── Colors and highlights ─────────────────────────────────────────────────
-  let baseColors = provinceBaseColors(mode, world, config.colors, owners);
+  /** Everyone living in each province, once the sim has said (the population map mode's colors). */
+  let population: Float64Array | null = null;
+  const colorsOf = () => provinceBaseColors(mode, world, config.colors, owners, population);
+  let baseColors = colorsOf();
   const highlights = new Uint8Array(baseColors.length);
   let selected: number | null = null;
   let highlightedCountry: number | null = null;
@@ -1157,7 +1162,7 @@ export async function createMapView(
     setMode(next) {
       if (next === mode) return;
       mode = next;
-      baseColors = provinceBaseColors(mode, world, config.colors, owners);
+      baseColors = colorsOf();
       refreshBaseColors();
       seaBaseColors = seaZoneColors(mode, world, config.colors);
       refreshSeaColors();
@@ -1172,12 +1177,21 @@ export async function createMapView(
       if (provinceOwner.every((owner, province) => owner === owners[province])) return;
       owners = provinceOwner.slice();
       if (mode === 'political') {
-        baseColors = provinceBaseColors(mode, world, config.colors, owners);
+        baseColors = colorsOf();
         refreshBaseColors();
       }
       if (highlightedCountry !== null) refreshColors();
       // Country borders follow the owners.
       terrain.ownersChanged();
+    },
+    setProvincePopulation(provincePopulation) {
+      // The store hands over the same array until the sim sends a new one.
+      if (provincePopulation === population) return;
+      population = provincePopulation;
+      if (mode === 'population') {
+        baseColors = colorsOf();
+        refreshBaseColors();
+      }
     },
     setSelectedProvince(province) {
       if (province === selected) return;

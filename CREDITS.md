@@ -16,8 +16,13 @@ credits below are also shown in the game under **Settings → About this build**
 
 ## Statistics
 
-- **Starting population and economy:** World Bank (World Development Indicators) and International
-  Monetary Fund (World Economic Outlook). See `packages/tools/starting-data/README.md`.
+- **Starting population and economy:** World Bank (World Development Indicators: population, GDP,
+  birth and death rates, labor force, unemployment, armed forces) and International Monetary Fund
+  (World Economic Outlook). See `packages/tools/starting-data/README.md`.
+- **Where people live (population per province):** [Kontur Population](https://data.humdata.org/dataset/kontur-population-dataset):
+  Global Population Density for 400m H3 Hexagons, © Kontur. Licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The game uses only the number of
+  people counted in each province (`data/province_start.json`).
 
 ## Pictures
 

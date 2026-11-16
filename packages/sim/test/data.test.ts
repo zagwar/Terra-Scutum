@@ -7,6 +7,7 @@ import {
   testModels,
   testNotifications,
   testPerformanceBudget,
+  testPops,
   testStressTest,
   testTerrainTiles,
   testWorld,
@@ -21,6 +22,7 @@ const validConfig = {
 
 const world = {
   ...testWorld(),
+  pops: testPops(),
   mapView: testMapView(),
   terrainTiles: testTerrainTiles(),
   notifications: testNotifications(),
@@ -102,6 +104,8 @@ describe('game data validation', () => {
       'data/sea_zones.json: file is missing',
       'data/government_types.json: file is missing',
       'data/country_start.json: file is missing',
+      'data/province_start.json: file is missing',
+      'data/pops.json: file is missing',
       'data/map_view.json: file is missing',
       'data/terrain_tiles.json: file is missing',
       'data/notifications.json: file is missing',
