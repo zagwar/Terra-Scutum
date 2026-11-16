@@ -117,7 +117,12 @@ export function App({
         </>
       )}
       {state.map === 'ready' && (
-        <MapModeBar mode={state.mapMode} onSetMapMode={onSetMapMode} onResetView={onResetView} />
+        <MapModeBar
+          mode={state.mapMode}
+          populationDensityColors={state.populationDensityColors}
+          onSetMapMode={onSetMapMode}
+          onResetView={onResetView}
+        />
       )}
       {state.map === 'loading' && !state.error && (
         <div className="loading-note" data-testid="loading-note">
@@ -131,6 +136,8 @@ export function App({
         <MapTooltip
           world={world}
           provinceOwner={provinceOwner}
+          // The population map mode's tooltip also says how many people live there.
+          population={state.mapMode === 'population' ? state.population : null}
           target={{ kind: 'province', index: state.hoveredProvince }}
         />
       )}
@@ -211,6 +218,8 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
         <ProvincePanel
           world={world}
           provinceOwner={provinceOwner}
+          population={state.population}
+          pops={state.pops}
           province={panel.index}
           nav={nav}
           onSelectProvince={link.province}
@@ -237,6 +246,8 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
           world={world}
           countryStart={countryStart}
           provinceOwner={provinceOwner}
+          population={state.population}
+          pops={state.pops}
           data={countryScreen}
           country={panel.index}
           playerCountry={state.playerCountry}

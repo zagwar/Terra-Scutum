@@ -1,5 +1,7 @@
 import {
   type CountryStartTable,
+  type PopsConfig,
+  type PopulationSnapshot,
   type WorldMap,
   cabinetSeatNameKey,
   countryNameKey,
@@ -23,6 +25,9 @@ export interface CountryScreenProps {
   readonly world: WorldMap;
   readonly countryStart: CountryStartTable;
   readonly provinceOwner: Uint16Array;
+  /** The population (F06) and the pop groups; null until the sim has sent them. */
+  readonly population: PopulationSnapshot | null;
+  readonly pops: PopsConfig | null;
   readonly data: CountryScreenData;
   /** Index of the country to show. */
   readonly country: number;
@@ -35,7 +40,7 @@ export interface CountryScreenProps {
 }
 
 /** The screens the Government view's buttons open (section 12.4.1). */
-const GOVERNMENT_LINKS = ['laws', 'government', 'decisions', 'ledger'] as const;
+const GOVERNMENT_LINKS = ['laws', 'government', 'population', 'decisions', 'ledger'] as const;
 
 /**
  * The country screen (F138, section 12.4.1), modeled on Hearts of Iron IV: a

@@ -354,10 +354,17 @@ body {
   gap: 8px;
 }
 
-/* The map mode buttons: two to a row. */
+/* The map mode buttons: three to a row (more map modes come with their features). */
 .map-mode-bar .button-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.map-mode-bar .button-row .button {
+  padding: 7px 2px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
 .button.is-active {
@@ -426,6 +433,189 @@ body {
   cursor: help;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
+}
+
+/* ── Population (F06) ───────────────────────────────────────────────────── */
+.province-population {
+  margin-bottom: 14px;
+}
+
+.province-population .facts {
+  margin-bottom: 8px;
+}
+
+.needs-bars {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.needs-bars li {
+  display: grid;
+  grid-template-columns: 72px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+}
+
+.needs-name {
+  color: var(--color-text-dim);
+}
+
+.needs-bar {
+  height: 8px;
+  overflow: hidden;
+  background: #1b2a3a;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 4px;
+}
+
+.needs-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.needs-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.needs-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.pop-table {
+  width: 100%;
+  margin: 0 0 14px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.pop-table thead th {
+  padding: 3px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--color-text-dim);
+  border-bottom: 1px solid var(--color-panel-border);
+}
+
+.pop-table thead th[title] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.pop-table thead th:first-child,
+.pop-table tbody th {
+  text-align: left;
+  font-weight: 400;
+}
+
+.pop-table td {
+  padding: 3px 4px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pop-table tbody th {
+  padding: 3px 4px 3px 0;
+}
+
+.pop-table tbody tr + tr > * {
+  border-top: 1px solid rgba(42, 58, 74, 0.5);
+}
+
+.pop-table.is-full td,
+.pop-table.is-full th {
+  padding: 5px 8px;
+}
+
+.pop-table.is-full thead th {
+  font-size: 11px;
+}
+
+.shell-window.is-wide {
+  width: min(880px, calc(100vw - 24px));
+}
+
+.population-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.population-head .flag {
+  width: 40px;
+  height: 30px;
+}
+
+.population-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.population-change {
+  margin-left: auto;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.population-top {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr);
+  gap: 8px 32px;
+  margin-bottom: 6px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.map-tooltip-line {
+  display: block;
+  color: var(--color-text-dim);
+}
+
+.map-legend {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.map-legend ol {
+  display: flex;
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-legend li {
+  flex: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-legend-color {
+  display: block;
+  height: 8px;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 760px), (max-height: 520px) {
+  .population-top {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* The credits for the public data the game is made from (Settings → About this build). */
@@ -757,7 +947,7 @@ body {
   right: var(--shell-gap);
   width: var(--side-width);
   /* Leaves room for the map mode box underneath. */
-  max-height: calc(100% - var(--content-top) - 280px);
+  max-height: calc(100% - var(--content-top) - 300px);
   overflow-y: auto;
   padding: 8px 10px 10px;
 }

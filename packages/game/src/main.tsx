@@ -74,6 +74,7 @@ function showMapWhenPossible(): void {
           const state = store.getState();
           map.setMode(state.mapMode);
           if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
+          if (state.population) map.setProvincePopulation(state.population.provincePopulation);
           map.setSelectedProvince(state.selectedProvince);
           map.setSelectedSeaZone(state.selectedSeaZone);
           map.setHighlightedCountry(state.choosingCountry ? state.candidateCountry : null);
@@ -122,6 +123,9 @@ const sim = createSimClient({
       sim: 'running',
       snapshot: message.snapshot,
       provinceOwner: message.snapshot.provinceOwner ?? null,
+      population: message.snapshot.population ?? null,
+      pops: message.pops,
+      populationDensityColors: message.mapView.colors.populationDensity,
       world: message.world,
       countryStart: message.countryStart,
       saveFormatVersion: message.saveFormatVersion,
@@ -140,6 +144,7 @@ const sim = createSimClient({
       snapshot,
       playerCountry: snapshot.playerCountry,
       ...(snapshot.provinceOwner ? { provinceOwner: snapshot.provinceOwner } : {}),
+      ...(snapshot.population ? { population: snapshot.population } : {}),
     });
     debugHooks?.recordEvents(events);
     // Sim events that have a message type become messages (toasts, pop-ups, the log).

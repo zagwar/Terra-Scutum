@@ -1,11 +1,23 @@
 import {
   type CountryStartTable,
+  type PopsConfig,
+  type PopulationSnapshot,
   type WorldMap,
   countryNameKey,
   provinceNameKey,
   summarizeCountry,
 } from '@terra-scutum/sim';
-import { formatArea, formatMoney, formatMoneyMillions, formatPopulation, t, tKey } from '../i18n';
+import {
+  formatArea,
+  formatMoney,
+  formatMoneyMillions,
+  formatPercent,
+  formatPopulation,
+  t,
+  tKey,
+} from '../i18n';
+import { standardOfLivingHint } from '../population/population-parts';
+import { countrySummary } from '../population/population-view';
 import { COUNTRY_SCREEN_COMES_WITH } from './country-screen-catalog';
 import { Missing, Section } from './parts';
 
@@ -13,11 +25,15 @@ import { Missing, Section } from './parts';
  * The country screen's overview (both views): the facts of the old country
  * panel (F02, F71): capital, population, GDP, provinces, area and neighbors,
  * worked out from the current owners, plus military strength once it exists.
+ * Since F06 the population is the living one (with unemployment and the
+ * standard of living); GDP is still the real-world starting figure.
  */
 export function CountryOverview({
   world,
   countryStart,
   provinceOwner,
+  population: living,
+  pops,
   country,
   onSelectCountry,
   onSelectProvince,
@@ -25,6 +41,9 @@ export function CountryOverview({
   readonly world: WorldMap;
   readonly countryStart: CountryStartTable;
   readonly provinceOwner: Uint16Array;
+  /** The population (F06) and the pop groups; null until the sim has sent them. */
+  readonly population: PopulationSnapshot | null;
+  readonly pops: PopsConfig | null;
   readonly country: number;
   readonly onSelectCountry: (country: number) => void;
   readonly onSelectProvince: (province: number) => void;
@@ -34,7 +53,10 @@ export function CountryOverview({
     .map((index) => ({ index, name: tKey(countryNameKey(world.countryIds[index])) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const capital = world.countryCapital[country];
-  const population = countryStart.population[country];
+  const people = living ? countrySummary(living, country) : null;
+  // GDP per person stays the real-world starting figure until the economy is simulated (F65).
+  const startPopulation = countryStart.population[country];
+  const population = people ? people.people : startPopulation;
   const gdpMillionUsd = countryStart.gdpMillionUsd[country];
 
   return (
@@ -58,8 +80,18 @@ export function CountryOverview({
           <dd data-testid="country-gdp">{formatMoneyMillions(gdpMillionUsd)}</dd>
           <dt>{t('COUNTRY_PANEL_GDP_PER_PERSON')}</dt>
           <dd data-testid="country-gdp-per-person">
-            {formatMoney((gdpMillionUsd * 1e6) / population)}
+            {formatMoney((gdpMillionUsd * 1e6) / startPopulation)}
           </dd>
+          {people && pops && (
+            <>
+              <dt>{t('POPULATION_UNEMPLOYMENT')}</dt>
+              <dd data-testid="country-unemployment">{formatPercent(people.unemployment)}</dd>
+              <dt title={standardOfLivingHint(pops)}>{t('POPULATION_STANDARD_OF_LIVING')}</dt>
+              <dd data-testid="country-living">
+                {t('POPULATION_SCORE', { value: Math.round(people.standardOfLiving) })}
+              </dd>
+            </>
+          )}
         </dl>
         <dl className="facts">
           <dt>{t('COUNTRY_PANEL_PROVINCES')}</dt>

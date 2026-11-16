@@ -16,6 +16,11 @@ export const RAW_FILES = {
   imfIndicators: 'imf-indicators.json',
   worldBankPopulation: 'wb-population.json',
   worldBankGdp: 'wb-gdp.json',
+  worldBankBirthRate: 'wb-SP.DYN.CBRT.IN.json',
+  worldBankDeathRate: 'wb-SP.DYN.CDRT.IN.json',
+  worldBankLaborForce: 'wb-SL.TLF.TOTL.IN.json',
+  worldBankUnemployment: 'wb-SL.UEM.TOTL.ZS.json',
+  worldBankArmedForces: 'wb-MS.MIL.TOTL.P1.json',
 } as const;
 
 /** The sources' codes for the whole world. */
@@ -85,6 +90,14 @@ export function snapshotSources(
 
   const sortedEntries = <T>(entries: [string, T][]) =>
     Object.fromEntries(entries.sort(([a], [b]) => (a < b ? -1 : 1)));
+  /** The latest figure of an indicator per country, with its year. */
+  const latest = (file: string) =>
+    sortedEntries(
+      worldBankRows(file).rows.map((r) => [
+        r.countryiso3code,
+        [Number(r.date), r.value!] as [number, number],
+      ]),
+    );
 
   return {
     imf: {
@@ -103,6 +116,13 @@ export function snapshotSources(
       gdpLatest: sortedEntries(
         gdp.rows.map((r) => [r.countryiso3code, [Number(r.date), r.value!] as [number, number]]),
       ),
+      demographics: {
+        birthRate: latest(RAW_FILES.worldBankBirthRate),
+        deathRate: latest(RAW_FILES.worldBankDeathRate),
+        laborForce: latest(RAW_FILES.worldBankLaborForce),
+        unemployment: latest(RAW_FILES.worldBankUnemployment),
+        armedForces: latest(RAW_FILES.worldBankArmedForces),
+      },
     },
   };
 }

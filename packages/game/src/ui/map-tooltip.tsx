@@ -1,11 +1,19 @@
-import { type WorldMap, countryNameKey, provinceNameKey, seaZoneNameKey } from '@terra-scutum/sim';
+import {
+  type PopulationSnapshot,
+  type WorldMap,
+  countryNameKey,
+  provinceNameKey,
+  seaZoneNameKey,
+} from '@terra-scutum/sim';
 import { useLayoutEffect, useRef } from 'react';
-import { t, tKey } from './i18n';
+import { formatDensity, formatPopulation, t, tKey } from './i18n';
 
 export interface MapTooltipProps {
   readonly world: WorldMap;
   /** The country (index) that owns each province right now. */
   readonly provinceOwner: Uint16Array;
+  /** Given in the population map mode: a province's tooltip then also shows its people (F06). */
+  readonly population?: PopulationSnapshot | null;
   /** What is under the mouse: a province or a sea zone (by index). */
   readonly target: { readonly kind: 'province' | 'seaZone'; readonly index: number };
 }
@@ -25,7 +33,7 @@ window.addEventListener('pointermove', (event) => {
  * the mouse (without going through the app store), so React only re-renders
  * when the province changes.
  */
-export function MapTooltip({ world, provinceOwner, target }: MapTooltipProps) {
+export function MapTooltip({ world, provinceOwner, population, target }: MapTooltipProps) {
   const element = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -56,6 +64,18 @@ export function MapTooltip({ world, provinceOwner, target }: MapTooltipProps) {
         : t('MAP_TOOLTIP_SEA_ZONE', {
             seaZone: tKey(seaZoneNameKey(world.seaZoneIds[target.index])),
           })}
+      {target.kind === 'province' && population && (
+        <span className="map-tooltip-line" data-testid="map-tooltip-population">
+          {t('MAP_TOOLTIP_PROVINCE_POPULATION', {
+            people: formatPopulation(population.provincePopulation[target.index]),
+            density: formatDensity(
+              world.provinceAreaKm2[target.index] > 0
+                ? population.provincePopulation[target.index] / world.provinceAreaKm2[target.index]
+                : 0,
+            ),
+          })}
+        </span>
+      )}
     </div>
   );
 }

@@ -39,6 +39,8 @@ describe('loading game data from disk', () => {
       'data/sea_zones.json: file is missing',
       'data/government_types.json: file is missing',
       'data/country_start.json: file is missing',
+      'data/province_start.json: file is missing',
+      'data/pops.json: file is missing',
       'data/map_view.json: file is missing',
       'data/terrain_tiles.json: file is missing',
       'data/notifications.json: file is missing',

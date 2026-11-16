@@ -9,6 +9,10 @@ import {
   opinionStanceNameKey,
   messageTypeNameKey,
   modelNameKey,
+  needNameKey,
+  needTierNameKey,
+  NEED_TIERS,
+  popGroupNameKey,
   countryNameKey,
   governmentTypeNameKey,
   provinceNameKey,
@@ -43,6 +47,9 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
     need(diplomaticActionNameKey(a.id), `diplomatic action ${a.id}`);
   for (const id of Object.keys(data.models.models)) need(modelNameKey(id), `model ${id}`);
   for (const view of data.stressTest.render.views) need(view.name, `stress test view ${view.name}`);
+  for (const group of data.pops.groups) need(popGroupNameKey(group.id), `pop group ${group.id}`);
+  for (const item of data.pops.needs) need(needNameKey(item.id), `need ${item.id}`);
+  for (const tier of NEED_TIERS) need(needTierNameKey(tier), `need tier ${tier}`);
   return problems;
 }
 

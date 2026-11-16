@@ -9,7 +9,7 @@ import { type MapViewConfig, type WorldMap, isCoastZone, neighborsOf } from '@te
  */
 
 /** The map modes that exist so far (section 12.2); more come with their features. */
-export const MAP_MODES = ['political', 'provinces', 'regions', 'seaZones'] as const;
+export const MAP_MODES = ['political', 'provinces', 'regions', 'seaZones', 'population'] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 type Rgb = readonly [number, number, number];
@@ -50,18 +50,43 @@ function write(target: Uint8Array, index: number, color: Rgb): void {
 }
 
 /**
+ * The color for a population density (people per km²) on the population map
+ * mode's scale: the steps' colors, mixed by the logarithm of the density.
+ */
+export function populationDensityColor(perKm2: number, steps: Colors['populationDensity']): Rgb {
+  const last = steps[steps.length - 1];
+  if (!(perKm2 > steps[0].perKm2)) return parseHexColor(steps[0].color);
+  if (perKm2 >= last.perKm2) return parseHexColor(last.color);
+  let i = 1;
+  while (steps[i].perKm2 < perKm2) i++;
+  const low = steps[i - 1];
+  const high = steps[i];
+  const amount = Math.log(perKm2 / low.perKm2) / Math.log(high.perKm2 / low.perKm2);
+  return mix(parseHexColor(low.color), parseHexColor(high.color), amount);
+}
+
+/**
  * The color of every province in a map mode, before any highlighting.
  * `provinceOwner` is the country (index) that owns each province right now;
  * the political map mode colors each province by its owner.
+ * `provincePopulation` is everyone living in each province (F06), for the
+ * population map mode; without it that mode shows plain land.
  */
 export function provinceBaseColors(
   mode: MapMode,
   world: WorldMap,
   colors: Colors,
   provinceOwner: ArrayLike<number>,
+  provincePopulation?: ArrayLike<number> | null,
 ): Uint8Array {
   const result = new Uint8Array(world.provinceIds.length * 4);
-  if (mode === 'political') {
+  if (mode === 'population' && provincePopulation) {
+    world.provinceIds.forEach((_, province) => {
+      const area = world.provinceAreaKm2[province];
+      const density = area > 0 ? provincePopulation[province] / area : 0;
+      write(result, province, populationDensityColor(density, colors.populationDensity));
+    });
+  } else if (mode === 'political') {
     const countryColors = world.countryMapColor.map(parseHexColor);
     const unowned = parseHexColor(colors.land);
     world.provinceIds.forEach((id, province) =>

@@ -6,6 +6,7 @@ import { SCREENS, type ShellWindow, lensNameKey, screenNameKey } from './catalog
 import { defaultMessageSettings } from './messages';
 import type { ShellActions } from './shell-actions';
 import { AboutBuild } from './about-build';
+import { PopulationScreen } from '../population/population-screen';
 import { comesWithText } from './top-bar';
 
 export interface ShellWindowViewProps {
@@ -27,6 +28,9 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
   } else if (window === 'messageLog') {
     title = t('MESSAGE_LOG_TITLE');
     body = <MessageLogBody state={state} actions={actions} />;
+  } else if (window === 'population') {
+    title = tKey(screenNameKey(window));
+    body = <PopulationScreen state={state} actions={actions} />;
   } else {
     const screen = SCREENS[window];
     title = tKey(screenNameKey(window));
@@ -34,14 +38,14 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
       <div className="screen-empty" data-testid="screen-empty">
         <p className="screen-empty-lens">{tKey(lensNameKey(screen.lens))}</p>
         <p>{t('SCREEN_EMPTY')}</p>
-        <p className="screen-empty-note">{comesWithText(screen.comesWith)}</p>
+        {screen.comesWith && <p className="screen-empty-note">{comesWithText(screen.comesWith)}</p>}
       </div>
     );
   }
   return (
     <div className="shell-window-layer">
       <section
-        className="panel shell-window"
+        className={window === 'population' ? 'panel shell-window is-wide' : 'panel shell-window'}
         data-testid="shell-window"
         data-window={window}
         role="dialog"

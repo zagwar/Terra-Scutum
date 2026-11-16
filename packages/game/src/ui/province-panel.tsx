@@ -1,4 +1,6 @@
 import {
+  type PopsConfig,
+  type PopulationSnapshot,
   type WorldMap,
   countryNameKey,
   neighborsOf,
@@ -8,12 +10,16 @@ import {
 } from '@terra-scutum/sim';
 import { formatArea, t, tKey } from './i18n';
 import { LinkList } from './link-list';
+import { ProvincePopulation } from './population/province-population';
 import { PanelHeader, type PanelNav } from './shell/panel-header';
 
 export interface ProvincePanelProps {
   readonly world: WorldMap;
   /** The country (index) that owns each province right now. */
   readonly provinceOwner: Uint16Array;
+  /** The population (F06) and the pop groups; null until the sim has sent them. */
+  readonly population: PopulationSnapshot | null;
+  readonly pops: PopsConfig | null;
   /** Index of the province to show. */
   readonly province: number;
   readonly nav: PanelNav;
@@ -28,7 +34,8 @@ export interface ProvincePanelProps {
 
 /**
  * The province info panel (F01): name, country, region and what the province
- * borders. Population, buildings and construction join it with their features.
+ * borders, and its population (F06). Buildings and construction join it with
+ * their features.
  * The country is the province's current owner (F02); clicking it opens the country panel.
  * Clicking a bordering sea zone shows that sea zone (F70); the region's name
  * opens the region panel (F122).
@@ -36,6 +43,8 @@ export interface ProvincePanelProps {
 export function ProvincePanel({
   world,
   provinceOwner,
+  population,
+  pops,
   province,
   nav,
   onSelectProvince,
@@ -92,6 +101,15 @@ export function ProvincePanel({
         <dt>{t('PROVINCE_PANEL_AREA')}</dt>
         <dd data-testid="province-area">{formatArea(world.provinceAreaKm2[province])}</dd>
       </dl>
+
+      {population && pops && (
+        <ProvincePopulation
+          population={population}
+          pops={pops}
+          province={province}
+          areaKm2={world.provinceAreaKm2[province]}
+        />
+      )}
 
       <h3 className="list-title">{t('PROVINCE_PANEL_NEIGHBORS', { count: neighbors.length })}</h3>
       <LinkList items={neighbors} testId="province-neighbors" onSelect={onSelectProvince} />

@@ -39,9 +39,11 @@ export function LensBar({ openLens, onToggleLens, onOpenScreen }: LensBarProps) 
                   onClick={() => onOpenScreen(screen)}
                 >
                   <span>{tKey(screenNameKey(screen))}</span>
-                  <span className="lens-screen-note">
-                    {comesWithText(SCREENS[screen].comesWith)}
-                  </span>
+                  {SCREENS[screen].comesWith && (
+                    <span className="lens-screen-note">
+                      {comesWithText(SCREENS[screen].comesWith)}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

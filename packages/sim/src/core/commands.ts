@@ -21,7 +21,19 @@ export type SimCommand =
    * The player chooses the country they lead (F05, by id). Only before the
    * first day is simulated: afterwards the choice is locked.
    */
-  | { readonly type: 'choosePlayerCountry'; readonly country: string };
+  | { readonly type: 'choosePlayerCountry'; readonly country: string }
+  /**
+   * Diagnostic (F06): multiplies the jobs open to one pop group (by id), or
+   * to every group (`group` null), in a province by `factor`, as buildings
+   * opening or closing will later. Used by tests to watch unemployment and
+   * job changes.
+   */
+  | {
+      readonly type: 'debugScaleJobs';
+      readonly province: string;
+      readonly group: string | null;
+      readonly factor: number;
+    };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -81,6 +93,30 @@ const HANDLERS: CommandHandlers = {
       state.playerCountry = country;
       state.emit({ type: 'playerCountryChosen', country: command.country });
     }
+    return OK;
+  },
+  debugScaleJobs(state, command): CommandResult {
+    const province = state.world.provinceIndex.get(command.province);
+    if (province === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_PROVINCE',
+        params: { province: String(command.province) },
+      };
+    }
+    const population = state.population;
+    const group = command.group === null ? -1 : population.groupIds.indexOf(command.group);
+    if (
+      (command.group !== null && group < 0) ||
+      !Number.isFinite(command.factor) ||
+      command.factor < 0
+    ) {
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    }
+    const row = province * population.groupCount;
+    for (let g = 0; g < population.groupCount; g++)
+      if (group < 0 || group === g) population.jobs[row + g] *= command.factor;
+    population.reportOwnershipVersion = -1;
     return OK;
   },
 };

@@ -299,6 +299,18 @@ export const mapViewSchema = z.strictObject({
     /** The country picked while choosing a country (F05): its provinces are tinted with this color. */
     countryHighlight: hexColor,
     countryHighlightStrength: fraction,
+    /**
+     * The "population" map mode (F06) colors provinces by how densely they
+     * are peopled: the color at each density (people per km²), from sparse
+     * to dense. Between two steps the colors are mixed (by the logarithm of
+     * the density); below the first and above the last they stay as they are.
+     */
+    populationDensity: z
+      .array(z.strictObject({ perKm2: z.number().positive(), color: hexColor }))
+      .min(2)
+      .refine((steps) => steps.every((step, i) => i === 0 || step.perKm2 > steps[i - 1].perKm2), {
+        message: 'the steps must go from sparse to dense',
+      }),
   }),
   lines: z.strictObject({
     provinceBorder: lineStyle,

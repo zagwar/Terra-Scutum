@@ -1,6 +1,9 @@
 import type {
   CountryStartTable,
+  MapViewConfig,
   NotificationsConfig,
+  PopsConfig,
+  PopulationSnapshot,
   SimSnapshot,
   WorldMap,
 } from '@terra-scutum/sim';
@@ -28,6 +31,16 @@ export interface AppState extends PanelState {
    * owners again when they change.
    */
   readonly provinceOwner: Uint16Array | null;
+  /**
+   * The population (F06): people, jobs, wages and standard of living per
+   * province, pop and country; null until the sim is ready. Kept apart from
+   * the snapshot like the owners: the sim only sends it when it changed.
+   */
+  readonly population: PopulationSnapshot | null;
+  /** Pop groups and needs (`data/pops.json`); null until the sim is ready. */
+  readonly pops: PopsConfig | null;
+  /** The population map mode's colors by density (`data/map_view.json`), for its legend. */
+  readonly populationDensityColors: MapViewConfig['colors']['populationDensity'];
   /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
   readonly world: WorldMap | null;
   /** Each country's real-world starting data (F71); null until the sim is ready. */
@@ -87,6 +100,9 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     map: 'loading',
     snapshot: null,
     provinceOwner: null,
+    population: null,
+    pops: null,
+    populationDensityColors: [],
     world: null,
     countryStart: null,
     saveFormatVersion: null,

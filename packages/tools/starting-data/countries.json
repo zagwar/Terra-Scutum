@@ -12,6 +12,16 @@
       "note": "Western Sahara: about 600,000 people (UN World Population Prospects 2024, rounded); its economy is counted in Morocco's GDP"
     }
   },
+  "provinceEstimates": {
+    "gbr_gibraltar": {
+      "population": 34000,
+      "note": "about 34,000 people; the province is drawn as a disc bigger than Gibraltar, which also covers Spanish towns"
+    },
+    "gin_conakry": {
+      "population": 1700000,
+      "note": "about 1.7 million people (Guinea's 2014 census, grown since); the map's small shape misses most of the city"
+    }
+  },
   "countries": {
     "AFG": {
       "government": "authoritarian",
@@ -21,7 +31,13 @@
     "ALB": { "government": "parliamentary_democracy" },
     "AND": {
       "government": "constitutional_monarchy",
-      "note": "parliamentary co-principality (the French president and the Bishop of Urgell)"
+      "note": "parliamentary co-principality (the French president and the Bishop of Urgell)",
+      "demographics": {
+        "laborForceShare": 0.55,
+        "unemploymentRate": 0.015,
+        "armedForcesShare": 0,
+        "note": "estimates [DEFAULT]: about 47,000 employed, almost no unemployment, no army; the World Bank has no figures"
+      }
     },
     "ARE": {
       "government": "absolute_monarchy",
@@ -172,7 +188,15 @@
       "government": "presidential_democracy",
       "note": "in January 2025 the president was impeached after declaring martial law; an acting president governed"
     },
-    "KOS": { "government": "parliamentary_democracy" },
+    "KOS": {
+      "government": "parliamentary_democracy",
+      "demographics": {
+        "laborForceShare": 0.31,
+        "unemploymentRate": 0.109,
+        "armedForcesShare": 0.01,
+        "note": "estimates [DEFAULT] from Kosovo's labor force survey of 2023 (about 490,000 in the labor force, 10.9 % unemployed) and a Kosovo Security Force of about 5,000; the World Bank has no figures"
+      }
+    },
     "KWT": {
       "government": "absolute_monarchy",
       "note": "the emir suspended parliament in May 2024"
@@ -189,7 +213,13 @@
     },
     "LIE": {
       "government": "constitutional_monarchy",
-      "note": "the prince holds more power than most constitutional monarchs"
+      "note": "the prince holds more power than most constitutional monarchs",
+      "demographics": {
+        "laborForceShare": 0.5,
+        "unemploymentRate": 0.02,
+        "armedForcesShare": 0,
+        "note": "estimates [DEFAULT]: about half the residents work, about 2 % unemployed, no army; the World Bank has no figures"
+      }
     },
     "LKA": { "government": "presidential_democracy" },
     "LSO": { "government": "constitutional_monarchy" },
@@ -202,7 +232,13 @@
     },
     "MCO": {
       "government": "constitutional_monarchy",
-      "note": "the prince holds more power than most constitutional monarchs"
+      "note": "the prince holds more power than most constitutional monarchs",
+      "demographics": {
+        "laborForceShare": 0.45,
+        "unemploymentRate": 0.02,
+        "armedForcesShare": 0.015,
+        "note": "estimates [DEFAULT]: about 17,000 residents in the labor force, about 2 % unemployed, about 250 in the prince's guard and the fire brigade; the World Bank has no figures"
+      }
     },
     "MDA": { "government": "parliamentary_democracy" },
     "MDG": {
@@ -289,7 +325,13 @@
     },
     "SMR": {
       "government": "parliamentary_democracy",
-      "note": "two Captains Regent lead the state"
+      "note": "two Captains Regent lead the state",
+      "demographics": {
+        "laborForceShare": 0.52,
+        "unemploymentRate": 0.04,
+        "armedForcesShare": 0,
+        "note": "estimates [DEFAULT]: about half the residents work, about 4 % unemployed, ceremonial forces only; the World Bank has no figures"
+      }
     },
     "SOM": {
       "government": "parliamentary_democracy",
@@ -323,17 +365,22 @@
     "TKM": { "government": "authoritarian" },
     "TLS": { "government": "parliamentary_democracy" },
     "TTO": { "government": "parliamentary_democracy" },
-    "TUN": {
-      "government": "authoritarian",
-      "note": "the president took over most powers in 2021"
-    },
+    "TUN": { "government": "authoritarian", "note": "the president took over most powers in 2021" },
     "TUR": {
       "government": "presidential_democracy",
       "note": "borderline: competitive but unfair elections; the main opposition leader was arrested in 2025"
     },
     "TWN": {
       "government": "presidential_democracy",
-      "populationNote": "from the IMF (the World Bank has no figure for Taiwan)"
+      "populationNote": "from the IMF (the World Bank has no figure for Taiwan)",
+      "demographics": {
+        "birthsPerThousand": 5.8,
+        "deathsPerThousand": 8.6,
+        "laborForceShare": 0.513,
+        "unemploymentRate": 0.034,
+        "armedForcesShare": 0.015,
+        "note": "estimates [DEFAULT] from Taiwan's own statistics for 2024 (about 135,000 births, 201,000 deaths, a labor force of 12 million, 3.4 % unemployed, about 180,000 in the armed forces); the World Bank has no figures for Taiwan"
+      }
     },
     "TZA": {
       "government": "authoritarian",
@@ -353,7 +400,15 @@
       "population": 900,
       "populationNote": "about 900 people (Vatican figures); no World Bank or IMF figure",
       "gdpMillionUsd": 300,
-      "gdpNote": "placeholder [DEFAULT]: the Vatican has no official GDP"
+      "gdpNote": "placeholder [DEFAULT]: the Vatican has no official GDP",
+      "demographics": {
+        "birthsPerThousand": 0,
+        "deathsPerThousand": 5,
+        "laborForceShare": 0.8,
+        "unemploymentRate": 0,
+        "armedForcesShare": 0.19,
+        "note": "estimates [DEFAULT]: nobody is born a citizen, nearly every resident works for the Holy See, the Swiss Guard has about 135 men; no World Bank figures"
+      }
     },
     "VEN": { "government": "authoritarian" },
     "VNM": { "government": "authoritarian", "note": "one-party state" },

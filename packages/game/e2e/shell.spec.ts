@@ -45,14 +45,15 @@ test('the top bar, lenses, screens, alerts and outliner (UI shell, F122)', async
   for (const id of ['treasury', 'stability', 'manpower', 'food', 'swarmControl', 'arrival'])
     await expect(page.getByTestId(`top-bar-${id}`)).toContainText('—');
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
-  // Hovering a number says which feature brings it; clicking it opens its (empty) screen.
+  // Hovering a number says which feature brings it; clicking it opens its screen.
   await page.getByTestId('top-bar-stability').hover();
   await expect(page.getByTestId('top-bar-stability-tip')).toBeVisible();
   await expect(page.getByTestId('top-bar-stability-tip')).toContainText('Comes with F10 (M2)');
   await shot('top-bar-tooltip');
   await page.getByTestId('top-bar-stability').click();
   await expect(page.getByTestId('shell-window')).toHaveAttribute('data-window', 'population');
-  await expect(page.getByTestId('screen-empty')).toContainText('Comes with F06 (M2)');
+  // (Stability will live on the Population screen, which F06 built.)
+  await expect(page.getByTestId('population-screen')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('shell-window')).toHaveCount(0);
 

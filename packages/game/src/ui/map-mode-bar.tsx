@@ -1,3 +1,4 @@
+import type { MapViewConfig } from '@terra-scutum/sim';
 import { MAP_MODES, type MapMode } from '../render/map/map-colors';
 import { useState } from 'react';
 import { type TranslationKey, t } from './i18n';
@@ -8,10 +9,13 @@ const MODE_TEXT: Record<MapMode, TranslationKey> = {
   provinces: 'MAP_MODE_PROVINCES',
   regions: 'MAP_MODE_REGIONS',
   seaZones: 'MAP_MODE_SEA_ZONES',
+  population: 'MAP_MODE_POPULATION',
 };
 
 export interface MapModeBarProps {
   readonly mode: MapMode;
+  /** The population map mode's colors by density (`data/map_view.json`), for its legend. */
+  readonly populationDensityColors: MapViewConfig['colors']['populationDensity'];
   readonly onSetMapMode: (mode: MapMode) => void;
   readonly onResetView: () => void;
 }
@@ -20,7 +24,12 @@ export interface MapModeBarProps {
  * The map mode buttons (section 12.2), bottom-right. Each feature adds its
  * map mode here; the minimap joins them with the UI shell (F122).
  */
-export function MapModeBar({ mode, onSetMapMode, onResetView }: MapModeBarProps) {
+export function MapModeBar({
+  mode,
+  populationDensityColors,
+  onSetMapMode,
+  onResetView,
+}: MapModeBarProps) {
   const compact = useMedia(COMPACT_QUERY);
   const touch = useMedia(TOUCH_QUERY);
   // On a small screen (a phone) the box starts folded to its title, to keep the map free.
@@ -61,6 +70,19 @@ export function MapModeBar({ mode, onSetMapMode, onResetView }: MapModeBarProps)
               </button>
             ))}
           </div>
+          {mode === 'population' && populationDensityColors.length > 0 && (
+            <div className="map-legend" data-testid="map-legend">
+              <span className="map-legend-title">{t('MAP_LEGEND_POPULATION')}</span>
+              <ol>
+                {populationDensityColors.map((step) => (
+                  <li key={step.perKm2}>
+                    <span className="map-legend-color" style={{ background: step.color }} />
+                    {step.perKm2.toLocaleString('en')}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
           <div className="map-hint-row">
             <p className="hint">{t(touch ? 'MAP_HINT_TOUCH' : 'MAP_HINT')}</p>
             <button

@@ -6,6 +6,7 @@ import {
   type SystemRegistry,
   createPlaceholderLoad,
   hashGameState,
+  worldPopulation,
 } from '@terra-scutum/sim';
 
 export interface CampaignOptions {
@@ -39,7 +40,7 @@ export interface TickStats {
 
 /**
  * What a headless campaign run reports. Later features add their numbers
- * (Swarm control %, population, hive tiers, refugees, relations, nukes used).
+ * (Swarm control %, hive tiers, refugees, relations, nukes used).
  */
 export interface CampaignSummary {
   readonly seed: number;
@@ -53,6 +54,9 @@ export interface CampaignSummary {
   readonly weeklyTicks: TickStats;
   /** Time per system, slowest first. */
   readonly systemTimings: readonly { id: SystemId; totalMs: number }[];
+  /** Everyone in the world on the first and on the last day (F06). */
+  readonly startPopulation: number;
+  readonly endPopulation: number;
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
   /** The most memory seen during the run and at its end, in bytes (null without a `memory` option). */
@@ -101,6 +105,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
   options.prepare?.(state);
   state.enableProfiling(clock);
   const startDate = state.date;
+  const startPopulation = worldPopulation(state.population);
 
   const daily = new Float64Array(options.days);
   const weekly = new Float64Array(options.days);
@@ -138,6 +143,8 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     ),
     weeklyTicks: tickStats(weekly.subarray(0, weeklyCount), budget.weeklyTickAverageMs, null),
     systemTimings: state.getSystemTimings().sort((a, b) => b.totalMs - a.totalMs),
+    startPopulation,
+    endPopulation: worldPopulation(state.population),
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,

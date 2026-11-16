@@ -13,6 +13,12 @@ import { SYSTEMS, type SimSystem, type SystemId, type SystemRegistry, TICK_ORDER
 import { startingOwners } from '../world/ownership';
 import { type CountryStartTable, buildCountryStartTable } from '../world/country-start';
 import { type WorldMap, buildWorldMap } from '../world/world-map';
+import {
+  type PopulationRestore,
+  type PopulationState,
+  createPopulation,
+  restorePopulation,
+} from '../economy/population';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -29,6 +35,8 @@ export interface GameStateOptions {
     readonly provinceOwner: Uint16Array;
     /** The country (index) the player leads. */
     readonly playerCountry: number;
+    /** The population (F06): dependents per province, size and jobs per pop. */
+    readonly population: PopulationRestore;
   };
 }
 
@@ -70,6 +78,12 @@ export class GameState {
    * country the UI shows as "mine" (and, later, which one the AI leaves alone).
    */
   playerCountry: number;
+  /**
+   * The people (F06, section 8.1): dependents and pops per province, their
+   * jobs, wages and standard of living. Changed by the population system;
+   * read its report through `ensurePopulationReport`.
+   */
+  readonly population: PopulationState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -86,6 +100,7 @@ export class GameState {
     this.countryStart = buildCountryStartTable(options.data.countryStart, this.world);
     this.seed = options.seed >>> 0;
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
+    this.population = createPopulation(options.data, this.world, this.countryStart);
 
     if (options.restore) {
       this.day = options.restore.day;
@@ -96,6 +111,7 @@ export class GameState {
       if (!this.world.countryIds[options.restore.playerCountry])
         throw new Error('GameState: the restored player country is not a country');
       this.playerCountry = options.restore.playerCountry;
+      restorePopulation(this.population, options.restore.population);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);

@@ -9,6 +9,7 @@ import type {
   GovernmentKind,
   MapViewConfig,
   NotificationsConfig,
+  PopsConfig,
   SimCommand,
   SimEvent,
   SimSnapshot,
@@ -83,6 +84,8 @@ export type FromSimWorker =
       readonly models: ModelsConfig;
       /** Each country's real-world starting data (population, GDP, government type), by country index. */
       readonly countryStart: CountryStartTable;
+      /** Pop groups and needs (validated `data/pops.json`, F06). */
+      readonly pops: PopsConfig;
       /** The game speed at the start: paused. */
       readonly time: TimeState;
       /** Days per second at speeds 1–5 (`data/game_config.json`). */

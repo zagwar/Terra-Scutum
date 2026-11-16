@@ -3,6 +3,9 @@ import type { GameData } from '../data/game-data';
 import { GameState } from './game-state';
 import { SimError } from './sim-error';
 import type { SystemRegistry } from './systems';
+import { buildCountryStartTable } from '../world/country-start';
+import { buildWorldMap } from '../world/world-map';
+import { createPopulation } from '../economy/population';
 
 /**
  * Save format versioning.
@@ -17,7 +20,7 @@ import type { SystemRegistry } from './systems';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 3;
+export const SAVE_FORMAT_VERSION = 4;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -39,6 +42,18 @@ const saveFileSchema = z.strictObject({
   provinceOwners: z.array(z.number().int().min(0)),
   /** The country the player leads (its id, F05). */
   playerCountry: z.string(),
+  /**
+   * The population (F06). `groups` are the pop groups' ids in the order the
+   * arrays use; `dependents` has one number per province (in the order of
+   * `map.provinces`), `size` and `jobs` one per pop (province by province,
+   * the groups in order).
+   */
+  population: z.strictObject({
+    groups: z.array(z.string()),
+    dependents: z.array(z.number().min(0)),
+    size: z.array(z.number().min(0)),
+    jobs: z.array(z.number().min(0)),
+  }),
 });
 
 export type SaveFile = z.infer<typeof saveFileSchema>;
@@ -80,6 +95,25 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // Version 3 (F05) stores the player's country. Older saves were all played
   // as the one fixed in the data (`playerCountry` in `data/game_config.json`).
   2: (save, data) => ({ ...save, playerCountry: data.gameConfig.playerCountry }),
+  // Version 4 (F06) stores the population. Older saves are from before people
+  // were simulated: they get the starting population.
+  3: (save, data) => {
+    const world = buildWorldMap(data);
+    const population = createPopulation(
+      data,
+      world,
+      buildCountryStartTable(data.countryStart, world),
+    );
+    return {
+      ...save,
+      population: {
+        groups: [...population.groupIds],
+        dependents: Array.from(population.dependents),
+        size: Array.from(population.size),
+        jobs: Array.from(population.jobs),
+      },
+    };
+  },
 };
 
 /** Writes the state as a plain JSON-compatible object. */
@@ -94,6 +128,12 @@ export function serializeGameState(state: GameState): SaveFile {
     map: { provinces: [...state.world.provinceIds], countries: [...state.world.countryIds] },
     provinceOwners: Array.from(state.provinceOwner),
     playerCountry: state.world.countryIds[state.playerCountry],
+    population: {
+      groups: [...state.population.groupIds],
+      dependents: Array.from(state.population.dependents),
+      size: Array.from(state.population.size),
+      jobs: Array.from(state.population.jobs),
+    },
   };
 }
 
@@ -178,6 +218,19 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   if (playerCountry < 0) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, `unknown player country "${save.playerCountry}"`);
   }
+  // The population's arrays are in the order of the map and of the pop groups.
+  const groups = options.data.pops.groups.map((group) => group.id);
+  if (!sameIds(save.population.groups, groups)) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'the pop groups are not the ones of this game');
+  }
+  const pops = map.provinces.length * groups.length;
+  if (
+    save.population.dependents.length !== map.provinces.length ||
+    save.population.size.length !== pops ||
+    save.population.jobs.length !== pops
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'population does not match the map');
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
@@ -187,6 +240,11 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
       rngState: save.rng,
       provinceOwner: Uint16Array.from(save.provinceOwners),
       playerCountry,
+      population: {
+        dependents: Float64Array.from(save.population.dependents),
+        size: Float64Array.from(save.population.size),
+        jobs: Float64Array.from(save.population.jobs),
+      },
     },
   });
 }

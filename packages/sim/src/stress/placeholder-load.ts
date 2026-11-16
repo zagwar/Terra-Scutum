@@ -1,5 +1,6 @@
 import type { GameState } from '../core/game-state';
 import type { SystemRegistry } from '../core/systems';
+import { populationSystem } from '../economy/population';
 import { neighborsOf } from '../world/world-map';
 import type { SimStressConfig } from './stress-config';
 
@@ -13,14 +14,18 @@ import type { SimStressConfig } from './stress-config';
  * buildings, markets, trade routes, units and the province graph, random
  * choices from the sim's RNG, no allocation in the daily tick.
  *
+ * **Since F06 the pops are the real ones** (`GameState.population`, six pop
+ * groups per province): the real population system runs in its slot, and the
+ * placeholder pieces that need pops (buying needs on the markets, staffing
+ * buildings, paying taxes) read the real pops' sizes. F140 replaces the rest.
+ *
  * Daily: pops buy their needs (population), buildings produce from recipes
  * (industry), trade routes move goods (trade), taxes are collected (budget),
  * supply flows over the province graph and units draw it (supply), the
  * Swarm grows and spreads (swarmGrowth, swarmSpread), laser coverage
  * (laserCoverage), battles (combat).
- * Weekly: market prices (trade), pops change jobs (population), corporations
- * weigh investments (industry), every country's AI scores its options
- * (diplomacyAi).
+ * Weekly: market prices (trade), corporations weigh investments (industry),
+ * every country's AI scores its options (diplomacyAi).
  *
  * Each placeholder sits in the slot of the system it stands in for, so the
  * runner's per-system times already point at the future hot spots.
@@ -48,8 +53,12 @@ export function createPlaceholderLoad(
 
   const systems: SystemRegistry = {
     population: {
-      daily: (state) => loadOf(state).buyNeeds(state),
-      weekly: (state) => loadOf(state).changeJobs(),
+      // The real population system (F06), then the pops' shopping on the placeholder markets.
+      daily: (state) => {
+        populationSystem.daily?.(state);
+        loadOf(state).buyNeeds(state);
+      },
+      weekly: (state) => populationSystem.weekly?.(state),
     },
     industry: {
       daily: (state) => loadOf(state).produce(state),
@@ -72,7 +81,6 @@ export function createPlaceholderLoad(
 
 interface Load {
   buyNeeds(state: GameState): void;
-  changeJobs(): void;
   produce(state: GameState): void;
   corporationsInvest(state: GameState): void;
   trade(): void;
@@ -97,7 +105,8 @@ function createLoad(
   const provinces = world.provinceIds.length;
   const countries = world.countryIds.length;
   const goods = config.goods;
-  const groups = scaled(config.popGroupsPerProvince);
+  // The real pops (F06): their number isn't scaled.
+  const groups = state.population.groupCount;
   const needs = config.needsPerPop;
   const perProvince = scaled(config.buildingsPerProvince);
   const inputs = config.inputsPerBuilding;
@@ -118,13 +127,12 @@ function createLoad(
 
   // ── Pops ──────────────────────────────────────────────────────────────
   const pops = provinces * groups;
-  const popSize = keep(new Float64Array(pops));
+  const popSize = state.population.size;
   const popWealth = keep(new Float64Array(pops));
   const popNeed = keep(new Uint16Array(pops * needs));
   const popJob = keep(new Int32Array(pops));
   const popSatisfaction = keep(new Float32Array(pops));
   for (let p = 0; p < pops; p++) {
-    popSize[p] = 1000 + rng.nextFloat() * 100_000;
     popWealth[p] = rng.nextFloat() * 10;
     for (let n = 0; n < needs; n++) popNeed[p * needs + n] = rng.nextInt(0, goods);
     popJob[p] =
@@ -207,27 +215,7 @@ function createLoad(
           satisfied += available > 1 ? 1 : available;
           popWealth[p] -= wanted * price[good] * 1e-6;
         }
-        const share = satisfied / needs;
-        popSatisfaction[p] = share;
-        popSize[p] = size * (1 + (share - 0.5) * 1e-5);
-      }
-    },
-
-    changeJobs() {
-      // Each pop group looks for the best-paid building in its province.
-      for (let p = 0; p < pops; p++) {
-        if (perProvince === 0) break;
-        const first = ((p / groups) | 0) * perProvince;
-        let best = popJob[p];
-        let bestWage = wage[best] / (1 + workers[best] * 1e-6);
-        for (let b = first; b < first + perProvince; b++) {
-          const offer = wage[b] / (1 + workers[b] * 1e-6);
-          if (offer > bestWage) {
-            best = b;
-            bestWage = offer;
-          }
-        }
-        popJob[p] = best;
+        popSatisfaction[p] = satisfied / needs;
       }
     },
 
