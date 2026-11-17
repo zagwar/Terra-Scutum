@@ -4,12 +4,14 @@ import {
   type BuildingsConfig,
   type BuildingsSnapshot,
   type GoodsConfig,
+  type ProductionMethod,
 } from '@terra-scutum/sim';
 
 /**
- * Reads the buildings snapshot (F07) for the screens: a province's
- * buildings, a country's buildings by type, its national stockpile, and the
- * buildings that are held back. Pure code, unit tested.
+ * Reads the buildings snapshot (F07, F85) for the screens: a province's
+ * buildings, a country's buildings by type with their production methods,
+ * its national stockpile with the standing imports, and the buildings that
+ * are held back. Pure code, unit tested.
  */
 
 /** One building as the screens show it. */
@@ -19,6 +21,9 @@ export interface BuildingRow {
   readonly type: number;
   readonly definition: BuildingType;
   readonly level: number;
+  /** Its production method: the index into `definition.methods`, and the method. */
+  readonly method: number;
+  readonly methodDefinition: ProductionMethod;
   /** Output as a share of full output (0–1). */
   readonly output: number;
   /** The jobs it offers, the people at work in it, and the wages paid them (US$ a day). */
@@ -36,22 +41,26 @@ export const isHeldBack = (limitKind: number) =>
   limitKind === BUILDING_LIMIT.electricity ||
   limitKind === BUILDING_LIMIT.input;
 
-/** The jobs one level of a building type offers. */
-export const jobsPerLevel = (definition: BuildingType) =>
-  Object.values(definition.workers).reduce((a, b) => a + b, 0);
+/** The jobs one level of a building offers with this production method. */
+export const jobsPerLevel = (method: ProductionMethod) =>
+  Object.values(method.workers).reduce((a, b) => a + b, 0);
 
 function rowAt(buildings: BuildingsSnapshot, config: BuildingsConfig, i: number): BuildingRow {
   const cell = buildings.cells[i];
   const province = Math.floor(cell / buildings.typeCount);
   const type = cell - province * buildings.typeCount;
   const definition = config.buildings[type];
+  const method = buildings.method[i];
+  const methodDefinition = definition.methods[method] ?? definition.methods[0];
   return {
     province,
     type,
     definition,
     level: buildings.level[i],
+    method,
+    methodDefinition,
     output: buildings.output[i],
-    jobs: buildings.level[i] * jobsPerLevel(definition),
+    jobs: buildings.level[i] * jobsPerLevel(methodDefinition),
     workers: buildings.workers[i],
     wages: buildings.wages[i],
     limitKind: buildings.limitKind[i],
@@ -95,12 +104,12 @@ export interface GoodAmount {
 }
 
 /**
- * What a building of this type uses and makes in a day at `levels` levels
- * (times its output, for what it really does today). Electricity it uses
- * comes first among the uses.
+ * What a building running this production method uses and makes in a day at
+ * `levels` levels (times its output, for what it really does today).
+ * Electricity it uses comes first among the uses.
  */
 export function recipeAmounts(
-  definition: BuildingType,
+  definition: ProductionMethod,
   goods: GoodsConfig,
   levels: number,
 ): { readonly uses: GoodAmount[]; readonly makes: GoodAmount[] } {
@@ -129,16 +138,39 @@ export interface BuildingTypeSummary {
   readonly wages: number;
   /** Average output by level (0–1). */
   readonly output: number;
+  /** What its buildings make today, all together. */
+  readonly makes: readonly GoodAmount[];
+  /** Levels on each production method (by method index; methods with none left out), most first. */
+  readonly methods: readonly { readonly method: number; readonly levels: number }[];
   /** How many of them are held back by missing workers, electricity or inputs. */
   readonly heldBack: number;
   /** The single buildings, the biggest first. */
   readonly rows: readonly BuildingRow[];
 }
 
+/** Adds up amounts of the same good, in the order the goods first appear. */
+export function addAmounts(amounts: readonly GoodAmount[]): GoodAmount[] {
+  const total = new Map<string, number>();
+  for (const { good, amount } of amounts) total.set(good, (total.get(good) ?? 0) + amount);
+  return [...total].map(([good, amount]) => ({ good, amount }));
+}
+
+/** Levels on each production method among some buildings of one type, most first. */
+export function methodLevels(
+  rows: readonly Pick<BuildingRow, 'method' | 'level'>[],
+): { method: number; levels: number }[] {
+  const byMethod = new Map<number, number>();
+  for (const row of rows) byMethod.set(row.method, (byMethod.get(row.method) ?? 0) + row.level);
+  return [...byMethod]
+    .map(([method, levels]) => ({ method, levels }))
+    .sort((a, b) => b.levels - a.levels || a.method - b.method);
+}
+
 /** A country's buildings by type (types it has none of are left out), in the order of `data/buildings.json`. */
 export function countryBuildings(
   buildings: BuildingsSnapshot,
   config: BuildingsConfig,
+  goods: GoodsConfig,
   provinceOwner: ArrayLike<number>,
   country: number,
 ): BuildingTypeSummary[] {
@@ -167,6 +199,12 @@ export function countryBuildings(
         workers: sum((row) => row.workers),
         wages: sum((row) => row.wages),
         output: levels > 0 ? sum((row) => row.level * row.output) / levels : 0,
+        makes: addAmounts(
+          rows.flatMap(
+            (row) => recipeAmounts(row.methodDefinition, goods, row.level * row.output).makes,
+          ),
+        ),
+        methods: methodLevels(rows),
         heldBack: rows.filter((row) => isHeldBack(row.limitKind)).length,
         rows,
       };
@@ -182,6 +220,8 @@ export interface StockRow {
   readonly stock: number;
   readonly made: number;
   readonly used: number;
+  /** What arrives every day as standing imports (a stand-in until trade, F19). */
+  readonly imported: number;
   /** The most the stockpile keeps. */
   readonly limit: number;
   /** How many days the stock lasts while more is used than made; null when it isn't shrinking. */
@@ -201,7 +241,8 @@ export function countryStockpile(
     const made = buildings.made[at];
     const used = buildings.used[at];
     const limit = buildings.stockLimit[at];
-    if (stock <= 0 && made <= 0 && used <= 0 && limit <= 0) return;
+    const imported = buildings.imports[at];
+    if (stock <= 0 && made <= 0 && used <= 0 && limit <= 0 && imported <= 0) return;
     const stored = good.id !== goods.electricity;
     rows.push({
       good: good.id,
@@ -210,8 +251,10 @@ export function countryStockpile(
       stock,
       made,
       used,
+      imported,
       limit,
-      daysLeft: stored && used > made * 1.000001 ? stock / (used - made) : null,
+      daysLeft:
+        stored && used > (made + imported) * 1.000001 ? stock / (used - made - imported) : null,
     });
   });
   return rows;
@@ -246,4 +289,19 @@ export function stoppedBuildings(
       worst = i;
   }
   return { count, worst: worst < 0 ? null : rowAt(buildings, config, worst) };
+}
+
+/**
+ * The electricity the rest of the economy and homes of a country use (a
+ * stand-in until markets, F65, and the power grid, F74): asked for and got
+ * today, in MWh.
+ */
+export function otherElectricity(
+  buildings: BuildingsSnapshot,
+  country: number,
+): { readonly wanted: number; readonly used: number } {
+  return {
+    wanted: buildings.otherPowerWanted[country] ?? 0,
+    used: buildings.otherPowerUsed[country] ?? 0,
+  };
 }

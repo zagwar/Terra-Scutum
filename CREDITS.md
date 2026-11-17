@@ -23,6 +23,14 @@ credits below are also shown in the game under **Settings → About this build**
   Global Population Density for 400m H3 Hexagons, © Kontur. Licensed under
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The game uses only the number of
   people counted in each province (`data/province_start.json`).
+- **Starting buildings (F85):** coal, oil and gas production, oil use and electricity by source from
+  [Our World in Data's energy dataset](https://github.com/owid/energy-data) (built from the Energy
+  Institute Statistical Review of World Energy and Ember), licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); jobs and value added by sector, cereal
+  and fisheries production from the World Bank (World Development Indicators); steel, iron ore,
+  copper, bauxite, aluminum and silicon production typed in approximately from worldsteel (*World
+  Steel in Figures 2025*) and the U.S. Geological Survey (*Mineral Commodity Summaries 2025*). See
+  `packages/tools/starting-data/README.md`.
 
 ## Pictures
 

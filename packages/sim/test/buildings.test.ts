@@ -14,29 +14,58 @@ import {
   parseGameData,
   removePeople,
   serializeGameState,
-  startingCountryLevels,
+  setBuildingMethod,
 } from '../src';
-import { testBuildings, testRawData } from './helpers';
+import {
+  type TestStartingBuilding,
+  testBuildingStart,
+  testBuildings,
+  testRawData,
+} from './helpers';
 
 /**
- * Buildings with recipes (F07) on the tiny test world: AAA (two provinces,
- * 2 million people, GDP 50 billion US$) and BBB (one province, 500,000
- * people, GDP 1 billion US$). The test buildings (`testBuildings`), per
- * level and day:
+ * Buildings with recipes (F07) and production methods (F85) on the tiny
+ * test world: AAA (two provinces, 2 million people, GDP 50 billion US$) and
+ * BBB (one province, 500,000 people, GDP 1 billion US$). The test buildings
+ * (`testBuildings`), per level and day:
  *
  *   mine         100 laborers, 10 MWh                       → 200 ore
  *   coal_mine    100 laborers, 10 MWh                       → 300 coal
  *   power_plant  20 skilled workers, 100 coal               → 200 MWh
- *   mill         200 laborers + 100 skilled, 50 MWh, 100 ore + 50 coal → 60 steel
+ *   mill (modern) 200 laborers + 100 skilled, 50 MWh, 100 ore + 50 coal → 60 steel
+ *   mill (old)    900 laborers + 100 skilled, 20 MWh, 100 ore + 80 coal → 60 steel
+ *   dam          10 skilled workers, nothing                → 100 MWh
  */
 const GROUPS = 6;
 const [LABORERS, SKILLED] = [0, 1];
-const TYPES = ['mine', 'coal_mine', 'power_plant', 'mill'];
+const TYPES = ['mine', 'coal_mine', 'power_plant', 'mill', 'dam'];
 const GOODS = ['ore', 'coal', 'steel', 'electricity'];
 
-function newGame(anchors: { building: string; gdpBillionUsdPerLevel: number }[] = []) {
+/** AAA's starting buildings in the tests that need some. */
+const STARTING: Record<string, TestStartingBuilding[]> = {
+  alpha_west: [
+    ['mine', 'machines', 2],
+    ['coal_mine', 'machines', 1],
+    ['power_plant', 'turbines', 1],
+    ['mill', 'modern', 3],
+  ],
+  alpha_east: [
+    ['mine', 'machines', 1],
+    ['coal_mine', 'machines', 1],
+    ['power_plant', 'turbines', 1],
+    ['mill', 'modern', 2],
+  ],
+};
+
+function newGame(
+  start: Record<string, TestStartingBuilding[]> = {},
+  change: (buildings: ReturnType<typeof testBuildings>) => void = () => {},
+) {
   const raw = testRawData();
-  raw.buildings = testBuildings(anchors);
+  const buildings = testBuildings();
+  change(buildings);
+  raw.buildings = buildings;
+  raw.buildingStart = testBuildingStart(start);
   const data = parseGameData(raw);
   const state = new GameState({ data, seed: 1 });
   return { data, ...toolsFor(state) };
@@ -255,26 +284,18 @@ describe('partial output (F07)', () => {
   });
 });
 
-describe('the buildings a campaign starts with (F07)', () => {
-  const anchors = [{ building: 'mill', gdpBillionUsdPerLevel: 10 }];
+describe('the buildings a campaign starts with (F07, F85)', () => {
+  const anchors = STARTING;
 
-  it('sizes the anchor buildings by GDP and adds the suppliers they need', () => {
-    const { data } = newGame(anchors);
-    // 50 billion US$: 5 mills; their 500 ore take 3 mines (2.5 rounded up),
-    // and their coal and electricity 2 coal mines and 2 power plants.
-    expect(startingCountryLevels(data, 50_000)).toEqual([3, 2, 2, 5]);
-    expect(startingCountryLevels(data, 1_000)).toEqual([0, 0, 0, 0]);
-  });
-
-  it("shares a country's levels among its provinces by population", () => {
+  it('starts every province with its buildings from building_start.json', () => {
     const { state, cell } = newGame(anchors);
     const level = (provinceId: string, type: string) =>
       state.buildings.level[cell(provinceId, type)];
-    // alpha_west has 1.2 million people, alpha_east 0.8 million.
     expect([level('alpha_west', 'mill'), level('alpha_east', 'mill')]).toEqual([3, 2]);
     expect([level('alpha_west', 'mine'), level('alpha_east', 'mine')]).toEqual([2, 1]);
     expect([level('alpha_west', 'coal_mine'), level('alpha_east', 'coal_mine')]).toEqual([1, 1]);
     expect(level('beta_main', 'mill')).toBe(0);
+    expect(state.buildings.method[cell('alpha_west', 'mill')]).toBe(0);
   });
 
   it('starts with a stockpile and keeps running by itself', () => {
@@ -319,7 +340,7 @@ describe('the buildings a campaign starts with (F07)', () => {
 });
 
 describe('the buildings in the report, the snapshot and the save (F07)', () => {
-  const anchors = [{ building: 'mill', gdpBillionUsdPerLevel: 10 }];
+  const anchors = STARTING;
 
   it("a province's buildings work for whoever owns it now", () => {
     const { state, stock } = newGame(anchors);
@@ -337,7 +358,7 @@ describe('the buildings in the report, the snapshot and the save (F07)', () => {
     const { state, build, cell } = newGame(anchors);
     const first = createSnapshot(state);
     const sent = first.buildings!;
-    expect(sent.typeCount).toBe(4);
+    expect(sent.typeCount).toBe(5);
     expect(sent.cells.length).toBe(8);
     expect(sent.cells[0]).toBe(cell('alpha_east', 'mine'));
     expect([...sent.level]).toEqual([1, 1, 1, 2, 2, 1, 1, 3]);
@@ -412,7 +433,7 @@ describe('the buildings in the report, the snapshot and the save (F07)', () => {
       population: { ...people, jobs: Array.from(state.population.jobs) },
     };
     const loaded = deserializeGameState(old, { data });
-    expect(SAVE_FORMAT_VERSION).toBeGreaterThanOrEqual(5);
+    expect(SAVE_FORMAT_VERSION).toBeGreaterThanOrEqual(6);
     expect([...loaded.buildings.level]).toEqual([...state.buildings.level]);
     expect([...loaded.buildings.stock]).toEqual([...state.buildings.stock]);
     loaded.population.jobs.forEach((jobs, i) =>
@@ -437,8 +458,13 @@ describe('the buildings in the report, the snapshot and the save (F07)', () => {
       { ...buildings, types: ['mine'] },
       { ...buildings, goods: [...buildings.goods].reverse() },
       { ...buildings, levels: buildings.levels.slice(1) },
-      { ...buildings, levels: [99, 0, 1] },
-      { ...buildings, levels: [0, 9, 1] },
+      { ...buildings, levels: [99, 0, 1, 0] },
+      { ...buildings, levels: [0, 9, 1, 0] },
+      { ...buildings, levels: [0, 3, 1, 2] },
+      {
+        ...buildings,
+        methods: [['machines'], ['machines'], ['turbines'], ['modern'], ['turbines']],
+      },
       { ...buildings, stock: buildings.stock.slice(1) },
     ])
       expect(key({ ...good, buildings: bad })).toBe('SAVE_ERROR_CORRUPT');
@@ -495,27 +521,253 @@ describe('goods.json and buildings.json (F07)', () => {
       'duplicate building "mine"',
     );
     const worker = (group: string) =>
-      withBuildings((b) => (b.buildings[0].workers = { [group]: 5 } as never));
+      withBuildings((b) => (b.buildings[0].methods[0].workers = { [group]: 5 } as never));
     expect(worker('wizards')).toContain('unknown pop group "wizards"');
     expect(worker('soldiers')).toContain(`buildings can't hire "soldiers"`);
     expect(worker('owners')).toContain(`buildings can't hire "owners"`);
-    expect(withBuildings((b) => (b.buildings[3].inputs = { gold: 1 } as never))).toContain(
-      'unknown good "gold"',
-    );
-    expect(withBuildings((b) => (b.buildings[3].inputs = { electricity: 1 } as never))).toContain(
+    const mill = (b: Buildings) => b.buildings[3].methods[0] as Record<string, unknown>;
+    expect(withBuildings((b) => (mill(b).inputs = { gold: 1 }))).toContain('unknown good "gold"');
+    expect(withBuildings((b) => (mill(b).inputs = { electricity: 1 }))).toContain(
       'electricity is not an input',
     );
-    expect(withBuildings((b) => (b.buildings[3].inputs = { steel: 1 } as never))).toContain(
+    expect(withBuildings((b) => (mill(b).inputs = { steel: 1 }))).toContain(
       '"steel" is both an input and an output',
     );
-    expect(withBuildings((b) => (b.buildings[0].outputs = { electricity: 5 } as never))).toContain(
-      'only buildings of the energy category make electricity',
+    expect(
+      withBuildings((b) => (b.buildings[0].methods[0].outputs = { electricity: 5 } as never)),
+    ).toContain('only buildings of the energy category make electricity');
+    const methodsOf = (b: Buildings) => b.buildings[3].methods as unknown[];
+    expect(withBuildings((b) => methodsOf(b).push(methodsOf(b)[0]))).toContain(
+      '"mill" lists the method "modern" twice',
     );
     expect(
-      withBuildings(
-        (b) => (b.startingBuildings.anchors = [{ building: 'castle', gdpBillionUsdPerLevel: 5 }]),
-      ),
-    ).toContain('unknown building "castle"');
+      withBuildings((b) => ((b.buildings[2].methods[0] as Record<string, unknown>).offGrid = 0.5)),
+    ).toContain('only a method that uses electricity can run without it');
+    expect(withBuildings((b) => (b.buildings[0].methods = []))).toContain('methods');
+  });
+
+  it('checks building_start.json: provinces, buildings, methods', () => {
+    const start = (provinces: Record<string, TestStartingBuilding[]>) =>
+      issues((raw) => (raw.buildingStart = testBuildingStart(provinces)));
+    expect(start({ alpha_west: [['mill', 'old', 2]] })).toBe('');
+    expect(start({ atlantis: [['mill', 'old', 2]] })).toContain('unknown province "atlantis"');
+    expect(start({ alpha_west: [['castle', 'old', 2]] })).toContain('unknown building "castle"');
+    expect(start({ alpha_west: [['mill', 'magic', 2]] })).toContain(
+      '"mill" has no production method "magic"',
+    );
+    expect(
+      start({
+        alpha_west: [
+          ['mill', 'old', 2],
+          ['mill', 'modern', 1],
+        ],
+      }),
+    ).toContain('"mill" is listed twice in this province');
+  });
+});
+
+describe('production methods (F85)', () => {
+  it('a method sets the jobs, the electricity and the inputs of every level', () => {
+    const { state, build, give, building, pop, province } = newGame();
+    build('alpha_west', 'power_plant', 1);
+    build('alpha_west', 'mill', 2);
+    give('AAA', 'coal', 1000);
+    give('AAA', 'ore', 1000);
+    expect(state.population.buildingJobs[pop('alpha_west', LABORERS)]).toBe(400);
+    const modern = building('alpha_west', 'mill');
+    setBuildingMethod(state, province('alpha_west'), TYPES.indexOf('mill'), 1); // old
+    expect(state.population.buildingJobs[pop('alpha_west', LABORERS)]).toBe(1800);
+    const old = building('alpha_west', 'mill');
+    expect(old.output).toBe(1);
+    expect(old.workers).toBeGreaterThan(modern.workers * 3);
+    run(state, 1);
+    // 2 levels × 80 coal and the plant's 40 coal for 40 MWh.
+    expect(
+      state.buildings.stock[state.world.countryIndex.get('AAA')! * GOODS.length + 1],
+    ).toBeCloseTo(1000 - 160 - 20, 6);
+    expect(() =>
+      setBuildingMethod(state, province('alpha_west'), TYPES.indexOf('mill'), 2),
+    ).toThrow('has no method 2');
+  });
+
+  it('a new building runs its type’s first method; a save keeps every method', () => {
+    const { data, state, build, cell, province } = newGame({ alpha_west: [['mill', 'old', 2]] });
+    expect(state.buildings.method[cell('alpha_west', 'mill')]).toBe(1);
+    build('alpha_east', 'mill', 1);
+    expect(state.buildings.method[cell('alpha_east', 'mill')]).toBe(0);
+    // Closing and reopening a building starts it on the first method again.
+    setBuildingMethod(state, province('alpha_east'), TYPES.indexOf('mill'), 1);
+    build('alpha_east', 'mill', 0);
+    build('alpha_east', 'mill', 1);
+    expect(state.buildings.method[cell('alpha_east', 'mill')]).toBe(0);
+    const save = serializeGameState(state);
+    expect(save.buildings.methods[3]).toEqual(['modern', 'old']);
+    const loaded = deserializeGameState(JSON.parse(JSON.stringify(save)), { data });
+    expect(loaded.buildings.method[cell('alpha_west', 'mill')]).toBe(1);
+    expect(hashGameState(loaded)).toBe(hashGameState(state));
+  });
+});
+
+describe('electricity: the rest of the economy, fuel-free plants first, off the grid (F85)', () => {
+  it('power plants that burn nothing run first; the others make the rest', () => {
+    const { build, give, building } = newGame();
+    build('alpha_west', 'dam', 1); // 100 MWh, burns nothing
+    build('alpha_west', 'power_plant', 1); // 200 MWh from 100 coal
+    build('alpha_west', 'mine', 15); // asks for 150 MWh
+    give('AAA', 'coal', 1000);
+    expect(building('alpha_west', 'dam').output).toBe(1);
+    const plant = building('alpha_west', 'power_plant');
+    expect(plant.output).toBeCloseTo(0.25, 6);
+    expect(plant.limit).toBe(BUILDING_LIMIT.demand);
+    expect(building('alpha_west', 'mine').output).toBe(1);
+  });
+
+  it('the rest of the economy uses most of what the starting power plants make, and follows the people', () => {
+    const { state, building, market } = newGame(
+      {
+        alpha_west: [
+          ['dam', 'turbines', 10],
+          ['mine', 'machines', 10],
+        ],
+      },
+      (b) => (b.standIns.otherElectricityShare = 0.9),
+    );
+    // 0.9 × 1,000 MWh, less the mines' 100 MWh, shared by AAA's 2 million people.
+    const report = ensureBuildingsReport(state);
+    const aaa = state.world.countryIndex.get('AAA')!;
+    expect(report.otherPowerWanted[aaa]).toBeCloseTo(800, 6);
+    expect(report.used[market('AAA', 'electricity')]).toBeCloseTo(900, 6);
+    expect(building('alpha_west', 'dam').output).toBeCloseTo(0.9, 6);
+    // More people want more electricity.
+    run(state, 3650);
+    expect(ensureBuildingsReport(state).otherPowerWanted[aaa]).toBeGreaterThan(800);
+  });
+
+  it('with too little electricity everyone gets the same share, homes too', () => {
+    const { state, build, building } = newGame(
+      { alpha_west: [['dam', 'turbines', 10]] },
+      (b) => (b.standIns.otherElectricityShare = 1),
+    );
+    build('alpha_west', 'mine', 100); // asks for 1,000 MWh more
+    const mine = building('alpha_west', 'mine');
+    expect(mine.output).toBeCloseTo(0.5, 6);
+    expect(mine.limit).toBe(BUILDING_LIMIT.electricity);
+    const aaa = state.world.countryIndex.get('AAA')!;
+    expect(ensureBuildingsReport(state).otherPowerUsed[aaa]).toBeCloseTo(500, 6);
+  });
+
+  it('a mine with its own generators keeps part of its output in a blackout, so the country climbs back', () => {
+    const { state, building, stock } = newGame(
+      {
+        alpha_west: [
+          ['power_plant', 'turbines', 1],
+          ['coal_mine', 'machines', 2],
+        ],
+      },
+      (b) => ((b.buildings[1].methods[0] as Record<string, unknown>).offGrid = 0.25),
+    );
+    // No coal: the plant can't run and the grid is dark.
+    expect(stock('AAA', 'coal')).toBeGreaterThan(0);
+    state.buildings.stock.fill(0);
+    state.buildings.changes += 1;
+    const dark = building('alpha_west', 'coal_mine');
+    expect(dark.output).toBeCloseTo(0.25, 6);
+    expect(dark.limit).toBe(BUILDING_LIMIT.electricity);
+    run(state, 3);
+    expect(building('alpha_west', 'power_plant').output).toBeGreaterThan(0);
+    expect(building('alpha_west', 'coal_mine').output).toBe(1);
+  });
+});
+
+describe('standing imports (F85)', () => {
+  it('bring every day what the starting buildings use but the country doesn’t make', () => {
+    const { state, stock, building } = newGame(
+      {
+        alpha_west: [
+          ['power_plant', 'turbines', 1],
+          ['mill', 'modern', 2],
+        ],
+      },
+      (b) => {
+        b.standIns.standingImportsShare = 1;
+        b.standIns.standingImportsBuffer = 0.1;
+      },
+    );
+    const aaa = state.world.countryIndex.get('AAA')!;
+    const imports = (good: string) =>
+      state.buildings.imports[aaa * GOODS.length + GOODS.indexOf(good)];
+    // The mills use 200 ore and 100 coal, the plant 100 coal; nothing is mined at home.
+    expect(imports('ore')).toBeCloseTo(200 * 1.1, 6);
+    expect(imports('coal')).toBeCloseTo(200 * 1.1, 6);
+    expect(imports('steel')).toBe(0);
+    expect(imports('electricity')).toBe(0);
+    run(state, 200);
+    expect(building('alpha_west', 'mill').output).toBe(1);
+    expect(stock('AAA', 'steel')).toBeCloseTo(30 * 120, 6);
+    // The surplus is lost at the stockpile's limit.
+    expect(stock('AAA', 'ore')).toBeLessThanOrEqual(30 * 220 + 1e-6);
+  });
+});
+
+describe('each province starts with the workers its buildings need (F85)', () => {
+  it('keeps every province’s workforce and the country’s pop groups, and moves workers to the jobs', () => {
+    const plain = newGame().state.population;
+    const { state, pop } = newGame({ alpha_east: [['mill', 'old', 300]] }); // 270,000 laborers
+    const fitted = state.population;
+    const province = (population: typeof plain, id: string) => {
+      let total = 0;
+      for (let g = 0; g < GROUPS; g++) total += population.size[pop(id, g)];
+      return total;
+    };
+    for (const id of ['alpha_west', 'alpha_east', 'beta_main'])
+      expect(province(fitted, id)).toBeCloseTo(province(plain, id), 3);
+    for (let g = 0; g < GROUPS; g++)
+      expect(fitted.size[pop('alpha_west', g)] + fitted.size[pop('alpha_east', g)]).toBeCloseTo(
+        plain.size[pop('alpha_west', g)] + plain.size[pop('alpha_east', g)],
+        3,
+      );
+    // alpha_east has more laborers than before, alpha_west fewer.
+    expect(fitted.size[pop('alpha_east', LABORERS)]).toBeGreaterThan(
+      plain.size[pop('alpha_east', LABORERS)],
+    );
+    expect(fitted.size[pop('alpha_west', LABORERS)]).toBeLessThan(
+      plain.size[pop('alpha_west', LABORERS)],
+    );
+    // So the mill is fully staffed, and unemployment is still as in the data.
+    expect(ensureBuildingsReport(state).staffing[toolsFor(state).cell('alpha_east', 'mill')]).toBe(
+      1,
+    );
+    const report = ensurePopulationReport(state);
+    const aaa = state.world.countryIndex.get('AAA')!;
+    let people = 0;
+    let employed = 0;
+    for (let g = 0; g < GROUPS; g++) {
+      people += report.countryGroupSize[aaa * GROUPS + g];
+      employed += report.countryGroupEmployed[aaa * GROUPS + g];
+    }
+    expect(1 - employed / people).toBeCloseTo(0.05, 6);
+  });
+});
+
+describe('older saves (F85)', () => {
+  it('loads a version 5 save (the six example buildings) with the starting buildings', () => {
+    const { data, state } = newGame(STARTING);
+    run(state, 10);
+    const save = serializeGameState(state);
+    const { methods: _methods, ...buildings } = save.buildings;
+    void _methods;
+    const old = {
+      ...save,
+      saveVersion: 5,
+      buildings: { ...buildings, types: ['farm'], levels: [0, 0, 7] },
+    };
+    const loaded = deserializeGameState(old, { data });
+    expect(loaded.day).toBe(10);
+    expect([...loaded.buildings.level]).toEqual([...newGame(STARTING).state.buildings.level]);
+    expect([...loaded.population.size]).toEqual([...state.population.size]);
+    loaded.population.standInJobs.forEach((jobs, i) =>
+      expect(jobs).toBeCloseTo(state.population.standInTarget[i] * state.population.size[i], 6),
+    );
   });
 });
 

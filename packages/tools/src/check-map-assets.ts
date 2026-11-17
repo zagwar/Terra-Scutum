@@ -13,6 +13,7 @@ import {
   buildingCategoryNameKey,
   buildingNameKey,
   goodNameKey,
+  productionMethodNameKey,
   needNameKey,
   needTierNameKey,
   NEED_TIERS,
@@ -57,6 +58,9 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const good of data.goods.goods) need(goodNameKey(good.id), `good ${good.id}`);
   for (const building of data.buildings.buildings)
     need(buildingNameKey(building.id), `building ${building.id}`);
+  for (const building of data.buildings.buildings)
+    for (const method of building.methods)
+      need(productionMethodNameKey(method.id), `production method ${method.id}`);
   for (const category of BUILDING_CATEGORIES)
     need(buildingCategoryNameKey(category), `building category ${category}`);
   return problems;

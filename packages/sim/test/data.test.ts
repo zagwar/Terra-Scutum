@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DATA_FILES, DataValidationError, formatDataIssue, parseGameData } from '../src';
 import {
+  testBuildingStart,
   testBuildings,
   testCountryFlags,
   testCountryScreen,
@@ -27,6 +28,7 @@ const world = {
   pops: testPops(),
   goods: testGoods(),
   buildings: testBuildings(),
+  buildingStart: testBuildingStart(),
   mapView: testMapView(),
   terrainTiles: testTerrainTiles(),
   notifications: testNotifications(),
@@ -112,6 +114,7 @@ describe('game data validation', () => {
       'data/pops.json: file is missing',
       'data/goods.json: file is missing',
       'data/buildings.json: file is missing',
+      'data/building_start.json: file is missing',
       'data/map_view.json: file is missing',
       'data/terrain_tiles.json: file is missing',
       'data/notifications.json: file is missing',

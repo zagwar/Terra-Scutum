@@ -1,16 +1,24 @@
 /**
  * `npm run import:starting-data`: builds `data/country_start.json` (F71),
- * `data/province_start.json` (F06: where in each country its people live) and
- * `packages/tools/starting-data/report.md` from the source tables in
+ * `data/province_start.json` (F06: where in each country its people live),
+ * `data/building_start.json` (F85: every province's starting buildings),
+ * `packages/tools/starting-data/report.md` and `buildings-report.md` from the source tables in
  * `packages/tools/starting-data/sources/` and the hand-written
- * `packages/tools/starting-data/countries.json`. Works offline.
+ * `packages/tools/starting-data/countries.json` and `production.json`. Works offline.
  *
  * `npm run import:starting-data -- --snapshot` first remakes the source
  * tables from fresh downloads in `.cache/starting-data/` (see the README).
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type CountryStartFile, type ProvinceStartFile, countryNameKey } from '@terra-scutum/sim';
+import {
+  type BuildingStartFile,
+  type CountryStartFile,
+  type ProvinceStartFile,
+  buildingsSchema,
+  countryNameKey,
+  popsSchema,
+} from '@terra-scutum/sim';
 import { DATA_DIR, LOCALES_DIR, REPO_ROOT, loadGameDataFromDisk } from './load-data';
 import {
   type ImfSnapshot,
@@ -25,6 +33,12 @@ import {
 import { provincePopulationSnapshotSchema } from './starting-data/province-population';
 import { writeStartingDataReport } from './starting-data/report';
 import { snapshotSources } from './starting-data/snapshot-sources';
+import {
+  buildStartingBuildings,
+  productionConfigSchema,
+} from './starting-data/build-starting-buildings';
+import { writeBuildingsReport } from './starting-data/report-buildings';
+import { productionSnapshotSchema, snapshotProduction } from './starting-data/snapshot-production';
 
 const CONFIG_DIR = join(REPO_ROOT, 'packages/tools/starting-data');
 const SOURCES_DIR = join(CONFIG_DIR, 'sources');
@@ -32,6 +46,7 @@ const RAW_DIR = join(REPO_ROOT, '.cache/starting-data');
 const IMF_FILE = join(SOURCES_DIR, 'imf-weo.json');
 const WORLD_BANK_FILE = join(SOURCES_DIR, 'world-bank-wdi.json');
 const PROVINCE_POPULATION_FILE = join(SOURCES_DIR, 'province-population.json');
+const PRODUCTION_FILE = join(SOURCES_DIR, 'production.json');
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as unknown;
 
@@ -51,6 +66,14 @@ function main(): void {
     writeFileSync(IMF_FILE, `${JSON.stringify(imf, null, 1)}\n`);
     writeFileSync(WORLD_BANK_FILE, `${JSON.stringify(worldBank, null, 1)}\n`);
     console.log(`Source tables remade from ${RAW_DIR} (${imf.edition}).`);
+  }
+
+  if (process.argv.includes('--snapshot') || process.argv.includes('--snapshot-production')) {
+    // F85: the production figures (World Bank, Our World in Data energy).
+    const today = new Date().toISOString().slice(0, 10);
+    const production = snapshotProduction(RAW_DIR, config, mapCountries, today);
+    writeFileSync(PRODUCTION_FILE, formatProductionSnapshot(production));
+    console.log(`Production table remade from ${RAW_DIR}.`);
   }
 
   const imf: ImfSnapshot = imfSnapshotSchema.parse(readJson(IMF_FILE));
@@ -79,6 +102,37 @@ function main(): void {
     throw new Error(provinceStart.errors.map((e) => `  - ${e}`).join('\n'));
   }
   writeFileSync(join(DATA_DIR, 'province_start.json'), formatProvinceStart(provinceStart.file));
+
+  // Starting buildings (F85): real production, shared among the provinces.
+  const seaProvinces = new Set(
+    (
+      readJson(join(DATA_DIR, 'provinces.json')) as {
+        provinces: { id: string; adjacentSeaZones: string[] }[];
+      }
+    ).provinces
+      .filter((p) => p.adjacentSeaZones.length > 0)
+      .map((p) => p.id),
+  );
+  const people = new Map(provinceStart.file.provinces.map((p) => [p.id, p.population]));
+  const startingBuildings = buildStartingBuildings({
+    config: productionConfigSchema.parse(readJson(join(CONFIG_DIR, 'production.json'))),
+    snapshot: productionSnapshotSchema.parse(readJson(PRODUCTION_FILE)),
+    countries: result.file.countries,
+    provinces: mapProvinces.map((p) => ({
+      id: p.id,
+      country: p.country,
+      areaKm2: p.areaKm2,
+      coastal: seaProvinces.has(p.id),
+      population: people.get(p.id) ?? 0,
+    })),
+    buildings: buildingsSchema.parse(readJson(join(DATA_DIR, 'buildings.json'))),
+    pops: popsSchema.parse(readJson(join(DATA_DIR, 'pops.json'))),
+    year: result.file.year,
+  });
+  if (startingBuildings.errors.length > 0) {
+    throw new Error(startingBuildings.errors.map((e) => `  - ${e}`).join('\n'));
+  }
+  writeFileSync(join(DATA_DIR, 'building_start.json'), formatBuildingStart(startingBuildings.file));
   // Check the result with the game's own schema and cross-checks (throws a list of problems).
   loadGameDataFromDisk();
   const names = readJson(join(LOCALES_DIR, 'en.map.json')) as Record<string, string>;
@@ -91,6 +145,12 @@ function main(): void {
     (id) => names[countryNameKey(id)] ?? id,
   );
 
+  writeBuildingsReport(
+    join(CONFIG_DIR, 'buildings-report.md'),
+    startingBuildings,
+    (id) => names[countryNameKey(id)] ?? id,
+  );
+
   const world = result.file.countries.reduce(
     (sum, c) => ({ population: sum.population + c.population, gdp: sum.gdp + c.gdpMillionUsd }),
     { population: 0, gdp: 0 },
@@ -100,6 +160,14 @@ function main(): void {
       `${(world.population / 1e9).toFixed(2)} billion people, ` +
       `GDP US$${(world.gdp / 1e6).toFixed(1)} trillion (${result.file.year}). ` +
       `Report: packages/tools/starting-data/report.md`,
+  );
+  const levels = startingBuildings.file.provinces.reduce(
+    (t, p) => t + p.buildings.reduce((u, b) => u + b[2], 0),
+    0,
+  );
+  console.log(
+    `Starting buildings: ${startingBuildings.file.provinces.reduce((t, p) => t + p.buildings.length, 0)} ` +
+      `with ${levels} levels. Report: packages/tools/starting-data/buildings-report.md`,
   );
 }
 
@@ -117,6 +185,19 @@ function formatProvinceStart(file: ProvinceStartFile): string {
   const head = JSON.stringify(rest, null, 2).slice(0, -2);
   const lines = provinces.map((p) => `    ${JSON.stringify(p)}`);
   return `${head},\n  "provinces": [\n${lines.join(',\n')}\n  ]\n}\n`;
+}
+
+/** One province per line. */
+function formatBuildingStart(file: BuildingStartFile): string {
+  const { provinces, ...rest } = file;
+  const head = JSON.stringify(rest, null, 2).slice(0, -2);
+  const lines = provinces.map((p) => `    ${JSON.stringify(p)}`);
+  return `${head},\n  "provinces": [\n${lines.join(',\n')}\n  ]\n}\n`;
+}
+
+/** One country per line. */
+function formatProductionSnapshot(snapshot: unknown): string {
+  return `${JSON.stringify(snapshot, null, 1)}\n`;
 }
 
 try {

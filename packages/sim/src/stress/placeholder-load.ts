@@ -23,8 +23,8 @@ import type { SimStressConfig } from './stress-config';
  * **Since F07 the real buildings run too** (`GameState.buildings`): the
  * building systems run in their slots (energy, resourceProduction,
  * industry), with every building type in every province, as in a late game.
- * The placeholder buildings only make up the rest of `buildingsPerProvince`
- * until the building catalog is complete (F85). F140 replaces the rest.
+ * The placeholder buildings only make up the rest of `buildingsPerProvince`;
+ * since the building catalog (F85, 26 types) there are none left.
  *
  * Daily: pops buy their needs (population), buildings produce from recipes
  * (industry), trade routes move goods (trade), taxes are collected (budget),

@@ -4,6 +4,7 @@ import {
   type GoodsConfig,
   type PopsConfig,
   buildingNameKey,
+  productionMethodNameKey,
 } from '@terra-scutum/sim';
 import { formatMoneyShort, formatPopulation, t, tKey } from '../i18n';
 import {
@@ -27,9 +28,9 @@ export interface ProvinceBuildingsProps {
 }
 
 /**
- * The province panel's buildings part (F07, section 8.3): each building with
- * its level, its output today, what holds it back, its workers and what it
- * makes and uses. Under it the test tools to change levels by hand until
+ * The province panel's buildings part (F07, F85, section 8.3): each building
+ * with its level, its output today, what holds it back, its production
+ * method, its workers and what it makes and uses. Under it the test tools to change levels by hand until
  * construction exists (F12).
  */
 export function ProvinceBuildings({
@@ -63,7 +64,7 @@ export function ProvinceBuildings({
           <ul className="building-list">
             {rows.map((row) => {
               const id = row.definition.id;
-              const today = recipeAmounts(row.definition, goods, row.level * row.output);
+              const today = recipeAmounts(row.methodDefinition, goods, row.level * row.output);
               const limit = limitText(row, pops, goods);
               return (
                 <li key={id} className="building" data-testid={`building-${id}`}>
@@ -92,6 +93,10 @@ export function ProvinceBuildings({
                     </p>
                   )}
                   <dl className="building-facts">
+                    <dt title={t('BUILDINGS_METHOD_HINT')}>{t('BUILDINGS_METHOD')}</dt>
+                    <dd data-testid={`building-method-${id}`} title={t('BUILDINGS_METHOD_HINT')}>
+                      {tKey(productionMethodNameKey(row.methodDefinition.id))}
+                    </dd>
                     <dt>{t('BUILDINGS_WORKERS')}</dt>
                     <dd data-testid={`building-workers-${id}`}>
                       {t('BUILDINGS_WORKERS_VALUE', {

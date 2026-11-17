@@ -61,7 +61,7 @@ export function limitText(
 
 /** A building's recipe at full output as a tooltip. */
 export function recipeHint(row: BuildingRow, goods: GoodsConfig): string {
-  const { uses, makes } = recipeAmounts(row.definition, goods, row.level);
+  const { uses, makes } = recipeAmounts(row.methodDefinition, goods, row.level);
   return t('BUILDINGS_RECIPE_HINT', {
     level: row.level,
     makes: amountsText(makes, goods),

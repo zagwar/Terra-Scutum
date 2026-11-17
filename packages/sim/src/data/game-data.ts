@@ -49,6 +49,11 @@ import {
   goodsSchema,
 } from '../economy/buildings-data';
 import {
+  type BuildingStartFile,
+  buildingStartFileSchema,
+  checkBuildingStart,
+} from '../economy/building-start';
+import {
   type ProvinceStartFile,
   checkProvinceStart,
   provinceStartFileSchema,
@@ -75,6 +80,7 @@ export const DATA_FILES = {
   pops: { file: 'pops.json', schema: popsSchema },
   goods: { file: 'goods.json', schema: goodsSchema },
   buildings: { file: 'buildings.json', schema: buildingsSchema },
+  buildingStart: { file: 'building_start.json', schema: buildingStartFileSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
@@ -105,8 +111,10 @@ export interface GameData {
   readonly pops: PopsConfig;
   /** The goods buildings make and use (F07; F65 adds prices and the rest). */
   readonly goods: GoodsConfig;
-  /** Building types with their recipes, the stockpile rules and the starting buildings (F07). */
+  /** Building types with their production methods, the stockpile rules and the stand-ins (F07, F85). */
   readonly buildings: BuildingsConfig;
+  /** Every province's starting buildings (F85). */
+  readonly buildingStart: BuildingStartFile;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
   /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
@@ -248,6 +256,7 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkProvinceStart,
   checkPops,
   checkBuildings,
+  checkBuildingStart,
   checkNotifications,
   checkPlayerCountry,
   checkCountryScreen,

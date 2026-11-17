@@ -3,53 +3,753 @@
     {
       "id": "farm",
       "category": "extraction",
-      "workers": { "laborers": 450, "skilled_workers": 40, "professionals": 10 },
-      "electricity": 25,
-      "outputs": { "grain": 1000 }
+      "methods": [
+        {
+          "id": "mechanized_farming",
+          "workers": {
+            "laborers": 800,
+            "skilled_workers": 170,
+            "professionals": 30
+          },
+          "electricity": 20,
+          "offGrid": 0.5,
+          "inputs": {
+            "fuel": 5,
+            "chemicals": 10
+          },
+          "outputs": {
+            "grain": 500
+          }
+        },
+        {
+          "id": "traditional_farming",
+          "workers": {
+            "laborers": 9900,
+            "skilled_workers": 80,
+            "professionals": 20
+          },
+          "electricity": 5,
+          "offGrid": 0.8,
+          "inputs": {
+            "chemicals": 3
+          },
+          "outputs": {
+            "grain": 500
+          }
+        },
+        {
+          "id": "subsistence_farming",
+          "workers": {
+            "laborers": 99900,
+            "skilled_workers": 80,
+            "professionals": 20
+          },
+          "outputs": {
+            "grain": 500
+          }
+        }
+      ]
+    },
+    {
+      "id": "ranch",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "intensive_ranching",
+          "workers": {
+            "laborers": 700,
+            "skilled_workers": 170,
+            "professionals": 30
+          },
+          "electricity": 15,
+          "offGrid": 0.5,
+          "inputs": {
+            "grain": 400,
+            "fuel": 2
+          },
+          "outputs": {
+            "livestock_fish": 300
+          }
+        },
+        {
+          "id": "pastoral_herding",
+          "workers": {
+            "laborers": 29900,
+            "skilled_workers": 80,
+            "professionals": 20
+          },
+          "outputs": {
+            "livestock_fish": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "fishery",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "trawler_fleet",
+          "workers": {
+            "laborers": 300,
+            "skilled_workers": 85,
+            "professionals": 15
+          },
+          "electricity": 5,
+          "offGrid": 0.5,
+          "inputs": {
+            "fuel": 15
+          },
+          "outputs": {
+            "livestock_fish": 100
+          }
+        },
+        {
+          "id": "artisanal_fishing",
+          "workers": {
+            "laborers": 9900,
+            "skilled_workers": 90,
+            "professionals": 10
+          },
+          "inputs": {
+            "fuel": 2
+          },
+          "outputs": {
+            "livestock_fish": 100
+          }
+        }
+      ]
     },
     {
       "id": "iron_mine",
       "category": "extraction",
-      "workers": { "laborers": 1100, "skilled_workers": 350, "professionals": 50 },
-      "electricity": 200,
-      "outputs": { "iron_ore": 8000 }
+      "methods": [
+        {
+          "id": "mechanized_mining",
+          "workers": {
+            "laborers": 300,
+            "skilled_workers": 170,
+            "professionals": 30
+          },
+          "electricity": 200,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 30
+          },
+          "outputs": {
+            "iron_ore": 8000
+          }
+        },
+        {
+          "id": "labor_intensive_mining",
+          "workers": {
+            "laborers": 2300,
+            "skilled_workers": 170,
+            "professionals": 30
+          },
+          "electricity": 100,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 10
+          },
+          "outputs": {
+            "iron_ore": 8000
+          }
+        }
+      ]
     },
     {
       "id": "coal_mine",
       "category": "extraction",
-      "workers": { "laborers": 1100, "skilled_workers": 350, "professionals": 50 },
-      "electricity": 150,
-      "outputs": { "coal": 6000 }
+      "methods": [
+        {
+          "id": "mechanized_mining",
+          "workers": {
+            "laborers": 450,
+            "skilled_workers": 210,
+            "professionals": 40
+          },
+          "electricity": 150,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 20
+          },
+          "outputs": {
+            "coal": 6000
+          }
+        },
+        {
+          "id": "labor_intensive_mining",
+          "workers": {
+            "laborers": 3250,
+            "skilled_workers": 210,
+            "professionals": 40
+          },
+          "electricity": 80,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 5
+          },
+          "outputs": {
+            "coal": 6000
+          }
+        }
+      ]
+    },
+    {
+      "id": "copper_mine",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "mechanized_mining",
+          "workers": {
+            "laborers": 600,
+            "skilled_workers": 340,
+            "professionals": 60
+          },
+          "electricity": 250,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 25
+          },
+          "outputs": {
+            "copper_ore": 1000
+          }
+        },
+        {
+          "id": "labor_intensive_mining",
+          "workers": {
+            "laborers": 3600,
+            "skilled_workers": 340,
+            "professionals": 60
+          },
+          "electricity": 120,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 8
+          },
+          "outputs": {
+            "copper_ore": 1000
+          }
+        }
+      ]
+    },
+    {
+      "id": "bauxite_mine",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "mechanized_mining",
+          "workers": {
+            "laborers": 250,
+            "skilled_workers": 130,
+            "professionals": 20
+          },
+          "electricity": 100,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 25
+          },
+          "outputs": {
+            "bauxite": 10000
+          }
+        },
+        {
+          "id": "labor_intensive_mining",
+          "workers": {
+            "laborers": 1450,
+            "skilled_workers": 130,
+            "professionals": 20
+          },
+          "electricity": 50,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 8
+          },
+          "outputs": {
+            "bauxite": 10000
+          }
+        }
+      ]
+    },
+    {
+      "id": "quarry",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "mechanized_quarrying",
+          "workers": {
+            "laborers": 120,
+            "skilled_workers": 70,
+            "professionals": 10
+          },
+          "electricity": 50,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 10
+          },
+          "outputs": {
+            "stone": 5000
+          }
+        },
+        {
+          "id": "labor_intensive_quarrying",
+          "workers": {
+            "laborers": 920,
+            "skilled_workers": 70,
+            "professionals": 10
+          },
+          "electricity": 20,
+          "offGrid": 0.25,
+          "inputs": {
+            "fuel": 3
+          },
+          "outputs": {
+            "stone": 5000
+          }
+        }
+      ]
+    },
+    {
+      "id": "oil_field",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "conventional_drilling",
+          "workers": {
+            "laborers": 80,
+            "skilled_workers": 100,
+            "professionals": 20
+          },
+          "electricity": 150,
+          "offGrid": 0.25,
+          "outputs": {
+            "crude_oil": 5000
+          }
+        }
+      ]
+    },
+    {
+      "id": "gas_field",
+      "category": "extraction",
+      "methods": [
+        {
+          "id": "conventional_drilling",
+          "workers": {
+            "laborers": 40,
+            "skilled_workers": 65,
+            "professionals": 15
+          },
+          "electricity": 100,
+          "offGrid": 0.25,
+          "outputs": {
+            "natural_gas": 3000
+          }
+        }
+      ]
     },
     {
       "id": "coal_power_plant",
       "category": "energy",
-      "workers": { "laborers": 50, "skilled_workers": 200, "professionals": 50 },
-      "inputs": { "coal": 6000 },
-      "outputs": { "electricity": 15000 }
+      "methods": [
+        {
+          "id": "steam_turbine",
+          "workers": {
+            "laborers": 50,
+            "skilled_workers": 200,
+            "professionals": 50
+          },
+          "inputs": {
+            "coal": 6000
+          },
+          "outputs": {
+            "electricity": 15000
+          }
+        }
+      ]
     },
     {
-      "id": "food_processing_plant",
-      "category": "processing",
-      "workers": { "laborers": 1000, "skilled_workers": 400, "professionals": 100 },
-      "electricity": 150,
-      "inputs": { "grain": 2000 },
-      "outputs": { "processed_food": 1600 }
+      "id": "gas_power_plant",
+      "category": "energy",
+      "methods": [
+        {
+          "id": "combined_cycle",
+          "workers": {
+            "laborers": 20,
+            "skilled_workers": 80,
+            "professionals": 20
+          },
+          "inputs": {
+            "natural_gas": 2100
+          },
+          "outputs": {
+            "electricity": 15000
+          }
+        }
+      ]
+    },
+    {
+      "id": "nuclear_power_plant",
+      "category": "energy",
+      "methods": [
+        {
+          "id": "fission_reactor",
+          "workers": {
+            "laborers": 100,
+            "skilled_workers": 400,
+            "professionals": 200
+          },
+          "outputs": {
+            "electricity": 24000
+          }
+        }
+      ]
+    },
+    {
+      "id": "hydro_power_plant",
+      "category": "energy",
+      "methods": [
+        {
+          "id": "hydro_dam",
+          "workers": {
+            "laborers": 10,
+            "skilled_workers": 40,
+            "professionals": 10
+          },
+          "outputs": {
+            "electricity": 6000
+          }
+        }
+      ]
+    },
+    {
+      "id": "wind_farm",
+      "category": "energy",
+      "methods": [
+        {
+          "id": "wind_turbines",
+          "workers": {
+            "laborers": 0,
+            "skilled_workers": 25,
+            "professionals": 5
+          },
+          "outputs": {
+            "electricity": 2400
+          }
+        }
+      ]
+    },
+    {
+      "id": "solar_farm",
+      "category": "energy",
+      "methods": [
+        {
+          "id": "solar_panels",
+          "workers": {
+            "laborers": 5,
+            "skilled_workers": 12,
+            "professionals": 3
+          },
+          "outputs": {
+            "electricity": 1200
+          }
+        }
+      ]
     },
     {
       "id": "steel_mill",
       "category": "processing",
-      "workers": { "laborers": 2200, "skilled_workers": 1500, "professionals": 300 },
-      "electricity": 2500,
-      "inputs": { "iron_ore": 8000, "coal": 3500 },
-      "outputs": { "steel": 5000 }
+      "methods": [
+        {
+          "id": "integrated_mill",
+          "workers": {
+            "laborers": 1100,
+            "skilled_workers": 1200,
+            "professionals": 200
+          },
+          "electricity": 2500,
+          "inputs": {
+            "iron_ore": 8000,
+            "coal": 3500
+          },
+          "outputs": {
+            "steel": 5000
+          }
+        },
+        {
+          "id": "older_mill",
+          "workers": {
+            "laborers": 8500,
+            "skilled_workers": 1300,
+            "professionals": 200
+          },
+          "electricity": 2000,
+          "inputs": {
+            "iron_ore": 8000,
+            "coal": 3500
+          },
+          "outputs": {
+            "steel": 5000
+          }
+        }
+      ]
+    },
+    {
+      "id": "oil_refinery",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "distillation_and_cracking",
+          "workers": {
+            "laborers": 250,
+            "skilled_workers": 450,
+            "professionals": 100
+          },
+          "electricity": 300,
+          "offGrid": 0.25,
+          "inputs": {
+            "crude_oil": 10000
+          },
+          "outputs": {
+            "fuel": 8500,
+            "chemicals": 1000
+          }
+        }
+      ]
+    },
+    {
+      "id": "chemical_plant",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "gas_based_chemistry",
+          "workers": {
+            "laborers": 150,
+            "skilled_workers": 280,
+            "professionals": 70
+          },
+          "electricity": 400,
+          "inputs": {
+            "natural_gas": 1000
+          },
+          "outputs": {
+            "chemicals": 1200
+          }
+        }
+      ]
+    },
+    {
+      "id": "plastics_plant",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "polymerization",
+          "workers": {
+            "laborers": 120,
+            "skilled_workers": 230,
+            "professionals": 50
+          },
+          "electricity": 300,
+          "inputs": {
+            "chemicals": 1100
+          },
+          "outputs": {
+            "plastic": 1000
+          }
+        }
+      ]
+    },
+    {
+      "id": "copper_smelter",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "flash_smelting",
+          "workers": {
+            "laborers": 250,
+            "skilled_workers": 300,
+            "professionals": 50
+          },
+          "electricity": 600,
+          "inputs": {
+            "copper_ore": 1000,
+            "fuel": 20
+          },
+          "outputs": {
+            "copper": 250
+          }
+        }
+      ]
+    },
+    {
+      "id": "aluminum_smelter",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "electrolysis",
+          "workers": {
+            "laborers": 600,
+            "skilled_workers": 750,
+            "professionals": 150
+          },
+          "electricity": 15000,
+          "inputs": {
+            "bauxite": 4500
+          },
+          "outputs": {
+            "aluminum": 1000
+          }
+        }
+      ]
+    },
+    {
+      "id": "silicon_plant",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "arc_furnace",
+          "workers": {
+            "laborers": 120,
+            "skilled_workers": 150,
+            "professionals": 30
+          },
+          "electricity": 1200,
+          "inputs": {
+            "stone": 300,
+            "coal": 150
+          },
+          "outputs": {
+            "silicon": 100
+          }
+        }
+      ]
+    },
+    {
+      "id": "food_processing_plant",
+      "category": "processing",
+      "methods": [
+        {
+          "id": "industrial_food_processing",
+          "workers": {
+            "laborers": 800,
+            "skilled_workers": 330,
+            "professionals": 70
+          },
+          "electricity": 150,
+          "inputs": {
+            "grain": 1500,
+            "livestock_fish": 400
+          },
+          "outputs": {
+            "processed_food": 1600
+          }
+        },
+        {
+          "id": "manual_food_processing",
+          "workers": {
+            "laborers": 5600,
+            "skilled_workers": 330,
+            "professionals": 70
+          },
+          "electricity": 60,
+          "inputs": {
+            "grain": 1500,
+            "livestock_fish": 400
+          },
+          "outputs": {
+            "processed_food": 1600
+          }
+        }
+      ]
+    },
+    {
+      "id": "electronics_plant",
+      "category": "manufacturing_civilian",
+      "methods": [
+        {
+          "id": "automated_assembly",
+          "workers": {
+            "laborers": 600,
+            "skilled_workers": 700,
+            "professionals": 200
+          },
+          "electricity": 400,
+          "inputs": {
+            "silicon": 5,
+            "copper": 15,
+            "plastic": 40
+          },
+          "outputs": {
+            "electronics": 100
+          }
+        },
+        {
+          "id": "manual_assembly",
+          "workers": {
+            "laborers": 5000,
+            "skilled_workers": 800,
+            "professionals": 200
+          },
+          "electricity": 200,
+          "inputs": {
+            "silicon": 5,
+            "copper": 15,
+            "plastic": 40
+          },
+          "outputs": {
+            "electronics": 100
+          }
+        }
+      ]
+    },
+    {
+      "id": "consumer_goods_factory",
+      "category": "manufacturing_civilian",
+      "methods": [
+        {
+          "id": "assembly_line",
+          "workers": {
+            "laborers": 8000,
+            "skilled_workers": 1700,
+            "professionals": 300
+          },
+          "electricity": 300,
+          "inputs": {
+            "steel": 150,
+            "plastic": 150,
+            "aluminum": 20,
+            "electronics": 20
+          },
+          "outputs": {
+            "consumer_goods": 500
+          }
+        },
+        {
+          "id": "workshop",
+          "workers": {
+            "laborers": 57500,
+            "skilled_workers": 2200,
+            "professionals": 300
+          },
+          "electricity": 100,
+          "inputs": {
+            "steel": 150,
+            "chemicals": 150
+          },
+          "outputs": {
+            "consumer_goods": 500
+          }
+        }
+      ]
     }
   ],
-  "stockpile": { "startingDays": 15, "maxDays": 30 },
-  "startingBuildings": {
-    "anchors": [
-      { "building": "steel_mill", "gdpBillionUsdPerLevel": 100 },
-      { "building": "food_processing_plant", "gdpBillionUsdPerLevel": 25 }
-    ]
+  "stockpile": {
+    "startingDays": 15,
+    "maxDays": 30
+  },
+  "standIns": {
+    "otherElectricityShare": 0.9,
+    "standingImportsShare": 1,
+    "standingImportsBuffer": 0.05
   }
 }

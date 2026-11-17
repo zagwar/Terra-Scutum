@@ -87,49 +87,61 @@ test('a province shows its buildings: levels, output, workers and what holds the
   await page.mouse.click(munich.x, munich.y);
   await expect(page.getByTestId('province-name')).toHaveText('Bavaria');
 
-  // Bavaria starts with the example buildings, all running at full output.
+  // Bavaria starts with its real buildings (F85), all running at full output.
   const steel = page.getByTestId('building-steel_mill');
   await expect(steel).toContainText('Steel mill');
-  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 8');
+  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 3');
   await expect(page.getByTestId('building-output-steel_mill')).toHaveText('100 %');
-  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('32,000 of 32,000');
-  // Amounts are real units, shortened: 8 levels × 5,000 t of steel a day.
-  await expect(page.getByTestId('building-makes-steel_mill')).toHaveText('40 kt steel a day');
+  await expect(page.getByTestId('building-method-steel_mill')).toHaveText(
+    'Integrated mill (blast furnace)',
+  );
+  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('7,500 of 7,500');
+  // Amounts are real units, shortened: 3 levels × 5,000 t of steel a day.
+  await expect(page.getByTestId('building-makes-steel_mill')).toHaveText('15 kt steel a day');
   await expect(page.getByTestId('building-uses-steel_mill')).toHaveText(
-    '20 GWh electricity, 64 kt iron ore, 28 kt coal a day',
+    '7.5 GWh electricity, 24 kt iron ore, 10.5 kt coal a day',
   );
   await expect(page.getByTestId('building-limit-steel_mill')).toHaveCount(0);
   await expect(page.getByTestId('building-farm')).toContainText('Farm');
+  await expect(page.getByTestId('building-method-farm')).toHaveText('Mechanized farming');
+  await expect(page.getByTestId('building-solar_farm')).toContainText('Solar farm');
   await steel.scrollIntoViewIfNeeded();
   await shot('province-panel');
 
-  // The test tools change a level by hand: one more steel mill level, 4,000 more jobs.
+  // The test tools change a level by hand: one more steel mill level, 2,500 more jobs.
   const unemployment = async () =>
     Number.parseFloat(await page.getByTestId('province-unemployment').innerText());
   const before = await unemployment();
   await page.getByTestId('building-test-tools').locator('summary').click();
   await page.getByTestId('building-more-steel_mill').click();
-  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 9');
-  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('36,000 of 36,000');
+  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 4');
+  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('10,000 of 10,000');
   for (let i = 0; i < 9; i++) await page.getByTestId('building-more-steel_mill').click();
-  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 18');
+  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 13');
   expect(await unemployment()).toBeLessThan(before);
   for (let i = 0; i < 10; i++) await page.getByTestId('building-less-steel_mill').click();
-  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 8');
+  await expect(page.getByTestId('building-level-steel_mill')).toHaveText('Level 3');
 
-  // Germany's coal mines close: once the stockpile is used up, the power plants stop,
-  // and with them everything that runs on electricity.
-  expect(await setCountryLevels(page, 'DEU', 'coal_mine', 0)).toBeGreaterThan(3);
-  await page.evaluate(() => window.__terraScutum!.step(10));
-  await expect(page.getByTestId('building-output-steel_mill')).toHaveText('100 %');
-  await page.evaluate(() => window.__terraScutum!.step(30));
+  // All of Germany's power plants close: the steel mill stops at once, while
+  // the farm keeps half its output on its own generators (F85).
+  for (const plant of [
+    'coal_power_plant',
+    'gas_power_plant',
+    'nuclear_power_plant',
+    'hydro_power_plant',
+    'wind_farm',
+    'solar_farm',
+  ])
+    await setCountryLevels(page, 'DEU', plant, 0);
+  await page.evaluate(() => window.__terraScutum!.step(1));
   await expect(page.getByTestId('building-output-steel_mill')).toHaveText('0 %');
   await expect(page.getByTestId('building-limit-steel_mill')).toHaveText(
     'Held back: not enough electricity.',
   );
   await expect(page.getByTestId('building-makes-steel_mill')).toHaveText('0 t steel a day');
+  await expect(page.getByTestId('building-output-farm')).toHaveText('50 %');
   // The workers keep their jobs for now: layoffs come with markets (F65).
-  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('32,000 of 32,000');
+  await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('7,500 of 7,500');
   await steel.scrollIntoViewIfNeeded();
   await shot('province-panel-held-back');
 
@@ -154,38 +166,45 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   const screen = page.getByTestId('buildings-screen');
   await expect(screen).toBeVisible();
   await expect(page.getByTestId('buildings-country')).toHaveText('United States');
-  await expect(page.getByTestId('buildings-types').locator('tbody tr')).toHaveCount(6);
-  await expect(page.getByTestId('buildings-type-steel_mill')).toContainText('310');
+  expect(await page.getByTestId('buildings-types').locator('tbody tr').count()).toBeGreaterThan(20);
+  await expect(page.getByTestId('buildings-type-steel_mill')).toContainText('44');
+  await expect(page.getByTestId('buildings-methods-steel_mill')).toHaveText(
+    'Integrated mill (blast furnace) 100 %',
+  );
   await expect(page.getByTestId('buildings-output-steel_mill')).toHaveText('100 %');
   await expect(page.getByTestId('buildings-held-back')).toHaveText('0');
   // The national stockpile: 15 days of inputs to start with; electricity can't be stored.
-  await expect(page.getByTestId('stockpile').locator('tbody tr')).toHaveCount(6);
-  await expect(page.getByTestId('stockpile-stock-iron_ore')).toHaveText('37.2 Mt');
-  await expect(page.getByTestId('stockpile-made-iron_ore')).toHaveText('2.48 Mt');
-  await expect(page.getByTestId('stockpile-used-iron_ore')).toHaveText('2.48 Mt');
+  await expect(page.getByTestId('stockpile').locator('tbody tr')).toHaveCount(20);
+  await expect(page.getByTestId('stockpile-stock-iron_ore')).toHaveText('5.28 Mt');
+  await expect(page.getByTestId('stockpile-made-iron_ore')).toHaveText('128 kt');
+  await expect(page.getByTestId('stockpile-used-iron_ore')).toHaveText('352 kt');
+  // The United States mines less iron ore than its mills use: standing imports bring the rest.
+  await expect(page.getByTestId('stockpile-imported-iron_ore')).toHaveText('242 kt');
   await expect(page.getByTestId('stockpile-stock-electricity')).toHaveText("can't be stored");
-  await expect(page.getByTestId('stockpile-stock-steel')).toHaveText('0 t');
+  await expect(page.getByTestId('stockpile-stock-processed_food')).toHaveText('0 t');
+  // Homes, shops and offices use most of the electricity.
+  await expect(page.getByTestId('stockpile-other-electricity')).toContainText('TWh');
   await shot('screen');
 
   // A building type's name shows where it stands; a province's name opens its panel.
   await page.getByTestId('buildings-open-steel_mill').click();
   await expect(page.getByTestId('buildings-where-title')).toContainText('Steel mill');
-  const where = page.getByTestId('buildings-where').locator('tbody tr');
-  await expect(where.first()).toContainText('California');
+  await expect(page.getByTestId('buildings-where').locator('tbody tr').first()).toContainText(
+    'Integrated mill',
+  );
   await page.getByTestId('buildings-where-title').scrollIntoViewIfNeeded();
   await shot('screen-where');
 
-  // Steel piles up in the stockpile, up to 30 days of what is made.
+  // Processed food piles up in the stockpile until people buy it (F08, F65).
   await page.evaluate(() => window.__terraScutum!.step(10));
-  await expect(page.getByTestId('stockpile-stock-steel')).toHaveText('15.5 Mt');
+  await expect(page.getByTestId('stockpile-stock-processed_food')).toContainText('Mt');
 
-  // The United States' iron mines close: when the ore runs out, the steel mills stop,
-  // and the alerts row says so.
-  await setCountryLevels(page, 'USA', 'iron_mine', 0);
-  await expect(page.getByTestId('stockpile-lasts-iron_ore')).toHaveText('15 days');
+  // The United States' oil fields close: when the crude oil in stock runs out, the
+  // refineries run only on the standing imports, and the alerts row says so.
+  await setCountryLevels(page, 'USA', 'oil_field', 0);
+  await expect(page.getByTestId('stockpile-lasts-crude_oil')).toHaveText('18 days');
   await page.evaluate(() => window.__terraScutum!.step(20));
-  await expect(page.getByTestId('buildings-output-steel_mill')).toHaveText('0 %');
-  await expect(page.getByTestId('stockpile-lasts-iron_ore')).toHaveText('empty');
+  await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('5 %');
   await expect(page.getByTestId('buildings-held-back')).not.toHaveText('0');
   await page.getByTestId('stockpile').scrollIntoViewIfNeeded();
   await shot('screen-held-back');
@@ -193,9 +212,9 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await expect(alert).toHaveCount(1);
   await expect(alert).toHaveAttribute('data-alert-type', 'idle_factory');
 
-  // The test button refills the stockpile (as imports will): the mills run again.
+  // The test button refills the stockpile (as trade will): the refineries run again.
   await page.getByTestId('stockpile-test-fill').click();
-  await expect(page.getByTestId('buildings-output-steel_mill')).toHaveText('100 %');
+  await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('100 %');
   await expect(alert).toHaveCount(0);
 
   // The alert again, and a click on it shows the worst building's province.
@@ -203,12 +222,12 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await page.getByTestId('shell-window-close').click();
   await expect(alert).toHaveCount(1);
   await alert.hover();
-  await expect(alert).toContainText('Steel mill in California runs at 0 %');
+  await expect(alert).toContainText('Oil refinery in');
+  await expect(alert).toContainText('runs at 5 %');
   await shot('alert');
   await alert.click();
-  await expect(page.getByTestId('province-name')).toHaveText('California');
-  await expect(page.getByTestId('building-limit-steel_mill')).toHaveText(
-    'Held back: not enough iron ore.',
+  await expect(page.getByTestId('building-limit-oil_refinery')).toHaveText(
+    'Held back: not enough crude oil.',
   );
   // Dismissed with a right-click, it stays away.
   await alert.click({ button: 'right' });

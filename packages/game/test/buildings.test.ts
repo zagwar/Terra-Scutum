@@ -14,6 +14,8 @@ import {
   countryBuildings,
   countryStockpile,
   isHeldBack,
+  jobsPerLevel,
+  otherElectricity,
   provinceBuildings,
   recipeAmounts,
   stoppedBuildings,
@@ -21,7 +23,7 @@ import {
 import { formatAmount, formatMoneyShort } from '../src/ui/i18n';
 import { RAW_GAME_DATA } from '../src/worker/game-data';
 
-// The buildings (F07) as the game shows them, on the real world's starting data.
+// The buildings (F07, F85) as the game shows them, on the real world's starting data.
 const data = parseGameData(RAW_GAME_DATA);
 const newGame = () => {
   const state = new GameState({ data, seed: 1 });
@@ -43,51 +45,63 @@ const { state, province, country, snapshot } = newGame();
 const buildings = snapshot();
 const { goods, pops } = data;
 
-describe('the world’s starting buildings (F07)', () => {
-  it('gives the bigger economies the example buildings, and they all run', () => {
+describe('the world’s starting buildings (F85)', () => {
+  it('gives every country its real buildings, and they (nearly) all run', () => {
     const report = ensureBuildingsReport(state);
     const owners = new Set<number>();
+    let heldBack = 0;
     for (let i = 0; i < report.cellCount; i++) {
       const cell = report.cells[i];
       owners.add(state.provinceOwner[Math.floor(cell / report.typeCount)]);
-      expect(isHeldBack(report.limitKind[cell])).toBe(false);
+      if (isHeldBack(report.limitKind[cell])) heldBack += 1;
     }
-    expect(owners.size).toBeGreaterThan(100);
+    // Only a microstate's one factory level is too big for its few workers (Liechtenstein).
+    expect(heldBack).toBeLessThanOrEqual(3);
+    expect(report.cellCount).toBeGreaterThan(10_000);
+    expect(owners.size).toBeGreaterThan(165);
     expect(owners.has(country('USA'))).toBe(true);
-    // A small economy has none: its people work in the rest of the economy.
-    expect(owners.has(country('BDI'))).toBe(false);
-    // Buildings are a small part of all jobs so far (the stand-in economy has the rest).
+    expect(owners.has(country('BDI'))).toBe(true);
+    // Buildings offer about a third of all jobs: farming and the catalog's industries.
     const sum = (values: ArrayLike<number>) => Array.from(values).reduce((a, b) => a + b, 0);
     const share = sum(state.population.buildingJobs) / sum(state.population.jobs);
-    expect(share).toBeGreaterThan(0.003);
-    expect(share).toBeLessThan(0.02);
+    expect(share).toBeGreaterThan(0.25);
+    expect(share).toBeLessThan(0.4);
   });
 });
 
 describe('reading the buildings snapshot', () => {
-  it('lists a province’s buildings in the order of buildings.json', () => {
+  it('lists a province’s buildings in the order of buildings.json, with their methods', () => {
     const rows = provinceBuildings(buildings, data.buildings, province('deu_bavaria'));
-    expect(rows.map((row) => row.definition.id)).toEqual([
-      'farm',
-      'iron_mine',
-      'coal_mine',
-      'coal_power_plant',
-      'food_processing_plant',
-      'steel_mill',
-    ]);
-    const steel = rows[5];
-    expect(steel).toMatchObject({ level: 8, output: 1, limitKind: BUILDING_LIMIT.none });
-    expect(steel.jobs).toBe(8 * 4000);
+    const ids = rows.map((row) => row.definition.id);
+    const order = data.buildings.buildings.map((building) => building.id);
+    expect(ids).toEqual([...ids].sort((a, b) => order.indexOf(a) - order.indexOf(b)));
+    expect(ids).toEqual(expect.arrayContaining(['farm', 'steel_mill', 'solar_farm']));
+    const farm = rows.find((row) => row.definition.id === 'farm')!;
+    expect(farm.methodDefinition.id).toBe('mechanized_farming');
+    const steel = rows.find((row) => row.definition.id === 'steel_mill')!;
+    expect(steel).toMatchObject({ output: 1, limitKind: BUILDING_LIMIT.none, method: 0 });
+    expect(steel.jobs).toBe(steel.level * jobsPerLevel(steel.methodDefinition));
     expect(steel.workers).toBeCloseTo(steel.jobs, 0);
     expect(steel.wages).toBeGreaterThan(0);
     expect(provinceBuildings(buildings, data.buildings, province('bra_brazilian_island'))).toEqual(
       [],
     );
+    // A poor country farms by hand.
+    const indiaFarms = countryBuildings(
+      buildings,
+      data.buildings,
+      goods,
+      state.provinceOwner,
+      country('IND'),
+    ).find((type) => type.definition.id === 'farm')!;
+    expect(
+      indiaFarms.methods.map(({ method }) => indiaFarms.definition.methods[method].id),
+    ).not.toContain('mechanized_farming');
   });
 
   it('works out what a building uses and makes at its level', () => {
     const steelMill = data.buildings.buildings.find((building) => building.id === 'steel_mill')!;
-    const { uses, makes } = recipeAmounts(steelMill, goods, 3);
+    const { uses, makes } = recipeAmounts(steelMill.methods[0], goods, 3);
     expect(makes).toEqual([{ good: 'steel', amount: 15_000 }]);
     expect(uses).toEqual([
       { good: 'electricity', amount: 7_500 },
@@ -98,53 +112,77 @@ describe('reading the buildings snapshot', () => {
   });
 
   it('sums up a country’s buildings by type', () => {
-    const types = countryBuildings(buildings, data.buildings, state.provinceOwner, country('USA'));
+    const types = countryBuildings(
+      buildings,
+      data.buildings,
+      goods,
+      state.provinceOwner,
+      country('USA'),
+    );
     expect(types.map((type) => type.definition.id)).toContain('steel_mill');
     const steel = types.find((type) => type.definition.id === 'steel_mill')!;
-    expect(steel.levels).toBe(310);
-    expect(steel.jobs).toBe(310 * 4000);
+    // About 80 million tonnes of steel a year, as in 2024.
+    expect(steel.levels * 5000 * 365).toBeGreaterThan(75e6);
+    expect(steel.levels * 5000 * 365).toBeLessThan(85e6);
+    expect(steel.jobs).toBe(steel.levels * 2500);
     expect(steel.output).toBeCloseTo(1, 6);
     expect(steel.heldBack).toBe(0);
-    expect(steel.rows.reduce((sum, row) => sum + row.level, 0)).toBe(310);
-    // The biggest first: California has the most people.
-    expect(state.world.provinceIds[steel.rows[0].province]).toBe('usa_california');
-    expect(
-      countryBuildings(buildings, data.buildings, state.provinceOwner, country('BDI')),
-    ).toEqual([]);
+    expect(steel.methods).toEqual([{ method: 0, levels: steel.levels }]);
+    expect(steel.makes).toEqual([{ good: 'steel', amount: steel.levels * 5000 }]);
+    expect(steel.rows.reduce((sum, row) => sum + row.level, 0)).toBe(steel.levels);
+    expect(steel.rows[0].level).toBeGreaterThanOrEqual(steel.rows[steel.rows.length - 1].level);
   });
 
-  it('shows a country’s national stockpile', () => {
+  it('shows a country’s national stockpile with its standing imports', () => {
     const rows = countryStockpile(buildings, goods, country('USA'));
     const of = (good: string) => rows.find((row) => row.good === good)!;
     expect(rows.map((row) => row.good)).toEqual(goods.goods.map((good) => good.id));
-    // 15 days of the 2.48 million tonnes of ore the steel mills use a day.
-    expect(of('iron_ore')).toMatchObject({ stored: true, daysLeft: null });
-    expect(of('iron_ore').stock).toBeCloseTo(15 * 2_480_000, 0);
-    expect(of('iron_ore').made).toBeCloseTo(2_480_000, 0);
-    expect(of('steel')).toMatchObject({ stock: 0, used: 0 });
-    expect(of('steel').limit).toBeCloseTo(30 * 1_550_000, 0);
-    expect(of('electricity')).toMatchObject({ stored: false, stock: 0 });
+    // The steel mills use more iron ore than the United States mines: the rest is imported.
+    const ore = of('iron_ore');
+    expect(ore).toMatchObject({ stored: true, daysLeft: null });
+    expect(ore.stock).toBeCloseTo(15 * ore.used, 0);
+    expect(ore.made).toBeLessThan(ore.used);
+    expect(ore.imported).toBeCloseTo((ore.used - ore.made) * 1.05 + ore.made * 0.05, 0);
+    expect(of('processed_food')).toMatchObject({ stock: 0, used: 0, imported: 0 });
+    expect(of('electricity')).toMatchObject({ stored: false, stock: 0, imported: 0 });
+    // Homes, shops and offices use most of the electricity.
+    const other = otherElectricity(buildings, country('USA'));
+    expect(other.used).toBeCloseTo(other.wanted, 3);
+    expect(other.wanted).toBeGreaterThan(of('electricity').used * 0.8);
     expect(of('electricity').made).toBeCloseTo(of('electricity').used, 3);
-    expect(countryStockpile(buildings, goods, country('BDI'))).toEqual([]);
   });
 
   it('finds the buildings that are stopped, the worst first', () => {
     const game = newGame();
     const usa = game.country('USA');
+    const refineries = countryBuildings(
+      game.snapshot(),
+      data.buildings,
+      goods,
+      game.state.provinceOwner,
+      usa,
+    ).find((type) => type.definition.id === 'oil_refinery')!;
     const stopped = () =>
       stoppedBuildings(game.snapshot(), data.buildings, game.state.provinceOwner, usa);
     expect(stopped()).toEqual({ count: 0, worst: null });
-    game.setCountryLevels('USA', 'iron_mine', 0);
-    // The stockpile lasts 15 days; then the steel mills stop.
+    game.setCountryLevels('USA', 'oil_field', 0);
+    // The crude oil in stock lasts about 16 days; then only the imports come in.
     for (let day = 0; day < 10; day++) game.state.advanceDay();
     expect(stopped().count).toBe(0);
-    expect(countryStockpile(game.snapshot(), goods, usa)[2].daysLeft).toBeCloseTo(5, 6);
+    const crude = countryStockpile(game.snapshot(), goods, usa).find(
+      (row) => row.good === 'crude_oil',
+    )!;
+    expect(crude.daysLeft).toBeGreaterThan(5);
+    expect(crude.daysLeft).toBeLessThan(7);
     for (let day = 0; day < 10; day++) game.state.advanceDay();
     const { count, worst } = stopped();
-    expect(count).toBe(45);
-    expect(worst).toMatchObject({ output: 0, limitKind: BUILDING_LIMIT.input, level: 37 });
-    expect(limitText(worst!, pops, goods)).toBe('Held back: not enough iron ore.');
-    expect(game.state.world.provinceIds[worst!.province]).toBe('usa_california');
+    expect(count).toBe(refineries.buildings);
+    expect(worst).toMatchObject({
+      limitKind: BUILDING_LIMIT.input,
+      level: refineries.rows[0].level,
+    });
+    expect(worst!.output).toBeLessThan(0.1);
+    expect(limitText(worst!, pops, goods)).toBe('Held back: not enough crude oil.');
   });
 
   it('says what holds a building back', () => {
@@ -154,6 +192,7 @@ describe('reading the buildings snapshot', () => {
     expect(limit(BUILDING_LIMIT.workers, 1)).toBe('Held back: not enough skilled workers.');
     expect(limit(BUILDING_LIMIT.electricity, 0)).toBe('Held back: not enough electricity.');
     expect(limit(BUILDING_LIMIT.input, 3)).toBe('Held back: not enough coal.');
+    expect(limit(BUILDING_LIMIT.input, 4)).toBe('Held back: not enough crude oil.');
     expect(limit(BUILDING_LIMIT.demand, 0)).toBe('No more electricity is needed today.');
   });
 });
@@ -177,15 +216,11 @@ describe('the idle factory alert', () => {
     };
     pass(1);
     expect(store.getState().alerts).toEqual([]);
-    game.setCountryLevels('USA', 'iron_mine', 0);
+    game.setCountryLevels('USA', 'oil_field', 0);
     pass(20);
     const [alert] = store.getState().alerts;
-    expect(alert).toMatchObject({
-      id: IDLE_BUILDINGS_ALERT_ID,
-      typeId: 'idle_factory',
-      target: { kind: 'province', index: game.province('usa_california') },
-    });
-    expect(alert.params).toMatchObject({ count: 45, building: 'Steel mill', output: '0 %' });
+    expect(alert).toMatchObject({ id: IDLE_BUILDINGS_ALERT_ID, typeId: 'idle_factory' });
+    expect(alert.params).toMatchObject({ building: 'Oil refinery', output: '5 %' });
     // Another country's trouble is not the player's alert.
     store.update({ playerCountry: game.country('DEU') });
     expect(store.getState().alerts).toEqual([]);

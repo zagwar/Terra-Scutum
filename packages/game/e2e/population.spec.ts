@@ -82,7 +82,7 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
   const pops = page.getByTestId('province-pops');
   await expect(pops.locator('tbody tr')).toHaveCount(6);
   await expect(page.getByTestId('province-pops-laborers')).toContainText('Laborers');
-  await expect(page.getByTestId('province-pops-laborers')).toContainText('2.47M');
+  await expect(page.getByTestId('province-pops-laborers')).toContainText('2.36M');
   await expect(page.getByTestId('province-pops-laborers')).toContainText('$40.4k');
   await expect(page.getByTestId('province-pops-soldiers')).toContainText('Soldiers');
   await shot('province-panel');
@@ -99,8 +99,8 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
   expect(after[bavaria]).toBeLessThan(13_216_947);
   expect(after[bavaria]).toBeGreaterThan(13_100_000);
 
-  // Half of Bavaria's jobs close (a test command, as closing buildings will later):
-  // unemployment jumps and people can afford less.
+  // Half of the rest of the economy's jobs in Bavaria close (a test command; its
+  // buildings keep theirs): unemployment jumps and people can afford less.
   const result = await page.evaluate(() =>
     window.__terraScutum!.sendCommand({
       type: 'debugScaleJobs',
@@ -110,7 +110,7 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
     }),
   );
   expect(result).toEqual({ ok: true });
-  await expect(page.getByTestId('province-unemployment')).toHaveText(/^5\d\.\d %$/);
+  await expect(page.getByTestId('province-unemployment')).toHaveText(/^[45]\d\.\d %$/);
   expect(await numberOf(page, 'province-living')).toBeLessThan(living - 5);
   await shot('province-panel-jobs-closed');
 

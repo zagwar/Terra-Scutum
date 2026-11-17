@@ -83,29 +83,51 @@ in provinces, and goods move over the transport network.
 - **Missing inputs:** a building that can't get all its inputs runs at partial output. If it has no electricity or workers, it stops.
 - **Who builds:** both the state and corporations. See **Private vs state construction** below.
 
-#### How buildings work in the game (built in F07) [DEFAULT]
-All numbers are in `data/buildings.json` and `data/goods.json`.
-- **One building of each type per province, with a level.** A recipe is **per level, per day**: workers by pop group, electricity, inputs → outputs. A level-3 building needs three times as much of everything and makes three times the output.
+#### How buildings work in the game (built in F07 and F85) [DEFAULT]
+All numbers are in `data/buildings.json` and `data/goods.json`; each country's starting buildings in `data/building_start.json`.
+- **One building of each type per province, with a level and a production method.** A recipe is **per level, per day**: workers by pop group, electricity, inputs → outputs. A level-3 building needs three times as much of everything and makes three times the output.
+- **Production methods (F85, Victoria 3-style; designer decision):** a building type has one or more methods, each a full recipe; a building runs one of them. Methods of the same building make the same goods per level but differ in workers and inputs: a **mechanized** farm needs 1,000 workers, fuel and fertilizer for 500 t of grain a day, a **traditional** one 10,000 workers and a little fertilizer, a **subsistence** one 100,000 workers and nothing else. So a poor country isn't as productive as a rich one: it runs labor-intensive methods. A newly built building runs its type's first (most modern) method. Switching methods, and research unlocking better ones, come with F88.
 - **Real units, shortened on screen** (designer decision): goods are counted in tonnes and electricity in megawatt-hours, sized like real plants; the screens show 5 kt, 1.4 Mt, 2.5 GWh.
 - **Workers:** a building offers jobs to the pops of its province. Where a pop group is too small for all its jobs, every employer gets the same share, and a building runs only as far as its **scarcest pop group** allows; without workers of a group it needs, it stops. Buildings pay the going local wage (section 8.1).
-- **National stockpile (a stand-in until markets, F65):** each country keeps what its buildings make until its buildings use it. A campaign starts with 15 days of inputs; a country keeps at most 30 days of what it uses or makes, and the rest is lost (sold abroad, once there is trade).
+- **National stockpile (a stand-in until markets, F65):** each country keeps what its buildings make until its buildings use it. A campaign starts with 15 days of inputs; a country keeps at most 30 days of what it uses or makes, and the rest is lost (sold abroad).
+- **Standing imports (F85, a stand-in until trade, F19):** every day each country gets, free, what its *starting* buildings use but it doesn't make itself (Japan's iron ore and coal, Europe's gas), plus 5 % of everything its starting buildings use. Fixed for the campaign until trade replaces them.
 - **Missing inputs:** when a good is short, every building that needs it gets the same share and runs at **partial output**.
-- **Electricity** can't be stored. Power plants make what the country's buildings ask for that day (a plant with little to do runs below full output and burns less fuel). With too little electricity buildings run at partial output; with none they stop. A country whose power plants run out of fuel can't restart by itself (its mines need electricity too): it needs goods from outside, which trade (F19) will bring. The power grid (F74) will make electricity a matter of provinces.
+- **Electricity** can't be stored. Power plants make what the country asks for that day: its buildings, and **the rest of the economy and homes** (F85: 90 % of what the starting power plants can make, less what the starting buildings use, per person; it grows with the population). Plants that **burn nothing** (nuclear, hydro, wind, solar) run first, then the gas and coal plants for the rest (a plant with little to do burns less fuel). With too little electricity everyone gets the same share and buildings run at partial output; with none they stop, except **off the grid** (F85): mines, oil and gas fields and refineries keep 25 % of their output on their own generators, mechanized farms 50 %, traditional farms 80 %; subsistence farms and herders need no electricity. So a country whose power plants ran out of fuel slowly climbs back by itself (designer decision: running out of fuel stays a real risk, with slow self-recovery). The power grid (F74) will make electricity a matter of provinces and add blackout priorities.
 - **Output** = the share of jobs filled (by the scarcest pop group) × the scarcest of electricity and inputs. The screens name what holds a building back most.
 - **Every day, in three steps:** power plants (energy), then farms and mines (resource production), then everything else (industry). What a step makes is in the stockpile for the next step; the province's current owner gets it.
-- **The example buildings** (per level and day; the building catalog comes with F85):
+- **The building catalog (F85)** (per level and day; the first method of each; workers in the most productive countries):
 
-| Building | Workers | Uses | Makes |
-|---|---|---|---|
-| Farm | 500 | 25 MWh | 1,000 t grain |
-| Iron mine | 1,500 | 200 MWh | 8,000 t iron ore |
-| Coal mine | 1,500 | 150 MWh | 6,000 t coal |
-| Coal power plant | 300 | 6,000 t coal | 15,000 MWh electricity |
-| Food processing plant | 1,500 | 2,000 t grain, 150 MWh | 1,600 t processed food |
-| Steel mill | 4,000 | 8,000 t iron ore, 3,500 t coal, 2,500 MWh | 5,000 t steel |
+| Building | Methods | Workers | Uses | Makes |
+|---|---|---|---|---|
+| Farm | mechanized / traditional / subsistence | 1,000 / 10,000 / 100,000 | 20 MWh, 5 t fuel, 10 t chemicals | 500 t grain |
+| Ranch | intensive / pastoral herding | 900 / 30,000 | 15 MWh, 400 t grain, 2 t fuel | 300 t livestock and fish |
+| Fishery | trawler fleet / artisanal | 400 / 10,000 | 5 MWh, 15 t fuel | 100 t livestock and fish |
+| Iron mine | mechanized / labor-intensive | 500 / 2,500 | 200 MWh, 30 t fuel | 8,000 t iron ore |
+| Coal mine | mechanized / labor-intensive | 700 / 3,500 | 150 MWh, 20 t fuel | 6,000 t coal |
+| Copper mine | mechanized / labor-intensive | 1,000 / 4,000 | 250 MWh, 25 t fuel | 1,000 t copper ore |
+| Bauxite mine | mechanized / labor-intensive | 400 / 1,600 | 100 MWh, 25 t fuel | 10,000 t bauxite |
+| Quarry | mechanized / labor-intensive | 200 / 1,000 | 50 MWh, 10 t fuel | 5,000 t stone |
+| Oil field | conventional drilling | 200 | 150 MWh | 5,000 t crude oil |
+| Gas field | conventional drilling | 120 | 100 MWh | 3,000 t natural gas |
+| Coal power plant | steam turbines | 300 | 6,000 t coal | 15,000 MWh |
+| Gas power plant | combined cycle | 120 | 2,100 t natural gas | 15,000 MWh |
+| Nuclear power plant | fission reactor | 700 | nothing (no uranium good yet) | 24,000 MWh |
+| Hydro power plant | dam | 60 | nothing | 6,000 MWh |
+| Wind farm | wind turbines | 30 | nothing | 2,400 MWh |
+| Solar farm | solar panels | 20 | nothing | 1,200 MWh |
+| Steel mill | integrated mill / older mill (blast furnace) | 2,500 / 10,000 | 2,500 MWh, 8,000 t iron ore, 3,500 t coal | 5,000 t steel |
+| Oil refinery | distillation and cracking | 800 | 300 MWh, 10,000 t crude oil | 8,500 t fuel, 1,000 t chemicals |
+| Chemical plant | gas-based chemistry | 500 | 400 MWh, 1,000 t natural gas | 1,200 t chemicals |
+| Plastics plant | polymerization | 400 | 300 MWh, 1,100 t chemicals | 1,000 t plastic |
+| Copper smelter | flash smelting | 600 | 600 MWh, 1,000 t copper ore, 20 t fuel | 250 t copper |
+| Aluminum smelter | electrolysis | 1,500 | 15,000 MWh, 4,500 t bauxite | 1,000 t aluminum |
+| Silicon plant | arc furnace | 300 | 1,200 MWh, 300 t stone, 150 t coal | 100 t silicon |
+| Food processing plant | industrial / manual | 1,200 / 6,000 | 150 MWh, 1,500 t grain, 400 t livestock and fish | 1,600 t processed food |
+| Electronics plant | automated / manual assembly | 1,500 / 6,000 | 400 MWh, 5 t silicon, 15 t copper, 40 t plastic | 100 t electronics |
+| Consumer goods factory | assembly line / workshops | 10,000 / 60,000 | 300 MWh, 150 t steel, 150 t plastic, 20 t aluminum, 20 t electronics (workshops: 100 MWh, 150 t steel, 150 t chemicals) | 500 t consumer goods |
 
-- **Starting buildings (a stand-in until F85):** every country gets one steel mill level per US$100 billion of GDP and one food processing plant level per US$25 billion, plus as many farms, mines and power plants as these need, shared among its provinces by population. About 150 countries start with buildings; together they offer about 0.6 % of the world's jobs.
-- **Not in F07:** building slots, deposits, farmland and coastal rules, costs and construction (F12), production methods (F88), prices, profits and layoffs (F65), transport (F86), the power grid (F74), ownership by corporations or the state (F12, F89). Until construction exists, **test buttons** change levels by hand.
+- **Starting buildings (F85):** each country's real production in 2024 (see `packages/tools/starting-data/README.md`): mines, fields and power plants from the energy statistics (Our World in Data: Energy Institute, Ember), steel and metals from worldsteel and the USGS (typed in approximately), farming, fishing and manufacturing from the World Bank; placed in the real producing provinces of the big producers, otherwise by population or land. The production methods follow each country's productivity: its farms employ its real farm workers, so India's farms are mostly subsistence and traditional, the United States' mechanized. Each province starts with the pop mix its buildings need (a steel province has more skilled workers); each country keeps the split of F06. The world makes about what it really makes (1.9 billion t of steel, 8.4 billion t of coal, 4.6 billion t of crude oil, 32,000 TWh), and buildings offer about **30 % of the world's jobs** (almost all farm jobs and the industries in the catalog); "the rest of the economy" keeps services, construction, vehicles and machinery.
+- **Not built yet:** building slots, deposits, farmland and coastal rules, costs and construction (F12; the provinces where the starting mines and fields are become the deposits); switching production methods and research (F88); prices, profits and layoffs (F65); trade (F19); transport (F86); the power grid (F74); ownership by corporations or the state (F12, F89); military chains (F14, M3); fortifications and housing (planned with construction, combat and refugees: F141, F142). Until construction exists, **test buttons** change levels by hand.
 
 #### Example production chains [DEFAULT]
 ```
@@ -120,16 +142,26 @@ Chemical plant ─► Chemicals ─────┘                              
                                                                        │
                                      Mech assembly plant (mech parts + electronics + electricity) ─► Mech Walkers
 
-Oil well ─► Oil refinery ─┬─► Fuel ──────────────► Supply depots, vehicles, power plants
+Oil field ─► Oil refinery ─┬─► Fuel ─────────────► Farms, fisheries, mines (later supply depots, vehicles)
                           └─► Chemicals ─┬─► Explosives ─┐
 Steel ───────────────────────────────────┼───────────────┴─► Ammunition plant ─► Ammunition
 Heavy-metal mine ─► Heavy-metal refinery ─► Heavy metals ─► Disruptor round plant (+ steel + explosives) ─► Disruptor rounds
 
-Farm ─► Grain ─► Food processing plant ─┬─► Processed food (civilians)
-                                        └─► Rations (army)
+Farm ─► Grain ─┬─────────────► Food processing plant ─┬─► Processed food (civilians)
+               └─► Ranch ─┐       ▲                    └─► Rations (army, M3)
+Fishery ─────────────────┴─► Livestock and fish
+
+Gas field ─► Natural gas ─┬─► Gas power plant ─► Electricity
+                          └─► Chemical plant ─► Chemicals ─┬─► Plastics plant ─► Plastic ─┐
+Copper mine ─► Copper smelter ─► Copper ─┐                 └─► Farms (fertilizer)        │
+Quarry ─► Stone ─► Silicon plant ─► Silicon ─┴─► Electronics plant ◄──────────────────────┤
+Bauxite mine ─► Aluminum smelter ─► Aluminum ─┐                  │                        │
+Steel ─────────────────────────────────────────┴─► Consumer goods factory ◄──────────────┘
 ```
+(The chains built in F85: food, steel, fuel, metals and consumer goods. Military chains come in M3.)
 
 #### Building catalog [DEFAULT; full stats to be written, section 17]
+*Built so far (F85): the extraction, energy, processing and civilian manufacturing buildings of the table above, except the heavy-metal and rare metals mines, the heavy-metal refinery, the construction materials, explosives and luxury goods buildings, the machine parts plant and the substation. The fortifications and housing are planned as F141 and F142.*
 | Category | Buildings |
 |---|---|
 | **Extraction** | Farm, ranch, fishery, iron mine, coal mine, oil well, gas field, rare metals mine, heavy-metal mine, quarry |
@@ -255,9 +287,9 @@ Corporations are simulated like small countries inside the economy. They update 
 - During the war, **global markets** tighten: prices rise as producing countries fall.
 
 #### Goods and markets (simplified Victoria)
-- **Goods [DEFAULT, about 30]:**
-  - **Raw:** grain, livestock/fish, iron ore, coal, oil, natural gas, rare metals, heavy metals, stone
-  - **Intermediate:** steel, fuel, chemicals, explosives, electronics, machine parts, construction materials, electricity
+- **Goods [DEFAULT, about 35]:** *(F85 built the ones in `data/goods.json`: grain, livestock and fish, iron ore, coal, crude oil, natural gas, copper ore, bauxite, stone, steel, fuel, chemicals, plastic, copper, aluminum, silicon, electronics, processed food, consumer goods, electricity. Copper, aluminum, silicon and plastic were added by the designer during F85.)*
+  - **Raw:** grain, livestock/fish, iron ore, coal, oil, natural gas, copper ore, bauxite, rare metals, heavy metals, stone
+  - **Intermediate:** steel, fuel, chemicals, plastic, copper, aluminum, silicon, explosives, electronics, machine parts, construction materials, electricity
   - **Civilian:** processed food, consumer goods, luxury goods, services
   - **Military:** rations, small arms, ammunition, disruptor rounds, vehicles, artillery, aircraft, missiles, mech parts, mech walkers, launch vehicles
 - Each country has **one national market**. Buildings sell what they produce there and buy their inputs there. Pops buy their needs there. The government buys military goods there.

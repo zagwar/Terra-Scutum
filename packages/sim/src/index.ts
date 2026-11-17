@@ -20,6 +20,8 @@ export * from './data/terrain-format';
 export * from './data/country-screen-config';
 export * from './economy/buildings';
 export * from './economy/buildings-data';
+export * from './economy/building-start';
+export * from './economy/starting-economy';
 export * from './economy/pops-data';
 export * from './economy/population';
 export * from './politics/government-types';

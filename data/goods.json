@@ -1,10 +1,24 @@
 {
   "goods": [
     { "id": "grain", "unit": "t" },
-    { "id": "processed_food", "unit": "t" },
+    { "id": "livestock_fish", "unit": "t" },
     { "id": "iron_ore", "unit": "t" },
     { "id": "coal", "unit": "t" },
+    { "id": "crude_oil", "unit": "t" },
+    { "id": "natural_gas", "unit": "t" },
+    { "id": "copper_ore", "unit": "t" },
+    { "id": "bauxite", "unit": "t" },
+    { "id": "stone", "unit": "t" },
     { "id": "steel", "unit": "t" },
+    { "id": "fuel", "unit": "t" },
+    { "id": "chemicals", "unit": "t" },
+    { "id": "plastic", "unit": "t" },
+    { "id": "copper", "unit": "t" },
+    { "id": "aluminum", "unit": "t" },
+    { "id": "silicon", "unit": "t" },
+    { "id": "electronics", "unit": "t" },
+    { "id": "processed_food", "unit": "t" },
+    { "id": "consumer_goods", "unit": "t" },
     { "id": "electricity", "unit": "MWh" }
   ],
   "electricity": "electricity"
