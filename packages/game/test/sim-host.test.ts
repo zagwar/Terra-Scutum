@@ -384,10 +384,14 @@ describe('game speed (F04): the sim worker runs the days by itself', () => {
     running.time.advance(1_000);
     const stepped = timedHost();
     stepped.host.handle({ type: 'step', requestId: 1, days: 10 });
-    // (The population's version counts how often it was sent, which differs; its numbers don't.)
-    const { populationVersion: _a, ...ran } = lastSnapshot(running.posted);
-    const { populationVersion: _b, ...stepping } = lastSnapshot(stepped.posted);
-    void [_a, _b];
+    // (The population's and the buildings' versions count how often they were sent, which differs; their numbers don't.)
+    const { populationVersion: _a, buildingsVersion: _c, ...ran } = lastSnapshot(running.posted);
+    const {
+      populationVersion: _b,
+      buildingsVersion: _d,
+      ...stepping
+    } = lastSnapshot(stepped.posted);
+    void [_a, _b, _c, _d];
     expect(ran).toEqual(stepping);
     expect(ran.population?.countryPopulation).toBeDefined();
     expect(lastSnapshot(running.posted)).toMatchObject({ day: 10, date: { month: 1, day: 11 } });

@@ -162,6 +162,8 @@ export interface MapView {
   setProvinceOwners(provinceOwner: Uint16Array): void;
   /** Everyone living in each province (from the sim's snapshot, F06), for the population map mode. */
   setProvincePopulation(provincePopulation: Float64Array): void;
+  /** The people at work in each province's buildings (from the sim's snapshot, F07), for the industry map mode. */
+  setProvinceIndustry(provinceWorkers: Float64Array): void;
   setSelectedProvince(province: number | null): void;
   setSelectedSeaZone(seaZone: number | null): void;
   /** Tints every province of a country (index), or none (null): the country picked while choosing (F05). */
@@ -475,7 +477,10 @@ export async function createMapView(
   // ── Colors and highlights ─────────────────────────────────────────────────
   /** Everyone living in each province, once the sim has said (the population map mode's colors). */
   let population: Float64Array | null = null;
-  const colorsOf = () => provinceBaseColors(mode, world, config.colors, owners, population);
+  /** The people at work in each province's buildings, once the sim has said (the industry map mode's colors). */
+  let industry: Float64Array | null = null;
+  const colorsOf = () =>
+    provinceBaseColors(mode, world, config.colors, owners, population, industry);
   let baseColors = colorsOf();
   const highlights = new Uint8Array(baseColors.length);
   let selected: number | null = null;
@@ -1189,6 +1194,14 @@ export async function createMapView(
       if (provincePopulation === population) return;
       population = provincePopulation;
       if (mode === 'population') {
+        baseColors = colorsOf();
+        refreshBaseColors();
+      }
+    },
+    setProvinceIndustry(provinceWorkers) {
+      if (provinceWorkers === industry) return;
+      industry = provinceWorkers;
+      if (mode === 'industry') {
         baseColors = colorsOf();
         refreshBaseColors();
       }

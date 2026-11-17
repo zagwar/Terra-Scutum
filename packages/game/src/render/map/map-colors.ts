@@ -9,7 +9,14 @@ import { type MapViewConfig, type WorldMap, isCoastZone, neighborsOf } from '@te
  */
 
 /** The map modes that exist so far (section 12.2); more come with their features. */
-export const MAP_MODES = ['political', 'provinces', 'regions', 'seaZones', 'population'] as const;
+export const MAP_MODES = [
+  'political',
+  'provinces',
+  'regions',
+  'seaZones',
+  'population',
+  'industry',
+] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
 type Rgb = readonly [number, number, number];
@@ -54,14 +61,31 @@ function write(target: Uint8Array, index: number, color: Rgb): void {
  * mode's scale: the steps' colors, mixed by the logarithm of the density.
  */
 export function populationDensityColor(perKm2: number, steps: Colors['populationDensity']): Rgb {
+  return scaleColor(perKm2, steps, (step) => step.perKm2);
+}
+
+/**
+ * The color for so many people at work in a province's buildings (F07) on
+ * the industry map mode's scale, mixed the same way.
+ */
+export function industryColor(workers: number, steps: Colors['industry']): Rgb {
+  return scaleColor(workers, steps, (step) => step.workers);
+}
+
+/** The color for a value on a scale of steps: the steps' colors, mixed by the logarithm of the value. */
+function scaleColor<Step extends { readonly color: string }>(
+  value: number,
+  steps: readonly Step[],
+  at: (step: Step) => number,
+): Rgb {
   const last = steps[steps.length - 1];
-  if (!(perKm2 > steps[0].perKm2)) return parseHexColor(steps[0].color);
-  if (perKm2 >= last.perKm2) return parseHexColor(last.color);
+  if (!(value > at(steps[0]))) return parseHexColor(steps[0].color);
+  if (value >= at(last)) return parseHexColor(last.color);
   let i = 1;
-  while (steps[i].perKm2 < perKm2) i++;
+  while (at(steps[i]) < value) i++;
   const low = steps[i - 1];
   const high = steps[i];
-  const amount = Math.log(perKm2 / low.perKm2) / Math.log(high.perKm2 / low.perKm2);
+  const amount = Math.log(value / at(low)) / Math.log(at(high) / at(low));
   return mix(parseHexColor(low.color), parseHexColor(high.color), amount);
 }
 
@@ -71,6 +95,8 @@ export function populationDensityColor(perKm2: number, steps: Colors['population
  * the political map mode colors each province by its owner.
  * `provincePopulation` is everyone living in each province (F06), for the
  * population map mode; without it that mode shows plain land.
+ * `provinceIndustry` is the people at work in each province's buildings
+ * (F07), for the industry map mode, likewise.
  */
 export function provinceBaseColors(
   mode: MapMode,
@@ -78,9 +104,14 @@ export function provinceBaseColors(
   colors: Colors,
   provinceOwner: ArrayLike<number>,
   provincePopulation?: ArrayLike<number> | null,
+  provinceIndustry?: ArrayLike<number> | null,
 ): Uint8Array {
   const result = new Uint8Array(world.provinceIds.length * 4);
-  if (mode === 'population' && provincePopulation) {
+  if (mode === 'industry' && provinceIndustry) {
+    world.provinceIds.forEach((_, province) =>
+      write(result, province, industryColor(provinceIndustry[province], colors.industry)),
+    );
+  } else if (mode === 'population' && provincePopulation) {
     world.provinceIds.forEach((_, province) => {
       const area = world.provinceAreaKm2[province];
       const density = area > 0 ? provincePopulation[province] / area : 0;

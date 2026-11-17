@@ -6,6 +6,7 @@ import { SCREENS, type ShellWindow, lensNameKey, screenNameKey } from './catalog
 import { defaultMessageSettings } from './messages';
 import type { ShellActions } from './shell-actions';
 import { AboutBuild } from './about-build';
+import { BuildingsScreen } from '../buildings/buildings-screen';
 import { PopulationScreen } from '../population/population-screen';
 import { comesWithText } from './top-bar';
 
@@ -31,6 +32,9 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
   } else if (window === 'population') {
     title = tKey(screenNameKey(window));
     body = <PopulationScreen state={state} actions={actions} />;
+  } else if (window === 'buildings') {
+    title = tKey(screenNameKey(window));
+    body = <BuildingsScreen state={state} actions={actions} />;
   } else {
     const screen = SCREENS[window];
     title = tKey(screenNameKey(window));
@@ -45,7 +49,11 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
   return (
     <div className="shell-window-layer">
       <section
-        className={window === 'population' ? 'panel shell-window is-wide' : 'panel shell-window'}
+        className={
+          window === 'population' || window === 'buildings'
+            ? 'panel shell-window is-wide'
+            : 'panel shell-window'
+        }
         data-testid="shell-window"
         data-window={window}
         role="dialog"

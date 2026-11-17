@@ -1,4 +1,7 @@
 import {
+  type BuildingsConfig,
+  type BuildingsSnapshot,
+  type GoodsConfig,
   type PopsConfig,
   type PopulationSnapshot,
   type WorldMap,
@@ -9,6 +12,7 @@ import {
   seaZoneNameKey,
 } from '@terra-scutum/sim';
 import { formatArea, t, tKey } from './i18n';
+import { ProvinceBuildings } from './buildings/province-buildings';
 import { LinkList } from './link-list';
 import { ProvincePopulation } from './population/province-population';
 import { PanelHeader, type PanelNav } from './shell/panel-header';
@@ -20,6 +24,12 @@ export interface ProvincePanelProps {
   /** The population (F06) and the pop groups; null until the sim has sent them. */
   readonly population: PopulationSnapshot | null;
   readonly pops: PopsConfig | null;
+  /** The buildings (F07), their types and the goods; null until the sim has sent them. */
+  readonly buildings: BuildingsSnapshot | null;
+  readonly buildingTypes: BuildingsConfig | null;
+  readonly goods: GoodsConfig | null;
+  /** Test tool: sets the level of this province's building of a type (by id). */
+  readonly onSetBuildingLevel: (buildingId: string, level: number) => void;
   /** Index of the province to show. */
   readonly province: number;
   readonly nav: PanelNav;
@@ -34,8 +44,8 @@ export interface ProvincePanelProps {
 
 /**
  * The province info panel (F01): name, country, region and what the province
- * borders, and its population (F06). Buildings and construction join it with
- * their features.
+ * borders, its population (F06) and its buildings (F07). Construction joins
+ * it with its feature.
  * The country is the province's current owner (F02); clicking it opens the country panel.
  * Clicking a bordering sea zone shows that sea zone (F70); the region's name
  * opens the region panel (F122).
@@ -45,6 +55,10 @@ export function ProvincePanel({
   provinceOwner,
   population,
   pops,
+  buildings,
+  buildingTypes,
+  goods,
+  onSetBuildingLevel,
   province,
   nav,
   onSelectProvince,
@@ -108,6 +122,17 @@ export function ProvincePanel({
           pops={pops}
           province={province}
           areaKm2={world.provinceAreaKm2[province]}
+        />
+      )}
+
+      {buildings && buildingTypes && goods && pops && (
+        <ProvinceBuildings
+          buildings={buildings}
+          buildingTypes={buildingTypes}
+          goods={goods}
+          pops={pops}
+          province={province}
+          onSetLevel={onSetBuildingLevel}
         />
       )}
 

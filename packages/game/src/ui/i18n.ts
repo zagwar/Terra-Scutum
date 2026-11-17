@@ -1,4 +1,4 @@
-import type { CalendarDate } from '@terra-scutum/sim';
+import type { CalendarDate, GoodUnit } from '@terra-scutum/sim';
 import en from '../../../../locales/en.json';
 import enMap from '../../../../locales/en.map.json';
 
@@ -89,14 +89,16 @@ export function formatPeopleShort(people: number): string {
   return Math.round(people).toLocaleString('en');
 }
 
-/** An amount of money in a table: "$1.2M", "$64.7k", "$518". */
+/** An amount of money in a table: "$1.07B", "$1.2M", "$64.7k", "$518". */
 export function formatMoneyShort(dollars: number): string {
   const amount =
-    dollars >= 1e6
-      ? t('NUMBER_SHORT_MILLION', { value: threeDigits(dollars / 1e6) })
-      : dollars >= 1e4
-        ? t('NUMBER_SHORT_THOUSAND', { value: threeDigits(dollars / 1e3) })
-        : Math.round(dollars).toLocaleString('en');
+    dollars >= 1e9
+      ? t('NUMBER_SHORT_BILLION', { value: threeDigits(dollars / 1e9) })
+      : dollars >= 1e6
+        ? t('NUMBER_SHORT_MILLION', { value: threeDigits(dollars / 1e6) })
+        : dollars >= 1e4
+          ? t('NUMBER_SHORT_THOUSAND', { value: threeDigits(dollars / 1e3) })
+          : Math.round(dollars).toLocaleString('en');
   return t('MONEY_VALUE', { amount });
 }
 
@@ -117,4 +119,28 @@ export function formatDensity(perKm2: number): string {
       ? Math.round(perKm2).toLocaleString('en')
       : perKm2.toLocaleString('en', { maximumSignificantDigits: 2 });
   return t('DENSITY_VALUE', { value });
+}
+
+/**
+ * An amount of a good as the player sees it (F07): real units, shortened so
+ * the numbers stay small (designer decision). Tonnes: "950 t", "5 kt",
+ * "1.4 Mt"; megawatt-hours: "25 MWh", "2.5 GWh", "1.1 TWh".
+ */
+export function formatAmount(amount: number, unit: GoodUnit): string {
+  const steps =
+    unit === 't'
+      ? (['AMOUNT_T', 'AMOUNT_KT', 'AMOUNT_MT', 'AMOUNT_GT'] as const)
+      : (['AMOUNT_MWH', 'AMOUNT_GWH', 'AMOUNT_TWH'] as const);
+  let step = 0;
+  let value = Math.abs(amount);
+  // 999.5 would read "1,000": move up a step from there.
+  while (value >= 999.5 && step < steps.length - 1) {
+    value /= 1000;
+    step += 1;
+  }
+  const text =
+    value >= 100 || (step === 0 && value >= 10)
+      ? Math.round(value).toLocaleString('en')
+      : threeDigits(value);
+  return t(steps[step], { value: amount < 0 ? `−${text}` : text });
 }

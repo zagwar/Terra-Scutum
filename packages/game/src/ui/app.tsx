@@ -120,6 +120,7 @@ export function App({
         <MapModeBar
           mode={state.mapMode}
           populationDensityColors={state.populationDensityColors}
+          industryColors={state.industryColors}
           onSetMapMode={onSetMapMode}
           onResetView={onResetView}
         />
@@ -138,6 +139,8 @@ export function App({
           provinceOwner={provinceOwner}
           // The population map mode's tooltip also says how many people live there.
           population={state.mapMode === 'population' ? state.population : null}
+          // The industry map mode's tooltip says how many people work in its buildings.
+          buildings={state.mapMode === 'industry' ? state.buildings : null}
           target={{ kind: 'province', index: state.hoveredProvince }}
         />
       )}
@@ -220,6 +223,12 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
           provinceOwner={provinceOwner}
           population={state.population}
           pops={state.pops}
+          buildings={state.buildings}
+          buildingTypes={state.buildingTypes}
+          goods={state.goods}
+          onSetBuildingLevel={(buildingId, level) =>
+            void actions.testSetBuildingLevel(panel.index, buildingId, level)
+          }
           province={panel.index}
           nav={nav}
           onSelectProvince={link.province}

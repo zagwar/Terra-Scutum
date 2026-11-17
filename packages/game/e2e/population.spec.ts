@@ -143,7 +143,7 @@ test('the Population screen and the country screen show the country’s people',
   await expect(provinces).toHaveCount(49);
   await expect(provinces.first()).toContainText('California');
   await expect(provinces.first()).toContainText('41.2 million');
-  await expect(page.getByTestId('population-note')).toContainText('Buildings (F07)');
+  await expect(page.getByTestId('population-note')).toContainText('building catalog (F85)');
   await shot('screen');
 
   // A year later the country has grown a little.

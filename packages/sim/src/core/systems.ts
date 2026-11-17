@@ -1,3 +1,4 @@
+import { buildingSystems } from '../economy/buildings';
 import { populationSystem } from '../economy/population';
 import type { GameState } from './game-state';
 
@@ -60,4 +61,6 @@ export type SystemRegistry = Readonly<Partial<Record<SystemId, SimSystem>>>;
  */
 export const SYSTEMS: SystemRegistry = {
   population: populationSystem,
+  // Buildings (F07): energy, resourceProduction and industry.
+  ...buildingSystems,
 };

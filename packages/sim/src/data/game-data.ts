@@ -42,6 +42,13 @@ import {
 import { type StressTestConfig, stressTestSchema } from '../stress/stress-config';
 import { type PopsConfig, checkPops, popsSchema } from '../economy/pops-data';
 import {
+  type BuildingsConfig,
+  type GoodsConfig,
+  buildingsSchema,
+  checkBuildings,
+  goodsSchema,
+} from '../economy/buildings-data';
+import {
   type ProvinceStartFile,
   checkProvinceStart,
   provinceStartFileSchema,
@@ -66,6 +73,8 @@ export const DATA_FILES = {
   countryStart: { file: 'country_start.json', schema: countryStartFileSchema },
   provinceStart: { file: 'province_start.json', schema: provinceStartFileSchema },
   pops: { file: 'pops.json', schema: popsSchema },
+  goods: { file: 'goods.json', schema: goodsSchema },
+  buildings: { file: 'buildings.json', schema: buildingsSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
@@ -94,6 +103,10 @@ export interface GameData {
   readonly provinceStart: ProvinceStartFile;
   /** Pop groups, needs, growth and job changes (F06). */
   readonly pops: PopsConfig;
+  /** The goods buildings make and use (F07; F65 adds prices and the rest). */
+  readonly goods: GoodsConfig;
+  /** Building types with their recipes, the stockpile rules and the starting buildings (F07). */
+  readonly buildings: BuildingsConfig;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
   /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
@@ -234,6 +247,7 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkCountryStart,
   checkProvinceStart,
   checkPops,
+  checkBuildings,
   checkNotifications,
   checkPlayerCountry,
   checkCountryScreen,

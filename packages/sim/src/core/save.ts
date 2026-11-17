@@ -6,6 +6,7 @@ import type { SystemRegistry } from './systems';
 import { buildCountryStartTable } from '../world/country-start';
 import { buildWorldMap } from '../world/world-map';
 import { createPopulation } from '../economy/population';
+import { buildingLevelList, createBuildings, linkStartingBuildings } from '../economy/buildings';
 
 /**
  * Save format versioning.
@@ -20,7 +21,7 @@ import { createPopulation } from '../economy/population';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 4;
+export const SAVE_FORMAT_VERSION = 5;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -45,14 +46,28 @@ const saveFileSchema = z.strictObject({
   /**
    * The population (F06). `groups` are the pop groups' ids in the order the
    * arrays use; `dependents` has one number per province (in the order of
-   * `map.provinces`), `size` and `jobs` one per pop (province by province,
-   * the groups in order).
+   * `map.provinces`), `size` and `standInJobs` (the jobs the stand-in
+   * economy offers; buildings offer the rest) one per pop (province by
+   * province, the groups in order).
    */
   population: z.strictObject({
     groups: z.array(z.string()),
     dependents: z.array(z.number().min(0)),
     size: z.array(z.number().min(0)),
-    jobs: z.array(z.number().min(0)),
+    standInJobs: z.array(z.number().min(0)),
+  }),
+  /**
+   * The buildings (F07). `types` and `goods` are the building types' and the
+   * goods' ids in the order the numbers use. `levels` lists every building
+   * as three numbers: its province (an index into `map.provinces`), its type
+   * and its level. `stock` is each country's national stockpile: one number
+   * per country and good (country by country, the goods in order).
+   */
+  buildings: z.strictObject({
+    types: z.array(z.string()),
+    goods: z.array(z.string()),
+    levels: z.array(z.number().int().min(0)),
+    stock: z.array(z.number().min(0)),
   }),
 });
 
@@ -114,6 +129,34 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
       },
     };
   },
+  // Version 5 (F07) stores the buildings, and of the jobs only the ones the
+  // stand-in economy offers. Older saves are from before buildings: they get
+  // the starting buildings, which take over their jobs from the saved ones.
+  4: (save, data) => {
+    const world = buildWorldMap(data);
+    const countryStart = buildCountryStartTable(data.countryStart, world);
+    const population = createPopulation(data, world, countryStart);
+    const buildings = createBuildings(data, world, countryStart);
+    linkStartingBuildings(buildings, population);
+    const old = save.population as { jobs?: unknown } & UnknownRecord;
+    const { jobs, ...rest } = old;
+    const savedJobs = Array.isArray(jobs) ? (jobs as number[]) : [];
+    return {
+      ...save,
+      population: {
+        ...rest,
+        standInJobs: Array.from(population.buildingJobs, (offered, i) =>
+          Math.max(0, (Number(savedJobs[i]) || 0) - offered),
+        ),
+      },
+      buildings: {
+        types: [...buildings.typeIds],
+        goods: [...buildings.goodIds],
+        levels: buildingLevelList(buildings),
+        stock: Array.from(buildings.stock),
+      },
+    };
+  },
 };
 
 /** Writes the state as a plain JSON-compatible object. */
@@ -132,7 +175,13 @@ export function serializeGameState(state: GameState): SaveFile {
       groups: [...state.population.groupIds],
       dependents: Array.from(state.population.dependents),
       size: Array.from(state.population.size),
-      jobs: Array.from(state.population.jobs),
+      standInJobs: Array.from(state.population.standInJobs),
+    },
+    buildings: {
+      types: [...state.buildings.typeIds],
+      goods: [...state.buildings.goodIds],
+      levels: buildingLevelList(state.buildings),
+      stock: Array.from(state.buildings.stock),
     },
   };
 }
@@ -227,9 +276,27 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   if (
     save.population.dependents.length !== map.provinces.length ||
     save.population.size.length !== pops ||
-    save.population.jobs.length !== pops
+    save.population.standInJobs.length !== pops
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'population does not match the map');
+  }
+  // The buildings' numbers are in the order of the map, the building types and the goods.
+  const types = options.data.buildings.buildings.map((building) => building.id);
+  const goods = options.data.goods.goods.map((good) => good.id);
+  if (!sameIds(save.buildings.types, types) || !sameIds(save.buildings.goods, goods)) {
+    throw new SimError(
+      'SAVE_ERROR_CORRUPT',
+      {},
+      'the building types or goods are not the ones of this game',
+    );
+  }
+  const levels = save.buildings.levels;
+  let levelsFit = levels.length % 3 === 0;
+  for (let i = 0; levelsFit && i < levels.length; i += 3)
+    levelsFit =
+      levels[i] < map.provinces.length && levels[i + 1] < types.length && levels[i + 2] <= 65535;
+  if (!levelsFit || save.buildings.stock.length !== map.countries.length * goods.length) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'buildings do not match the map');
   }
   return new GameState({
     data: options.data,
@@ -243,8 +310,9 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
       population: {
         dependents: Float64Array.from(save.population.dependents),
         size: Float64Array.from(save.population.size),
-        jobs: Float64Array.from(save.population.jobs),
+        standInJobs: Float64Array.from(save.population.standInJobs),
       },
+      buildings: { levels, stock: Float64Array.from(save.buildings.stock) },
     },
   });
 }

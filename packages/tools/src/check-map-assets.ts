@@ -9,6 +9,10 @@ import {
   opinionStanceNameKey,
   messageTypeNameKey,
   modelNameKey,
+  BUILDING_CATEGORIES,
+  buildingCategoryNameKey,
+  buildingNameKey,
+  goodNameKey,
   needNameKey,
   needTierNameKey,
   NEED_TIERS,
@@ -50,6 +54,11 @@ export function checkMapNames(data: GameData, texts: ReadonlyMap<string, string>
   for (const group of data.pops.groups) need(popGroupNameKey(group.id), `pop group ${group.id}`);
   for (const item of data.pops.needs) need(needNameKey(item.id), `need ${item.id}`);
   for (const tier of NEED_TIERS) need(needTierNameKey(tier), `need tier ${tier}`);
+  for (const good of data.goods.goods) need(goodNameKey(good.id), `good ${good.id}`);
+  for (const building of data.buildings.buildings)
+    need(buildingNameKey(building.id), `building ${building.id}`);
+  for (const category of BUILDING_CATEGORIES)
+    need(buildingCategoryNameKey(category), `building category ${category}`);
   return problems;
 }
 

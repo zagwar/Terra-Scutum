@@ -38,9 +38,9 @@ on this same model.
 All numbers are in `data/pops.json` unless said otherwise; the starting figures are real (2025).
 - **Starting population:** each country's population (World Bank) is shared among its provinces by where people really live (a world population grid, `data/province_start.json`). Each province's people are split into **dependents** (children, the elderly and others who don't work) and the **workforce** (the country's real labor force share); the workforce into the six pop groups: **soldiers** by the country's real armed forces, the others by how rich the country is (GDP per person): poorer countries are mostly laborers, richer ones have more skilled workers and professionals.
 - **Growth (daily):** births and deaths at the country's real rates (a dependent is 4× likelier to die than a worker); each day some dependents enter the workforce and some workers retire after about 45 working years. New workers join the pop groups in the proportions the province has now. There is no migration between provinces or countries yet (F108).
-- **Jobs:** each pop has a number of jobs; people without one are **unemployed**. Until buildings offer the jobs (F07), a stand-in economy does: it starts at the country's real unemployment rate and keeps pace with the workforce. Owners and soldiers are never unemployed.
+- **Jobs:** each pop has a number of jobs; people without one are **unemployed**. The jobs come from **buildings** (F07, section 8.3) and from a **stand-in economy** for everything the building catalog doesn't cover yet ("the rest of the economy"): at the start it offers the jobs the starting buildings don't, so every country starts at its real unemployment rate; after that it keeps pace with the workforce, while a building that opens or closes changes employment. Owners and soldiers are never unemployed.
 - **Changing jobs (weekly):** people move to another pop group when it has open jobs and they are unemployed or would earn more. Moving **down** (a professional or official taking skilled work, a skilled worker taking laborer work) is quick (up to 5 % of the group a week); moving **up** needs training and is slow (laborers → skilled workers 0.4 % a week, skilled workers → professionals 0.2 %, professionals or skilled workers → officials). The education budget will speed training up (F09). Nobody becomes an owner or a soldier this way (corporations, F89; conscription, F15).
-- **Wages:** paid per worker; a worker's wage also feeds the dependents. Until buildings pay wages (F07): a country's pops earn 60 % of its real GDP between them, with skilled workers paid 1.6×, officials 1.8×, professionals 2.6×, owners 6× and soldiers 1.2× a laborer's wage.
+- **Wages:** paid per worker; a worker's wage also feeds the dependents. A country's pops earn 60 % of its real GDP between them, with skilled workers paid 1.6×, officials 1.8×, professionals 2.6×, owners 6× and soldiers 1.2× a laborer's wage. Buildings pay this going local wage too (F07); wages that follow a building's profit come with markets (F65).
 - **Needs** in three tiers, bought in order: **basic** (food, housing, energy), **everyday** (consumer goods, services), **luxury** (luxury goods). Each has a cost per person per day. Until markets set prices (F65), a province's prices follow how rich its country is (poorer countries are cheaper). *Safety*, the fourth need of this section, isn't bought: it comes with the Swarm (distance to the front, F10 and M7).
 - **Standard of living** (0–100): 40 for basic needs fully met, 35 more for everyday needs, 25 more for luxuries; in proportion when a tier is only partly affordable. It feeds happiness and stability (F10) and pop ideology (F118).
 - **Casualties** remove people for good (from one pop, or from everyone in a province); wars, the Swarm, famine and fallout will use this.
@@ -82,6 +82,30 @@ in provinces, and goods move over the transport network.
 - **Production methods [DEFAULT, Victoria-style]:** some buildings have alternative recipes. For example, a steel mill can run a blast furnace (iron ore + coal) or an electric arc furnace (scrap + lots of electricity). Better methods are unlocked by research.
 - **Missing inputs:** a building that can't get all its inputs runs at partial output. If it has no electricity or workers, it stops.
 - **Who builds:** both the state and corporations. See **Private vs state construction** below.
+
+#### How buildings work in the game (built in F07) [DEFAULT]
+All numbers are in `data/buildings.json` and `data/goods.json`.
+- **One building of each type per province, with a level.** A recipe is **per level, per day**: workers by pop group, electricity, inputs → outputs. A level-3 building needs three times as much of everything and makes three times the output.
+- **Real units, shortened on screen** (designer decision): goods are counted in tonnes and electricity in megawatt-hours, sized like real plants; the screens show 5 kt, 1.4 Mt, 2.5 GWh.
+- **Workers:** a building offers jobs to the pops of its province. Where a pop group is too small for all its jobs, every employer gets the same share, and a building runs only as far as its **scarcest pop group** allows; without workers of a group it needs, it stops. Buildings pay the going local wage (section 8.1).
+- **National stockpile (a stand-in until markets, F65):** each country keeps what its buildings make until its buildings use it. A campaign starts with 15 days of inputs; a country keeps at most 30 days of what it uses or makes, and the rest is lost (sold abroad, once there is trade).
+- **Missing inputs:** when a good is short, every building that needs it gets the same share and runs at **partial output**.
+- **Electricity** can't be stored. Power plants make what the country's buildings ask for that day (a plant with little to do runs below full output and burns less fuel). With too little electricity buildings run at partial output; with none they stop. A country whose power plants run out of fuel can't restart by itself (its mines need electricity too): it needs goods from outside, which trade (F19) will bring. The power grid (F74) will make electricity a matter of provinces.
+- **Output** = the share of jobs filled (by the scarcest pop group) × the scarcest of electricity and inputs. The screens name what holds a building back most.
+- **Every day, in three steps:** power plants (energy), then farms and mines (resource production), then everything else (industry). What a step makes is in the stockpile for the next step; the province's current owner gets it.
+- **The example buildings** (per level and day; the building catalog comes with F85):
+
+| Building | Workers | Uses | Makes |
+|---|---|---|---|
+| Farm | 500 | 25 MWh | 1,000 t grain |
+| Iron mine | 1,500 | 200 MWh | 8,000 t iron ore |
+| Coal mine | 1,500 | 150 MWh | 6,000 t coal |
+| Coal power plant | 300 | 6,000 t coal | 15,000 MWh electricity |
+| Food processing plant | 1,500 | 2,000 t grain, 150 MWh | 1,600 t processed food |
+| Steel mill | 4,000 | 8,000 t iron ore, 3,500 t coal, 2,500 MWh | 5,000 t steel |
+
+- **Starting buildings (a stand-in until F85):** every country gets one steel mill level per US$100 billion of GDP and one food processing plant level per US$25 billion, plus as many farms, mines and power plants as these need, shared among its provinces by population. About 150 countries start with buildings; together they offer about 0.6 % of the world's jobs.
+- **Not in F07:** building slots, deposits, farmland and coastal rules, costs and construction (F12), production methods (F88), prices, profits and layoffs (F65), transport (F86), the power grid (F74), ownership by corporations or the state (F12, F89). Until construction exists, **test buttons** change levels by hand.
 
 #### Example production chains [DEFAULT]
 ```

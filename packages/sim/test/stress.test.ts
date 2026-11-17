@@ -19,9 +19,11 @@ describe('the sim stress test’s placeholder load (F139)', () => {
       'budget',
       'combat',
       'diplomacyAi',
+      'energy',
       'industry',
       'laserCoverage',
       'population',
+      'resourceProduction',
       'supply',
       'swarmGrowth',
       'swarmSpread',
@@ -29,6 +31,10 @@ describe('the sim stress test’s placeholder load (F139)', () => {
     ]);
     const { state } = run(42, 30);
     expect(state.day).toBe(30);
+    // The real buildings (F07) run too: every type in every province, and they produce.
+    const buildings = state.buildings;
+    expect(buildings.cellCount).toBe(state.world.provinceIds.length * buildings.typeCount);
+    expect(buildings.made.some((amount) => amount > 0)).toBe(true);
   });
 
   it('is deterministic: the same seed gives the same campaign, another seed another one', () => {

@@ -311,6 +311,17 @@ export const mapViewSchema = z.strictObject({
       .refine((steps) => steps.every((step, i) => i === 0 || step.perKm2 > steps[i - 1].perKm2), {
         message: 'the steps must go from sparse to dense',
       }),
+    /**
+     * The industry map mode (F07): the color for so many people at work in
+     * a province's buildings, from few to many. Mixed between two steps like
+     * `populationDensity`; a province without buildings has the first color.
+     */
+    industry: z
+      .array(z.strictObject({ workers: z.number().positive(), color: hexColor }))
+      .min(2)
+      .refine((steps) => steps.every((step, i) => i === 0 || step.workers > steps[i - 1].workers), {
+        message: 'the steps must go from few workers to many',
+      }),
   }),
   lines: z.strictObject({
     provinceBorder: lineStyle,

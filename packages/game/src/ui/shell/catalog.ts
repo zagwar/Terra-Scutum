@@ -37,7 +37,7 @@ export const at = (feature: string, milestone: string): ComesWith => ({ feature,
 /** Every screen reachable from a lens (section 12.1), with the feature that builds it. */
 export const SCREENS = {
   budget: { lens: 'economy', comesWith: at('F09', 'M2') },
-  buildings: { lens: 'economy', comesWith: at('F07', 'M2') },
+  buildings: { lens: 'economy', comesWith: null },
   productionChains: { lens: 'economy', comesWith: at('F87', 'M3') },
   markets: { lens: 'economy', comesWith: at('F65', 'M2') },
   trade: { lens: 'economy', comesWith: at('F19', 'M4') },
@@ -106,11 +106,12 @@ export const LENS_SCREENS: Readonly<Record<LensId, readonly ScreenId[]>> = {
 /**
  * The map mode each lens switches to when opened (section 12.2: the Economy
  * lens shows the industry map mode…). The Society lens shows the population
- * map mode (F06); the other lenses leave the map mode alone until their map
- * modes exist [DEFAULT]: fill these in as the map modes arrive.
+ * map mode (F06) and the Economy lens the industry map mode (F07); the other
+ * lenses leave the map mode alone until their map modes exist [DEFAULT]:
+ * fill these in as the map modes arrive.
  */
 export const LENS_MAP_MODE: Readonly<Record<LensId, MapMode | null>> = {
-  economy: null,
+  economy: 'industry',
   politics: null,
   military: null,
   diplomacy: null,

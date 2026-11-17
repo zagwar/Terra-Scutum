@@ -59,6 +59,17 @@ export interface ShellActions {
   readonly pickCandidate: (country: number) => void;
   /** Country selection (F05): plays as this country; the game starts, paused. Resolves with the sim's answer. */
   readonly playAs: (country: number) => Promise<CommandResult>;
+  /**
+   * Test tools (F07, until construction exists, F12): sets the level of a
+   * province's building of one type (by id), and tops a country's national
+   * stockpile up to so many days of what its buildings use.
+   */
+  readonly testSetBuildingLevel: (
+    province: number,
+    buildingId: string,
+    level: number,
+  ) => Promise<CommandResult>;
+  readonly testFillStockpile: (country: number, days: number) => Promise<CommandResult>;
 }
 
 export function createShellActions({
@@ -191,6 +202,21 @@ export function createShellActions({
     pickCandidate(country) {
       store.update({ candidateCountry: country });
       focusCountry(country);
+    },
+    async testSetBuildingLevel(province, buildingId, level) {
+      const world = state().world;
+      if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({
+        type: 'debugSetBuildingLevel',
+        province: world.provinceIds[province],
+        building: buildingId,
+        level,
+      });
+    },
+    async testFillStockpile(country, days) {
+      const world = state().world;
+      if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({ type: 'debugFillStockpile', country: world.countryIds[country], days });
     },
     async playAs(country) {
       const { world } = state();
