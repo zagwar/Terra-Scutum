@@ -362,5 +362,7 @@ describe('the real starting data', () => {
     );
     expect(unemployment('USA')).toBeLessThan(0.06);
     for (const value of later.standardOfLiving) expect(Number.isFinite(value)).toBe(true);
-  });
+    // Ten years of the whole world with its real buildings (F85: about 1 ms a day) take a few
+    // seconds, more on CI's two-processor machines: longer than Vitest's default 5 s.
+  }, 30_000);
 });
