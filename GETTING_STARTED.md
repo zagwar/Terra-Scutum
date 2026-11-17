@@ -52,12 +52,11 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 
 1. Go to **claude.ai/code**.
 2. Under the message box, select **terra-scutum** (branch **main**).
-   - **Choose Claude Fable 5.2 as the model** for this first session. The first feature (the game's foundations) is the most important place to use it.
 3. Paste your **first prompt** (copy everything in the box):
    ```
    This is the first session for my game, Terra Scutum. We're in a Claude Code cloud session in the browser. Read CLAUDE.md and GAME_DESIGN.md first, then follow the "First session (start of M1)" steps in CLAUDE.md:
    1. Check the tools in this cloud environment and set up anything missing.
-   2. F132 (core architecture) is a ⚑ Fable task. I've selected Claude Fable 5.2 for this session; if you're not running as Fable, tell me before starting.
+   2. F132 (core architecture) is one of the hardest parts (⚑), so take extra care.
    Then build F132 only. Read docs/12_feature_tracker.md, docs/13_technical.md and docs/15_open_questions_and_gaps.md (section 17.3) for it.
    After that, walk me through connecting Cloudflare Pages step by step so I get preview links.
    I'm a complete beginner (no programming or GitHub experience), so explain things simply and walk me through anything I need to do myself step by step.
@@ -76,7 +75,6 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 3. **Give feedback** in the same session: *"Works great,"* or *"The camera zooms too fast,"* or *"The map colors are hard to read."* Claude fixes it, and the preview link updates.
 4. **Accept it:** on the pull request page, click **Merge pull request** → **Confirm merge**. The main game link now has this feature.
 5. **Next feature:** on claude.ai/code start a **new session** on **terra-scutum** (branch **main**) and paste the next prompt.
-   - If Claude said the next feature is **⚑ Fable**, pick **Claude Fable 5.2** as the model for that session first.
    - Always merge the previous feature **before** starting the next session.
 
 **Good habits**
@@ -99,7 +97,7 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 - **The game shows an error or a blank screen:** take a screenshot and paste it into a session: *"The preview link shows this."*
 - **The game looks or behaves wrong:** describe what you expected and what happened, with a screenshot.
 - **A merged feature broke something:** start a session and say *"The last feature broke X. Fix it or go back to the previous version."* GitHub keeps every version.
-- **Claude is going in circles on a bug:** start the session with **Claude Fable 5.2**.
+- **Claude is going in circles on a bug:** tell it so; ask it to stop, explain what it has tried, and take a different approach.
 - **A red ✗ appears on the pull request:** that's the automatic checks finding a problem. Don't merge; tell Claude: *"The checks failed on the pull request."*
 - **Stuck on setup:** ask in Claude (chat) with a screenshot of what you see.
 
@@ -122,4 +120,4 @@ This guide assumes **no game-making, GitHub or programming experience**. Everyth
 | **Simulation (sim)** | The part of the game that does all the math: economy, bugs, combat |
 | **Campaign runner** | A tool that plays years of the game automatically to find crashes and balance problems |
 | **Milestone (M1…) / feature (F01…)** | A stage of development / one piece of it (see `docs/12_feature_tracker.md`) |
-| **⚑ Fable** | A hard task where you should use Claude Fable 5.2 |
+| **⚑** | One of the hardest parts of the game: Claude proposes first and takes extra care (Claude Fable 5.2 is no longer used) |

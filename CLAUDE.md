@@ -7,7 +7,7 @@ This is *Terra Scutum: The Last Line of Earth* (short form *Terra Scutum*): a 3D
 - **Tools:** Node.js and npm are pre-installed. Dependencies come from `npm install` (run it at the start of a session if `node_modules` is missing). For Playwright's headless Chromium: use an existing Chrome if one is installed; otherwise install it with Playwright. If any download is blocked by the environment's network allowlist, tell the designer exactly which setting to change, step by step (environment selector under the message box → edit environment → network access or **Setup script**). Prefer a **setup script** for anything that should be ready in every session, kept under about five minutes so the environment is cached.
 - **Git and GitHub:** do each feature on its own branch, commit, and **push**. Then create the pull request if you can (otherwise tell the designer how: **Changes** panel → **Create PR**). **Always watch the pull request right after opening it, without asking** (subscribe to its activity): fix failing CI checks and answer review comments on it until it is merged or closed, and tell the designer you are watching it. Each new session starts from `main`, so the previous feature must be merged first; if it isn't on `main`, say so before doing anything else.
 - **Playing the game:** every pull request gets a **Cloudflare Pages preview link** (posted on the PR by Cloudflare). The designer plays that link in his browser **before** merging. After merging, the main link has the latest version.
-- **Models:** to use Claude Fable 5.2, the designer picks it as the model when starting a session.
+- **Models:** the designer no longer has access to Claude Fable 5.2 (since 2026-11-17). Build everything with the session's model; see "The hardest parts (⚑)" below.
 
 ## Working with the designer: a beginner
 Kai (the designer) has **no game development, programming or GitHub experience** and is not expected to write code. You do the building; Kai tests, makes design decisions, and merges pull requests. His guide is `GETTING_STARTED.md`.
@@ -30,18 +30,18 @@ These parts of the game are intentionally left for the designer (Kai) to write. 
 - **Music and sound:** remind him **at the start of M11**, or earlier if a task involves audio. Until then, no music; simple placeholder sounds only if a feature needs them.
 When you give a reminder, say briefly what's needed and why it matters for the upcoming work, then wait for his answer before building anything that depends on it.
 
-## Model reminders (Claude Fable 5.2)
-The designer has **limited access to Claude Fable 5.2** and wants to save it for the hardest parts. Features marked **⚑ Fable** in `docs/12_feature_tracker.md`:
-- **Foundations (M1):** core architecture (F132): the monorepo, sim/worker/UI split, data schemas, the daily tick, determinism, performance budget, save versioning, CI and tests
+## The hardest parts (⚑): be extra careful
+The designer **no longer has access to Claude Fable 5.2** (since 2026-11-17). **Don't remind him to switch models and don't stop to ask for one:** build every feature with the session's model. Features marked **⚑** in `docs/12_feature_tracker.md` are the hardest parts of the game:
+- **Foundations (M1):** core architecture (F132)
 - **Map and rendering architecture (M1–M2):** terrain, map rendering, LOD and procedural building placement (F125, F126)
 - **Economy core (M2):** pops, markets and prices, building recipes (F06, F65, F07)
 - **Country AI (M6):** F25
 - **Swarm AI (M7):** F105
 - **War (M8a):** the supply chain (F75), the combat model (F77) and front-line/battle-plan AI (F78)
 - **Save system (M10):** F40
-- **Also worth switching for:** a bug still not fixed after two or three attempts, a big performance problem, or a major refactor.
+- **Also hard:** a bug still not fixed after two or three attempts, a big performance problem, or a major refactor.
 
-**When to remind:** before starting a ⚑ Fable feature (or one of the "also worth switching for" situations), if you are **not** running as Claude Fable 5.2, stop and tell the designer: *"This is a ⚑ Fable task ([feature]). Consider starting a new session with Claude Fable 5.2 selected and pasting this same prompt."* Then wait for him to switch or tell you to continue. When the ⚑ Fable work is done, mention he can go back to his usual model.
+**For a ⚑ feature:** propose the design to the designer first and wait for his go; prototype the numbers on the real data before coding; test thoroughly (unit tests, the campaign runner, the stress test, the browser tests with screenshots); and say plainly what is uncertain or untested.
 
 ## End every finished piece of work with the next prompt
 The designer works **one feature per cloud session**, and a new session doesn't remember the old one, so **you write his next prompt for him.**
@@ -54,18 +54,18 @@ The designer works **one feature per cloud session**, and a new session doesn't 
   - "When the feature is done, push it, open the pull request and watch it (fix failing checks), tell me how to test it on the preview link, then give me the next prompt."
 - **Before the code block,** tell the designer in one line:
   - to play the **preview link**, then **merge the pull request** (step by step: **Merge pull request** → **Confirm merge**), then start a **new session** on `terra-scutum` / `main` and paste the prompt
-  - if the next feature is **⚑ Fable**: to choose **Claude Fable 5.2** as the model for that new session
   - if a **reminder** is due (lore before M7, music at M11): that it's time, and that the next prompt can't start until it's handled
 - **At the end of a milestone,** the next prompt starts the next milestone, and you give a short summary of what the finished milestone added.
 
 ## First session (start of M1)
 1. **Check the cloud tools** (`node --version`, `npm --version`, `check-tools`) and whether a headless Chromium is available for Playwright. Set up anything missing (see "Where you're running").
-2. **⚑ Fable:** F132 is a ⚑ Fable task. If you're not running as Claude Fable 5.2, give the reminder before starting it (the designer's guide tells him to start this first session with Fable already selected).
+2. **⚑:** F132 is one of the hardest parts: take the extra care of "The hardest parts (⚑)".
 3. Build **F132** first: the repository structure, tooling, CI and test setup in `docs/13_technical.md`, with a minimal game page that shows an empty 3D scene, so the preview link works.
 4. **Walk the designer through connecting Cloudflare Pages** to the repository (step by step, with the exact build settings: build command, output folder, Node version), so pull requests get preview links. Confirm the preview link works on the F132 pull request.
 5. Then continue with the rest of M1 in the build order from the feature tracker, one feature per session.
 
 ## How to work
+- **Victoria 3 is the foundation for every economy and pop decision** (designer decision, 2026-11-17): markets and prices, pops, needs and wealth, wages, employment, buildings and their profits, and later budget, laws, interest groups and politics. Copy Victoria 3's rules unless the design doc deliberately differs (no cultures or religions, six pop groups, real units, the national stockpile, fully simulated corporations…); say so whenever it differs, and keep the numbers in data as [DEFAULT].
 - Work milestone by milestone (`docs/12_feature_tracker.md`), **one feature per session**. Don't start features from a later milestone unless asked. M8 is split into M8a, M8b and M8c.
 - Keep all game logic in `packages/sim`, with no browser, Babylon or Node-only code in it.
 - **Before opening a pull request:** `npm run check` (typecheck, lint, data validation) and `npm test` must pass; run the campaign runner for sim changes; for anything visible, run the Playwright tests, **take screenshots and look at them**. Only then mark the feature `Done` in the feature tracker and log any design decisions in `docs/14_decision_log.md`.
