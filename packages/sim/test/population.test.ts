@@ -462,6 +462,6 @@ describe('the game starts with the population system', () => {
     const before = worldPopulation(state.population);
     state.advanceDay();
     expect(worldPopulation(state.population)).not.toBe(before);
-    expect(state.getSystemTimings().map((timing) => timing.id)).toEqual(['population']);
+    expect(state.getSystemTimings().map((timing) => timing.id)).toContain('population');
   });
 });

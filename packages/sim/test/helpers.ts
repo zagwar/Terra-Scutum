@@ -167,6 +167,62 @@ export function testPops() {
   };
 }
 
+/** A valid `goods.json` (F07): the goods of the test buildings. */
+export function testGoods() {
+  return {
+    goods: [
+      { id: 'ore', unit: 't' },
+      { id: 'coal', unit: 't' },
+      { id: 'steel', unit: 't' },
+      { id: 'electricity', unit: 'MWh' },
+    ],
+    electricity: 'electricity',
+  };
+}
+
+/**
+ * A valid `buildings.json` (F07) with round numbers: a mine, a coal mine, a
+ * power plant and a mill. No country starts with buildings unless a test
+ * passes `anchors`, so the tests of other systems see only the stand-in economy.
+ */
+export function testBuildings(anchors: { building: string; gdpBillionUsdPerLevel: number }[] = []) {
+  return {
+    buildings: [
+      {
+        id: 'mine',
+        category: 'extraction',
+        workers: { laborers: 100 },
+        electricity: 10,
+        outputs: { ore: 200 },
+      },
+      {
+        id: 'coal_mine',
+        category: 'extraction',
+        workers: { laborers: 100 },
+        electricity: 10,
+        outputs: { coal: 300 },
+      },
+      {
+        id: 'power_plant',
+        category: 'energy',
+        workers: { skilled_workers: 20 },
+        inputs: { coal: 100 },
+        outputs: { electricity: 200 },
+      },
+      {
+        id: 'mill',
+        category: 'processing',
+        workers: { laborers: 200, skilled_workers: 100 },
+        electricity: 50,
+        inputs: { ore: 100, coal: 50 },
+        outputs: { steel: 60 },
+      },
+    ],
+    stockpile: { startingDays: 10, maxDays: 30 },
+    startingBuildings: { anchors },
+  };
+}
+
 /** Valid map drawing settings (`data/map_view.json`). */
 export function testMapView() {
   const line = { color: '#000000', opacity: 1, widthPx: 1 };
@@ -210,6 +266,10 @@ export function testMapView() {
         { perKm2: 1, color: '#ffffff' },
         { perKm2: 100, color: '#ff0000' },
         { perKm2: 10000, color: '#000000' },
+      ],
+      industry: [
+        { workers: 100, color: '#ffffff' },
+        { workers: 10000, color: '#0000ff' },
       ],
     },
     lines: {
@@ -433,6 +493,8 @@ export function testRawData(
     },
     ...testWorld(),
     pops: testPops(),
+    goods: testGoods(),
+    buildings: testBuildings(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

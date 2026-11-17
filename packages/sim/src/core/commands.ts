@@ -1,5 +1,6 @@
 import type { GameState } from './game-state';
 import type { TextParams } from './sim-error';
+import { fillStockpile, setBuildingLevel } from '../economy/buildings';
 
 /**
  * Sim commands: the ONLY way anything outside the sim changes sim state.
@@ -33,7 +34,24 @@ export type SimCommand =
       readonly province: string;
       readonly group: string | null;
       readonly factor: number;
-    };
+    }
+  /**
+   * Diagnostic (F07): sets the level of a province's building of one type
+   * (both by id; level 0 removes it), as construction (F12), damage and the
+   * Swarm will later. Used by tests and by the game's test buttons.
+   */
+  | {
+      readonly type: 'debugSetBuildingLevel';
+      readonly province: string;
+      readonly building: string;
+      readonly level: number;
+    }
+  /**
+   * Diagnostic (F07): tops a country's national stockpile (by id) up to so
+   * many days of what its buildings use at full output, as emergency imports
+   * will later (trade, F19). Used by tests and by the game's test buttons.
+   */
+  | { readonly type: 'debugFillStockpile'; readonly country: string; readonly days: number };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -113,10 +131,51 @@ const HANDLERS: CommandHandlers = {
     ) {
       return { ok: false, reasonKey: 'COMMAND_INVALID' };
     }
+    // The stand-in economy's jobs; the ones buildings offer follow their levels.
     const row = province * population.groupCount;
-    for (let g = 0; g < population.groupCount; g++)
-      if (group < 0 || group === g) population.jobs[row + g] *= command.factor;
+    for (let g = 0; g < population.groupCount; g++) {
+      if (group < 0 || group === g) population.standInJobs[row + g] *= command.factor;
+      population.jobs[row + g] = population.standInJobs[row + g] + population.buildingJobs[row + g];
+    }
     population.reportOwnershipVersion = -1;
+    return OK;
+  },
+  debugSetBuildingLevel(state, command): CommandResult {
+    const province = state.world.provinceIndex.get(command.province);
+    if (province === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_PROVINCE',
+        params: { province: String(command.province) },
+      };
+    }
+    const type = state.buildings.typeIds.indexOf(command.building);
+    if (type < 0) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_BUILDING',
+        params: { building: String(command.building) },
+      };
+    }
+    if (!Number.isInteger(command.level) || command.level < 0 || command.level > 65535) {
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    }
+    setBuildingLevel(state, province, type, command.level);
+    return OK;
+  },
+  debugFillStockpile(state, command): CommandResult {
+    const country = state.world.countryIndex.get(command.country);
+    if (country === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+        params: { country: String(command.country) },
+      };
+    }
+    if (!Number.isFinite(command.days) || command.days < 0 || command.days > 3650) {
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    }
+    fillStockpile(state, country, command.days);
     return OK;
   },
 };

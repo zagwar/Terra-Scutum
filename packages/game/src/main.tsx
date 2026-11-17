@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createBuildingAlerts } from './ui/buildings/building-alerts';
 import { createAppStore } from './app-store';
 import { type DebugHooks, installDebugHooks } from './debug/debug-hooks';
 import { parseLaunchOptions } from './debug/scenarios';
@@ -75,6 +76,7 @@ function showMapWhenPossible(): void {
           map.setMode(state.mapMode);
           if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
           if (state.population) map.setProvincePopulation(state.population.provincePopulation);
+          if (state.buildings) map.setProvinceIndustry(state.buildings.provinceWorkers);
           map.setSelectedProvince(state.selectedProvince);
           map.setSelectedSeaZone(state.selectedSeaZone);
           map.setHighlightedCountry(state.choosingCountry ? state.candidateCountry : null);
@@ -116,6 +118,9 @@ function showMapWhenPossible(): void {
     );
 }
 
+// The "idle factory" alert follows the buildings (F07).
+store.subscribe(createBuildingAlerts(store).sync);
+
 const sim = createSimClient({
   onReady(message) {
     ready = message;
@@ -126,6 +131,10 @@ const sim = createSimClient({
       population: message.snapshot.population ?? null,
       pops: message.pops,
       populationDensityColors: message.mapView.colors.populationDensity,
+      buildings: message.snapshot.buildings ?? null,
+      buildingTypes: message.buildings,
+      goods: message.goods,
+      industryColors: message.mapView.colors.industry,
       world: message.world,
       countryStart: message.countryStart,
       saveFormatVersion: message.saveFormatVersion,
@@ -145,6 +154,7 @@ const sim = createSimClient({
       playerCountry: snapshot.playerCountry,
       ...(snapshot.provinceOwner ? { provinceOwner: snapshot.provinceOwner } : {}),
       ...(snapshot.population ? { population: snapshot.population } : {}),
+      ...(snapshot.buildings ? { buildings: snapshot.buildings } : {}),
     });
     debugHooks?.recordEvents(events);
     // Sim events that have a message type become messages (toasts, pop-ups, the log).

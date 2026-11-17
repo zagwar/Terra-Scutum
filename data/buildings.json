@@ -1,0 +1,55 @@
+{
+  "buildings": [
+    {
+      "id": "farm",
+      "category": "extraction",
+      "workers": { "laborers": 450, "skilled_workers": 40, "professionals": 10 },
+      "electricity": 25,
+      "outputs": { "grain": 1000 }
+    },
+    {
+      "id": "iron_mine",
+      "category": "extraction",
+      "workers": { "laborers": 1100, "skilled_workers": 350, "professionals": 50 },
+      "electricity": 200,
+      "outputs": { "iron_ore": 8000 }
+    },
+    {
+      "id": "coal_mine",
+      "category": "extraction",
+      "workers": { "laborers": 1100, "skilled_workers": 350, "professionals": 50 },
+      "electricity": 150,
+      "outputs": { "coal": 6000 }
+    },
+    {
+      "id": "coal_power_plant",
+      "category": "energy",
+      "workers": { "laborers": 50, "skilled_workers": 200, "professionals": 50 },
+      "inputs": { "coal": 6000 },
+      "outputs": { "electricity": 15000 }
+    },
+    {
+      "id": "food_processing_plant",
+      "category": "processing",
+      "workers": { "laborers": 1000, "skilled_workers": 400, "professionals": 100 },
+      "electricity": 150,
+      "inputs": { "grain": 2000 },
+      "outputs": { "processed_food": 1600 }
+    },
+    {
+      "id": "steel_mill",
+      "category": "processing",
+      "workers": { "laborers": 2200, "skilled_workers": 1500, "professionals": 300 },
+      "electricity": 2500,
+      "inputs": { "iron_ore": 8000, "coal": 3500 },
+      "outputs": { "steel": 5000 }
+    }
+  ],
+  "stockpile": { "startingDays": 15, "maxDays": 30 },
+  "startingBuildings": {
+    "anchors": [
+      { "building": "steel_mill", "gdpBillionUsdPerLevel": 100 },
+      { "building": "food_processing_plant", "gdpBillionUsdPerLevel": 25 }
+    ]
+  }
+}

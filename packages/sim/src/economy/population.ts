@@ -15,8 +15,10 @@ import { NEED_TIERS, type PopsConfig } from './pops-data';
  *
  * - **Every day:** births, deaths, young people entering the workforce and
  *   old ones leaving it. A handful of multiplications per province.
- * - **Every week:** the economy's jobs follow the workforce (a stand-in
- *   until buildings exist, F07) and people change group where jobs are open.
+ * - **Every week:** the stand-in economy's jobs follow the workforce and
+ *   people change group where jobs are open. A pop's jobs are the ones
+ *   buildings offer (F07, `buildings.ts`) plus the stand-in's: "the rest of
+ *   the economy", everything the building catalog doesn't cover yet.
  * - **The report** (employment, incomes, needs, standard of living, totals
  *   per province and country) is worked out from the state when it is asked
  *   for, at most once a day.
@@ -37,7 +39,16 @@ export interface PopulationState {
   readonly dependents: Float64Array;
   /** People in each pop. */
   readonly size: Float64Array;
-  /** Jobs open to each pop. Until buildings offer them (F07), the placeholder economy does. */
+  /**
+   * The jobs the stand-in economy offers each pop: the rest of the economy,
+   * everything buildings don't cover yet [DEFAULT].
+   */
+  readonly standInJobs: Float64Array;
+
+  // ── Jobs (worked out from the state) ─────────────────────────────────────
+  /** The jobs buildings offer each pop (F07): from their levels, kept up to date by `buildings.ts`. */
+  readonly buildingJobs: Float64Array;
+  /** All jobs open to each pop: `standInJobs` + `buildingJobs`. */
   readonly jobs: Float64Array;
 
   // ── Fixed for the campaign (worked out from the starting data) ───────────
@@ -48,12 +59,22 @@ export interface PopulationState {
   readonly enteringRate: Float64Array;
   /** Per day: the share of the workforce that retires. */
   readonly leavingRate: number;
-  /** Each pop's wage, in US$ per worker per day. Until buildings pay wages (F07): fixed from the starting data. */
+  /**
+   * Each pop's wage, in US$ per worker per day: the going local wage, fixed
+   * from the starting data. Buildings pay it too (F07) until markets let
+   * their profits set wages (F65).
+   */
   readonly wage: Float64Array;
   /** Each province's price level (1 = United States prices), until markets set prices (F65). */
   readonly priceLevel: Float64Array;
-  /** Placeholder economy: the share of each pop it keeps in work (1 for groups that are always employed). */
+  /** The share of each pop in work at the start: its country's real employment (1 for groups that are always employed). */
   readonly employmentTarget: Float64Array;
+  /**
+   * The stand-in economy: the share of each pop it keeps in work. At the
+   * start that is `employmentTarget` less the jobs the starting buildings
+   * offer (`linkStartingBuildings`).
+   */
+  readonly standInTarget: Float64Array;
 
   // ── The report (worked out from the state; not saved) ────────────────────
   /** People of each pop with a job. */
@@ -97,7 +118,7 @@ export interface PopulationState {
 export interface PopulationRestore {
   readonly dependents: Float64Array;
   readonly size: Float64Array;
-  readonly jobs: Float64Array;
+  readonly standInJobs: Float64Array;
 }
 
 const TIERS = NEED_TIERS.length;
@@ -254,6 +275,8 @@ export function createPopulation(
     militaryGroup,
     dependents,
     size,
+    standInJobs: jobs.slice(),
+    buildingJobs: new Float64Array(provinces * groups),
     jobs,
     birthRate,
     workerDeathRate,
@@ -263,6 +286,7 @@ export function createPopulation(
     wage,
     priceLevel,
     employmentTarget,
+    standInTarget: employmentTarget.slice(),
     employed: new Float64Array(provinces * groups),
     standardOfLiving: new Float32Array(provinces * groups),
     provincePopulation: new Float64Array(provinces),
@@ -287,17 +311,22 @@ export function createPopulation(
   };
 }
 
-/** Puts a saved population back (the arrays must be the right length). */
+/**
+ * Puts a saved population back (the arrays must be the right length). The
+ * buildings' jobs are added when the buildings are put back (`restoreBuildings`).
+ */
 export function restorePopulation(population: PopulationState, saved: PopulationRestore): void {
   if (
     saved.dependents.length !== population.dependents.length ||
     saved.size.length !== population.size.length ||
-    saved.jobs.length !== population.jobs.length
+    saved.standInJobs.length !== population.standInJobs.length
   )
     throw new Error('Population: the restored arrays do not match the map and the pop groups');
   population.dependents.set(saved.dependents);
   population.size.set(saved.size);
-  population.jobs.set(saved.jobs);
+  population.standInJobs.set(saved.standInJobs);
+  for (let i = 0; i < population.jobs.length; i++)
+    population.jobs[i] = population.standInJobs[i] + population.buildingJobs[i];
   population.reportOwnershipVersion = -1;
 }
 
@@ -337,16 +366,21 @@ export function growPopulation(population: PopulationState): void {
 
 /**
  * The weekly job market (section 8.1, "Pops change jobs"):
- * 1. The placeholder economy's jobs follow the workforce (until F07).
+ * 1. The stand-in economy's jobs follow the workforce; with the jobs
+ *    buildings offer (F07) they are the jobs open to each pop.
  * 2. People change group along the paths of `data/pops.json`, in order:
  *    into a group with open jobs, if they are unemployed or would earn more.
  */
 export function updateJobs(population: PopulationState): void {
-  const { size, jobs, wage, employmentTarget, changeFrom, changeTo, changeShare } = population;
+  const { size, jobs, wage, standInJobs, standInTarget, buildingJobs } = population;
+  const { changeFrom, changeTo, changeShare } = population;
   const groups = population.groupCount;
   const follow = population.jobsFollowWeekly;
   const pops = size.length;
-  for (let i = 0; i < pops; i++) jobs[i] += follow * (size[i] * employmentTarget[i] - jobs[i]);
+  for (let i = 0; i < pops; i++) {
+    standInJobs[i] += follow * (size[i] * standInTarget[i] - standInJobs[i]);
+    jobs[i] = standInJobs[i] + buildingJobs[i];
+  }
 
   const provinces = population.dependents.length;
   const changes = changeFrom.length;

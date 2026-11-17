@@ -14,6 +14,13 @@ import { startingOwners } from '../world/ownership';
 import { type CountryStartTable, buildCountryStartTable } from '../world/country-start';
 import { type WorldMap, buildWorldMap } from '../world/world-map';
 import {
+  type BuildingsRestore,
+  type BuildingsState,
+  createBuildings,
+  linkStartingBuildings,
+  restoreBuildings,
+} from '../economy/buildings';
+import {
   type PopulationRestore,
   type PopulationState,
   createPopulation,
@@ -35,8 +42,10 @@ export interface GameStateOptions {
     readonly provinceOwner: Uint16Array;
     /** The country (index) the player leads. */
     readonly playerCountry: number;
-    /** The population (F06): dependents per province, size and jobs per pop. */
+    /** The population (F06): dependents per province, size and stand-in jobs per pop. */
     readonly population: PopulationRestore;
+    /** The buildings (F07): their levels and the national stockpiles. */
+    readonly buildings: BuildingsRestore;
   };
 }
 
@@ -84,6 +93,12 @@ export class GameState {
    * read its report through `ensurePopulationReport`.
    */
   readonly population: PopulationState;
+  /**
+   * The buildings (F07, section 8.3): their levels, the national stockpiles
+   * and what they produce. Changed by the building systems and
+   * `setBuildingLevel`; read its report through `ensureBuildingsReport`.
+   */
+  readonly buildings: BuildingsState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -101,6 +116,9 @@ export class GameState {
     this.seed = options.seed >>> 0;
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
     this.population = createPopulation(options.data, this.world, this.countryStart);
+    this.buildings = createBuildings(options.data, this.world, this.countryStart);
+    // The starting buildings take over their jobs from the stand-in economy.
+    linkStartingBuildings(this.buildings, this.population);
 
     if (options.restore) {
       this.day = options.restore.day;
@@ -112,6 +130,7 @@ export class GameState {
         throw new Error('GameState: the restored player country is not a country');
       this.playerCountry = options.restore.playerCountry;
       restorePopulation(this.population, options.restore.population);
+      restoreBuildings(this.buildings, this.population, options.restore.buildings);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);

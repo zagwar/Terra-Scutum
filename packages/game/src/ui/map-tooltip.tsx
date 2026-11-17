@@ -1,4 +1,5 @@
 import {
+  type BuildingsSnapshot,
   type PopulationSnapshot,
   type WorldMap,
   countryNameKey,
@@ -14,6 +15,8 @@ export interface MapTooltipProps {
   readonly provinceOwner: Uint16Array;
   /** Given in the population map mode: a province's tooltip then also shows its people (F06). */
   readonly population?: PopulationSnapshot | null;
+  /** Given in the industry map mode: a province's tooltip then also shows the people at work in its buildings (F07). */
+  readonly buildings?: BuildingsSnapshot | null;
   /** What is under the mouse: a province or a sea zone (by index). */
   readonly target: { readonly kind: 'province' | 'seaZone'; readonly index: number };
 }
@@ -33,7 +36,13 @@ window.addEventListener('pointermove', (event) => {
  * the mouse (without going through the app store), so React only re-renders
  * when the province changes.
  */
-export function MapTooltip({ world, provinceOwner, population, target }: MapTooltipProps) {
+export function MapTooltip({
+  world,
+  provinceOwner,
+  population,
+  buildings,
+  target,
+}: MapTooltipProps) {
   const element = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -76,6 +85,25 @@ export function MapTooltip({ world, provinceOwner, population, target }: MapTool
           })}
         </span>
       )}
+      {target.kind === 'province' && buildings && (
+        <span className="map-tooltip-line" data-testid="map-tooltip-industry">
+          {buildings.provinceJobs[target.index] > 0
+            ? t('MAP_TOOLTIP_PROVINCE_INDUSTRY', {
+                workers: formatPopulation(buildings.provinceWorkers[target.index]),
+                levels: provinceLevels(buildings, target.index).toLocaleString('en'),
+              })
+            : t('MAP_TOOLTIP_PROVINCE_NO_INDUSTRY')}
+        </span>
+      )}
     </div>
   );
+}
+
+/** All building levels of a province. */
+function provinceLevels(buildings: BuildingsSnapshot, province: number): number {
+  let levels = 0;
+  for (let i = 0; i < buildings.cells.length; i++)
+    if (Math.floor(buildings.cells[i] / buildings.typeCount) === province)
+      levels += buildings.level[i];
+  return levels;
 }

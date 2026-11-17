@@ -1,5 +1,8 @@
 import type {
+  BuildingsConfig,
+  BuildingsSnapshot,
   CountryStartTable,
+  GoodsConfig,
   MapViewConfig,
   NotificationsConfig,
   PopsConfig,
@@ -41,6 +44,17 @@ export interface AppState extends PanelState {
   readonly pops: PopsConfig | null;
   /** The population map mode's colors by density (`data/map_view.json`), for its legend. */
   readonly populationDensityColors: MapViewConfig['colors']['populationDensity'];
+  /**
+   * The buildings (F07): every building's level, output and workers, and
+   * each country's national stockpile; null until the sim is ready. Kept
+   * apart from the snapshot like the population.
+   */
+  readonly buildings: BuildingsSnapshot | null;
+  /** Building types with their recipes (`data/buildings.json`) and the goods (`data/goods.json`); null until the sim is ready. */
+  readonly buildingTypes: BuildingsConfig | null;
+  readonly goods: GoodsConfig | null;
+  /** The industry map mode's colors by people at work in buildings (`data/map_view.json`), for its legend. */
+  readonly industryColors: MapViewConfig['colors']['industry'];
   /** The map's fixed facts from the sim (ids, who borders whom); null until the sim is ready. */
   readonly world: WorldMap | null;
   /** Each country's real-world starting data (F71); null until the sim is ready. */
@@ -103,6 +117,10 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     population: null,
     pops: null,
     populationDensityColors: [],
+    buildings: null,
+    buildingTypes: null,
+    goods: null,
+    industryColors: [],
     world: null,
     countryStart: null,
     saveFormatVersion: null,

@@ -4,7 +4,9 @@ import {
   GameState,
   type SystemId,
   type SystemRegistry,
+  BUILDING_LIMIT,
   createPlaceholderLoad,
+  ensureBuildingsReport,
   hashGameState,
   worldPopulation,
 } from '@terra-scutum/sim';
@@ -57,6 +59,19 @@ export interface CampaignSummary {
   /** Everyone in the world on the first and on the last day (F06). */
   readonly startPopulation: number;
   readonly endPopulation: number;
+  /**
+   * The buildings on the last day (F07): how many there are, their levels,
+   * the people at work in them, their average output (0–1, by level; power
+   * plants that are only short of demand count as running fully), and how
+   * many are held back by missing workers, inputs or electricity.
+   */
+  readonly buildings: {
+    readonly count: number;
+    readonly levels: number;
+    readonly workers: number;
+    readonly averageOutput: number;
+    readonly heldBack: number;
+  };
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
   /** The most memory seen during the run and at its end, in bytes (null without a `memory` option). */
@@ -130,6 +145,25 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
   if (endMemory !== null) peakMemory = Math.max(peakMemory, endMemory);
 
   const budget = options.data.gameConfig.performanceBudget;
+  const report = ensureBuildingsReport(state);
+  const buildings = {
+    count: report.cellCount,
+    levels: 0,
+    workers: 0,
+    averageOutput: 0,
+    heldBack: 0,
+  };
+  for (let i = 0; i < report.cellCount; i++) {
+    const cell = report.cells[i];
+    const fine =
+      report.limitKind[cell] === BUILDING_LIMIT.none ||
+      report.limitKind[cell] === BUILDING_LIMIT.demand;
+    buildings.levels += report.level[cell];
+    buildings.workers += report.workers[cell];
+    buildings.averageOutput += report.level[cell] * (fine ? 1 : report.output[cell]);
+    if (!fine) buildings.heldBack += 1;
+  }
+  buildings.averageOutput = buildings.levels > 0 ? buildings.averageOutput / buildings.levels : 0;
   return {
     seed: state.seed,
     days: options.days,
@@ -145,6 +179,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     systemTimings: state.getSystemTimings().sort((a, b) => b.totalMs - a.totalMs),
     startPopulation,
     endPopulation: worldPopulation(state.population),
+    buildings,
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,

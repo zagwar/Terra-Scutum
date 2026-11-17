@@ -1,7 +1,7 @@
 import type { MapViewConfig } from '@terra-scutum/sim';
 import { MAP_MODES, type MapMode } from '../render/map/map-colors';
 import { useState } from 'react';
-import { type TranslationKey, t } from './i18n';
+import { type TranslationKey, formatPeopleShort, t } from './i18n';
 import { COMPACT_QUERY, TOUCH_QUERY, isCompactNow, useMedia } from './use-media';
 
 const MODE_TEXT: Record<MapMode, TranslationKey> = {
@@ -10,12 +10,15 @@ const MODE_TEXT: Record<MapMode, TranslationKey> = {
   regions: 'MAP_MODE_REGIONS',
   seaZones: 'MAP_MODE_SEA_ZONES',
   population: 'MAP_MODE_POPULATION',
+  industry: 'MAP_MODE_INDUSTRY',
 };
 
 export interface MapModeBarProps {
   readonly mode: MapMode;
   /** The population map mode's colors by density (`data/map_view.json`), for its legend. */
   readonly populationDensityColors: MapViewConfig['colors']['populationDensity'];
+  /** The industry map mode's colors by people at work in buildings, for its legend. */
+  readonly industryColors: MapViewConfig['colors']['industry'];
   readonly onSetMapMode: (mode: MapMode) => void;
   readonly onResetView: () => void;
 }
@@ -27,6 +30,7 @@ export interface MapModeBarProps {
 export function MapModeBar({
   mode,
   populationDensityColors,
+  industryColors,
   onSetMapMode,
   onResetView,
 }: MapModeBarProps) {
@@ -78,6 +82,19 @@ export function MapModeBar({
                   <li key={step.perKm2}>
                     <span className="map-legend-color" style={{ background: step.color }} />
                     {step.perKm2.toLocaleString('en')}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {mode === 'industry' && industryColors.length > 0 && (
+            <div className="map-legend" data-testid="map-legend">
+              <span className="map-legend-title">{t('MAP_LEGEND_INDUSTRY')}</span>
+              <ol>
+                {industryColors.map((step) => (
+                  <li key={step.workers}>
+                    <span className="map-legend-color" style={{ background: step.color }} />
+                    {formatPeopleShort(step.workers)}
                   </li>
                 ))}
               </ol>

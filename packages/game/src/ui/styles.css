@@ -544,6 +544,211 @@ body {
   font-size: 11px;
 }
 
+/* ── Buildings (F07) ────────────────────────────────────────────────────── */
+.province-buildings {
+  margin-bottom: 14px;
+}
+
+.province-buildings .facts {
+  margin-bottom: 8px;
+}
+
+.building-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.building {
+  padding: 7px 9px 8px;
+  background: rgba(27, 42, 58, 0.45);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 3px;
+}
+
+.building-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+  cursor: help;
+}
+
+.building-name {
+  font-weight: 600;
+}
+
+.building-level {
+  color: var(--color-text-dim);
+  white-space: nowrap;
+}
+
+.building-output {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.building-label {
+  color: var(--color-text-dim);
+}
+
+/* Output as a bar and a percentage: gold at full output, red when held back, grey when only idle. */
+.output {
+  display: grid;
+  grid-template-columns: minmax(40px, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+}
+
+.output-bar {
+  height: 8px;
+  overflow: hidden;
+  background: #1b2a3a;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 4px;
+}
+
+.output-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-good);
+}
+
+.output[data-status='held-back'] .output-bar > span {
+  background: var(--color-bad);
+}
+
+.output[data-status='held-back'] .output-value {
+  color: var(--color-bad);
+}
+
+.output[data-status='idle'] .output-bar > span {
+  background: var(--color-text-dim);
+}
+
+.output-value {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.building-limit {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.building-limit.is-bad {
+  color: var(--color-bad);
+}
+
+.building-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.building-facts dt {
+  color: var(--color-text-dim);
+}
+
+.building-facts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The test tools: changing levels by hand until construction exists (F12). */
+.test-tools {
+  margin: 0 0 12px;
+  padding: 6px 9px;
+  border: 1px dashed var(--color-panel-border);
+  border-radius: 3px;
+}
+
+.test-tools summary {
+  cursor: pointer;
+  color: var(--color-pending);
+}
+
+.test-tools .hint {
+  margin: 6px 0;
+}
+
+.test-levels {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.test-levels li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-value {
+  min-width: 26px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.button.is-small {
+  width: 26px;
+  padding: 2px 0;
+  line-height: 1.3;
+}
+
+.test-tools-row {
+  margin: 0 0 14px;
+}
+
+.test-tools-row .button {
+  width: auto;
+  border-style: dashed;
+  color: var(--color-pending);
+}
+
+.buildings-screen .hint {
+  margin: -4px 0 8px;
+}
+
+.buildings-facts {
+  max-width: 420px;
+}
+
+.pop-table tr.is-open > th .link-button {
+  color: var(--color-accent);
+}
+
+.pop-table td[data-status='bad'] {
+  color: var(--color-bad);
+}
+
+.pop-table td .output {
+  min-width: 110px;
+}
+
+.pop-table.is-full td:has(> .output) {
+  white-space: normal;
+}
+
 .shell-window.is-wide {
   width: min(880px, calc(100vw - 24px));
 }

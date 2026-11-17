@@ -16,6 +16,10 @@ describe('campaign runner', () => {
     // The world's people (F06): about 8.2 billion, growing.
     expect(summary.startPopulation / 1e9).toBeCloseTo(8.21, 1);
     expect(summary.endPopulation).toBeGreaterThan(summary.startPopulation * 1.01);
+    // The starting buildings (F07) keep running by themselves.
+    expect(summary.buildings.count).toBeGreaterThan(1000);
+    expect(summary.buildings.averageOutput).toBeGreaterThan(0.99);
+    expect(summary.buildings.heldBack).toBe(0);
   });
 
   it('gives the same state hash for the same seed and a different one for another seed', () => {

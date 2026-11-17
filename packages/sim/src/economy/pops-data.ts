@@ -27,9 +27,9 @@ export const popsSchema = z.strictObject({
       z.strictObject({
         id,
         /**
-         * How well the group is paid compared with laborers (1). Until
-         * buildings pay wages (F07), a pop's wage is this times its country's
-         * base wage.
+         * How well the group is paid compared with laborers (1): a pop's
+         * wage is this times its country's base wage. Buildings pay it too,
+         * until markets let their profits set wages (F65).
          */
         wage: z.number().positive(),
         /** True for groups that are never unemployed (owners, soldiers). */
@@ -83,8 +83,9 @@ export const popsSchema = z.strictObject({
     z.strictObject({ from: id, to: id, weeklyShare: share, training: z.boolean() }),
   ),
   /**
-   * The stand-in for the economy until buildings (F07) and markets (F65)
-   * exist: where jobs, wages and prices come from in the meantime.
+   * The stand-in for the parts of the economy that aren't built yet: the
+   * jobs buildings don't offer (the rest of the economy, until the building
+   * catalog is complete, F85), wages, and prices (until markets, F65).
    */
   placeholderEconomy: z.strictObject({
     /** The share of a country's GDP that reaches its pops as income. */
@@ -96,9 +97,9 @@ export const popsSchema = z.strictObject({
     priceLevelExponent: z.number().min(0).max(1),
     priceReferenceGdpPerPerson: z.number().positive(),
     /**
-     * Each week the jobs of a pop close this share of the gap to the number
-     * that keeps its employment where it started: the economy keeps pace
-     * with its workforce.
+     * Each week the stand-in's jobs for a pop close this share of the gap to
+     * the number that keeps the stand-in's share of the pop in work where it
+     * started: the rest of the economy keeps pace with its workforce.
      */
     jobsFollowWeekly: share,
   }),

@@ -1,0 +1,11 @@
+{
+  "goods": [
+    { "id": "grain", "unit": "t" },
+    { "id": "processed_food", "unit": "t" },
+    { "id": "iron_ore", "unit": "t" },
+    { "id": "coal", "unit": "t" },
+    { "id": "steel", "unit": "t" },
+    { "id": "electricity", "unit": "MWh" }
+  ],
+  "electricity": "electricity"
+}

@@ -1,9 +1,11 @@
 import type { RawGameData } from '@terra-scutum/sim';
+import buildings from '../../../../data/buildings.json';
 import countries from '../../../../data/countries.json';
 import countryFlags from '../../../../data/country_flags.json';
 import countryScreen from '../../../../data/country_screen.json';
 import countryStart from '../../../../data/country_start.json';
 import gameConfig from '../../../../data/game_config.json';
+import goods from '../../../../data/goods.json';
 import governmentTypes from '../../../../data/government_types.json';
 import mapView from '../../../../data/map_view.json';
 import models from '../../../../data/models.json';
@@ -31,6 +33,8 @@ export const RAW_GAME_DATA: RawGameData = {
   countryStart,
   provinceStart,
   pops,
+  goods,
+  buildings,
   mapView,
   terrainTiles,
   notifications,

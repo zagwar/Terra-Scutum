@@ -177,6 +177,8 @@ export function createSimHost(
           models: data.models,
           countryStart: state.countryStart,
           pops: data.pops,
+          goods: data.goods,
+          buildings: data.buildings,
           time,
           daysPerSecond,
           playerCountry: state.playerCountry,

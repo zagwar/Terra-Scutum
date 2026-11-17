@@ -1,18 +1,20 @@
 import type {
-  GameConfig,
-  ModelsConfig,
-  RenderStressConfig,
-  TerrainTilesFile,
+  BuildingsConfig,
   CommandResult,
   CountryScreenConfig,
   CountryStartTable,
+  GameConfig,
+  GoodsConfig,
   GovernmentKind,
   MapViewConfig,
+  ModelsConfig,
   NotificationsConfig,
   PopsConfig,
+  RenderStressConfig,
   SimCommand,
   SimEvent,
   SimSnapshot,
+  TerrainTilesFile,
   WorldMap,
 } from '@terra-scutum/sim';
 
@@ -86,6 +88,9 @@ export type FromSimWorker =
       readonly countryStart: CountryStartTable;
       /** Pop groups and needs (validated `data/pops.json`, F06). */
       readonly pops: PopsConfig;
+      /** The goods and the building types with their recipes (validated `data/goods.json` and `data/buildings.json`, F07). */
+      readonly goods: GoodsConfig;
+      readonly buildings: BuildingsConfig;
       /** The game speed at the start: paused. */
       readonly time: TimeState;
       /** Days per second at speeds 1–5 (`data/game_config.json`). */

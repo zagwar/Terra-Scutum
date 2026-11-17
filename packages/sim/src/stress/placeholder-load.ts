@@ -1,5 +1,6 @@
 import type { GameState } from '../core/game-state';
 import type { SystemRegistry } from '../core/systems';
+import { buildingSystems, fillStockpile, setBuildingLevel } from '../economy/buildings';
 import { populationSystem } from '../economy/population';
 import { neighborsOf } from '../world/world-map';
 import type { SimStressConfig } from './stress-config';
@@ -17,7 +18,13 @@ import type { SimStressConfig } from './stress-config';
  * **Since F06 the pops are the real ones** (`GameState.population`, six pop
  * groups per province): the real population system runs in its slot, and the
  * placeholder pieces that need pops (buying needs on the markets, staffing
- * buildings, paying taxes) read the real pops' sizes. F140 replaces the rest.
+ * buildings, paying taxes) read the real pops' sizes.
+ *
+ * **Since F07 the real buildings run too** (`GameState.buildings`): the
+ * building systems run in their slots (energy, resourceProduction,
+ * industry), with every building type in every province, as in a late game.
+ * The placeholder buildings only make up the rest of `buildingsPerProvince`
+ * until the building catalog is complete (F85). F140 replaces the rest.
  *
  * Daily: pops buy their needs (population), buildings produce from recipes
  * (industry), trade routes move goods (trade), taxes are collected (budget),
@@ -60,8 +67,15 @@ export function createPlaceholderLoad(
       },
       weekly: (state) => populationSystem.weekly?.(state),
     },
+    // The real buildings (F07): power plants, then farms and mines, then the rest.
+    energy: buildingSystems.energy,
+    resourceProduction: buildingSystems.resourceProduction,
     industry: {
-      daily: (state) => loadOf(state).produce(state),
+      // The real industry step, then the placeholder buildings that make up the number.
+      daily: (state) => {
+        buildingSystems.industry?.daily?.(state);
+        loadOf(state).produce(state);
+      },
       weekly: (state) => loadOf(state).corporationsInvest(state),
     },
     trade: {
@@ -108,7 +122,16 @@ function createLoad(
   // The real pops (F06): their number isn't scaled.
   const groups = state.population.groupCount;
   const needs = config.needsPerPop;
-  const perProvince = scaled(config.buildingsPerProvince);
+  // The real buildings (F07): every type in every province, as in a late
+  // game, with stockpiles to run on. Placeholder buildings make up the rest.
+  const real = state.buildings;
+  for (let province = 0; province < provinces; province++)
+    for (let type = 0; type < real.typeCount; type++)
+      if (real.level[province * real.typeCount + type] === 0)
+        setBuildingLevel(state, province, type, 1);
+  for (let country = 0; country < countries; country++)
+    fillStockpile(state, country, real.startingDays);
+  const perProvince = Math.max(0, scaled(config.buildingsPerProvince) - real.typeCount);
   const inputs = config.inputsPerBuilding;
   const outputs = config.outputsPerBuilding;
   const routes = scaled(config.tradeRoutes);
