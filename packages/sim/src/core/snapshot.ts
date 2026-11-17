@@ -51,6 +51,8 @@ export interface BuildingsSnapshot {
   /** Where each building is: `province * typeCount + type`, in rising order. */
   readonly cells: Int32Array;
   readonly level: Uint16Array;
+  /** Each building's production method (an index into its type's `methods`). */
+  readonly method: Uint8Array;
   /** Output as a share of full output, and the share of the jobs filled as the scarcest pop group allows (0–1). */
   readonly output: Float32Array;
   readonly staffing: Float32Array;
@@ -68,6 +70,11 @@ export interface BuildingsSnapshot {
   readonly made: Float64Array;
   readonly used: Float64Array;
   readonly stockLimit: Float64Array;
+  /** Per country and good: the standing imports that arrive every day (a stand-in until trade, F19). */
+  readonly imports: Float64Array;
+  /** Per country: the electricity the rest of the economy and homes asked for today, and what they got (MWh). */
+  readonly otherPowerWanted: Float64Array;
+  readonly otherPowerUsed: Float64Array;
 }
 
 /**
@@ -162,6 +169,7 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
   const count = buildings.cellCount;
   const cells = buildings.cells.slice(0, count);
   const level = new Uint16Array(count);
+  const method = new Uint8Array(count);
   const output = new Float32Array(count);
   const staffing = new Float32Array(count);
   const workers = new Float32Array(count);
@@ -171,6 +179,7 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
   for (let i = 0; i < count; i++) {
     const cell = cells[i];
     level[i] = buildings.level[cell];
+    method[i] = buildings.method[cell];
     output[i] = buildings.output[cell];
     staffing[i] = buildings.staffing[cell];
     workers[i] = buildings.workers[cell];
@@ -184,6 +193,7 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
     goodCount: buildings.goodCount,
     cells,
     level,
+    method,
     output,
     staffing,
     workers,
@@ -199,5 +209,8 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
       capacityUse,
       (use, m) => maxDays * Math.max(use, capacityMake[m]),
     ),
+    imports: buildings.imports.slice(),
+    otherPowerWanted: buildings.otherPowerWanted.slice(),
+    otherPowerUsed: buildings.otherPowerUsed.slice(),
   };
 }

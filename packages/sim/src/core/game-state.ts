@@ -13,19 +13,13 @@ import { SYSTEMS, type SimSystem, type SystemId, type SystemRegistry, TICK_ORDER
 import { startingOwners } from '../world/ownership';
 import { type CountryStartTable, buildCountryStartTable } from '../world/country-start';
 import { type WorldMap, buildWorldMap } from '../world/world-map';
-import {
-  type BuildingsRestore,
-  type BuildingsState,
-  createBuildings,
-  linkStartingBuildings,
-  restoreBuildings,
-} from '../economy/buildings';
+import { type BuildingsRestore, type BuildingsState, restoreBuildings } from '../economy/buildings';
 import {
   type PopulationRestore,
   type PopulationState,
-  createPopulation,
   restorePopulation,
 } from '../economy/population';
+import { createStartingEconomy } from '../economy/starting-economy';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -44,7 +38,7 @@ export interface GameStateOptions {
     readonly playerCountry: number;
     /** The population (F06): dependents per province, size and stand-in jobs per pop. */
     readonly population: PopulationRestore;
-    /** The buildings (F07): their levels and the national stockpiles. */
+    /** The buildings (F07, F85): their levels, methods and the national stockpiles. */
     readonly buildings: BuildingsRestore;
   };
 }
@@ -115,10 +109,11 @@ export class GameState {
     this.countryStart = buildCountryStartTable(options.data.countryStart, this.world);
     this.seed = options.seed >>> 0;
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
-    this.population = createPopulation(options.data, this.world, this.countryStart);
-    this.buildings = createBuildings(options.data, this.world, this.countryStart);
-    // The starting buildings take over their jobs from the stand-in economy.
-    linkStartingBuildings(this.buildings, this.population);
+    // The population and the starting buildings, which take over their jobs
+    // from the stand-in economy (and give each province its pop mix).
+    const economy = createStartingEconomy(options.data, this.world, this.countryStart);
+    this.population = economy.population;
+    this.buildings = economy.buildings;
 
     if (options.restore) {
       this.day = options.restore.day;

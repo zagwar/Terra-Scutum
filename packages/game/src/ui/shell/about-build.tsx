@@ -70,6 +70,7 @@ export function AboutBuild({ state }: { readonly state: AppState }) {
         <li>{t('CREDITS_LAND_COVER')}</li>
         <li>{t('CREDITS_STATISTICS')}</li>
         <li>{t('CREDITS_POPULATION')}</li>
+        <li>{t('CREDITS_PRODUCTION')}</li>
         <li>{t('CREDITS_FLAGS')}</li>
       </ul>
     </section>

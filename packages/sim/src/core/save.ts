@@ -5,8 +5,8 @@ import { SimError } from './sim-error';
 import type { SystemRegistry } from './systems';
 import { buildCountryStartTable } from '../world/country-start';
 import { buildWorldMap } from '../world/world-map';
-import { createPopulation } from '../economy/population';
-import { buildingLevelList, createBuildings, linkStartingBuildings } from '../economy/buildings';
+import { buildingLevelList } from '../economy/buildings';
+import { createStartingEconomy } from '../economy/starting-economy';
 
 /**
  * Save format versioning.
@@ -21,7 +21,7 @@ import { buildingLevelList, createBuildings, linkStartingBuildings } from '../ec
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 5;
+export const SAVE_FORMAT_VERSION = 6;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -57,15 +57,18 @@ const saveFileSchema = z.strictObject({
     standInJobs: z.array(z.number().min(0)),
   }),
   /**
-   * The buildings (F07). `types` and `goods` are the building types' and the
-   * goods' ids in the order the numbers use. `levels` lists every building
-   * as three numbers: its province (an index into `map.provinces`), its type
-   * and its level. `stock` is each country's national stockpile: one number
-   * per country and good (country by country, the goods in order).
+   * The buildings (F07, F85). `types` and `goods` are the building types' and
+   * the goods' ids in the order the numbers use; `methods` each type's
+   * production methods' ids. `levels` lists every building as four numbers:
+   * its province (an index into `map.provinces`), its type, its level and its
+   * method (an index into its type's `methods`). `stock` is each country's
+   * national stockpile: one number per country and good (country by country,
+   * the goods in order).
    */
   buildings: z.strictObject({
     types: z.array(z.string()),
     goods: z.array(z.string()),
+    methods: z.array(z.array(z.string())),
     levels: z.array(z.number().int().min(0)),
     stock: z.array(z.number().min(0)),
   }),
@@ -114,7 +117,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // were simulated: they get the starting population.
   3: (save, data) => {
     const world = buildWorldMap(data);
-    const population = createPopulation(
+    const { population } = createStartingEconomy(
       data,
       world,
       buildCountryStartTable(data.countryStart, world),
@@ -135,9 +138,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   4: (save, data) => {
     const world = buildWorldMap(data);
     const countryStart = buildCountryStartTable(data.countryStart, world);
-    const population = createPopulation(data, world, countryStart);
-    const buildings = createBuildings(data, world, countryStart);
-    linkStartingBuildings(buildings, population);
+    const { population, buildings } = createStartingEconomy(data, world, countryStart);
     const old = save.population as { jobs?: unknown } & UnknownRecord;
     const { jobs, ...rest } = old;
     const savedJobs = Array.isArray(jobs) ? (jobs as number[]) : [];
@@ -152,6 +153,35 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
       buildings: {
         types: [...buildings.typeIds],
         goods: [...buildings.goodIds],
+        levels: buildingLevelList(buildings).filter((_, i) => i % 4 !== 3),
+        stock: Array.from(buildings.stock),
+      },
+    };
+  },
+  // Version 6 (F85) brought the building catalog with production methods and
+  // real starting buildings. The six example buildings of a version 5 save
+  // don't carry over: it gets the starting buildings and stockpiles, and the
+  // stand-in economy offers the same share of every pop as at the start of a
+  // new campaign.
+  5: (save, data) => {
+    const world = buildWorldMap(data);
+    const countryStart = buildCountryStartTable(data.countryStart, world);
+    const { population, buildings } = createStartingEconomy(data, world, countryStart);
+    const old = save.population as { size?: unknown } & UnknownRecord;
+    const sizes = Array.isArray(old.size) ? (old.size as number[]) : [];
+    return {
+      ...save,
+      population: {
+        ...old,
+        standInJobs: Array.from(
+          population.standInTarget,
+          (share, i) => share * (Number(sizes[i]) || 0),
+        ),
+      },
+      buildings: {
+        types: [...buildings.typeIds],
+        goods: [...buildings.goodIds],
+        methods: buildings.methodIds.map((ids) => [...ids]),
         levels: buildingLevelList(buildings),
         stock: Array.from(buildings.stock),
       },
@@ -180,6 +210,7 @@ export function serializeGameState(state: GameState): SaveFile {
     buildings: {
       types: [...state.buildings.typeIds],
       goods: [...state.buildings.goodIds],
+      methods: state.buildings.methodIds.map((ids) => [...ids]),
       levels: buildingLevelList(state.buildings),
       stock: Array.from(state.buildings.stock),
     },
@@ -283,18 +314,27 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   // The buildings' numbers are in the order of the map, the building types and the goods.
   const types = options.data.buildings.buildings.map((building) => building.id);
   const goods = options.data.goods.goods.map((good) => good.id);
-  if (!sameIds(save.buildings.types, types) || !sameIds(save.buildings.goods, goods)) {
+  const methods = options.data.buildings.buildings.map((b) => b.methods.map((m) => m.id));
+  if (
+    !sameIds(save.buildings.types, types) ||
+    !sameIds(save.buildings.goods, goods) ||
+    save.buildings.methods.length !== methods.length ||
+    !methods.every((ids, t) => sameIds(save.buildings.methods[t], ids))
+  ) {
     throw new SimError(
       'SAVE_ERROR_CORRUPT',
       {},
-      'the building types or goods are not the ones of this game',
+      'the building types, methods or goods are not the ones of this game',
     );
   }
   const levels = save.buildings.levels;
-  let levelsFit = levels.length % 3 === 0;
-  for (let i = 0; levelsFit && i < levels.length; i += 3)
+  let levelsFit = levels.length % 4 === 0;
+  for (let i = 0; levelsFit && i < levels.length; i += 4)
     levelsFit =
-      levels[i] < map.provinces.length && levels[i + 1] < types.length && levels[i + 2] <= 65535;
+      levels[i] < map.provinces.length &&
+      levels[i + 1] < types.length &&
+      levels[i + 2] <= 65535 &&
+      levels[i + 3] < methods[levels[i + 1]].length;
   if (!levelsFit || save.buildings.stock.length !== map.countries.length * goods.length) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'buildings do not match the map');
   }

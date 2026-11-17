@@ -181,45 +181,92 @@ export function testGoods() {
 }
 
 /**
- * A valid `buildings.json` (F07) with round numbers: a mine, a coal mine, a
- * power plant and a mill. No country starts with buildings unless a test
- * passes `anchors`, so the tests of other systems see only the stand-in economy.
+ * A valid `buildings.json` (F07, F85) with round numbers: a mine, a coal
+ * mine, a power plant that burns coal, one that burns nothing (a dam) and a
+ * mill with two production methods. The stand-ins (standing imports, the
+ * rest of the economy's electricity) are off unless a test turns them on.
  */
-export function testBuildings(anchors: { building: string; gdpBillionUsdPerLevel: number }[] = []) {
+export function testBuildings() {
   return {
     buildings: [
       {
         id: 'mine',
         category: 'extraction',
-        workers: { laborers: 100 },
-        electricity: 10,
-        outputs: { ore: 200 },
+        methods: [
+          {
+            id: 'machines',
+            workers: { laborers: 100 },
+            electricity: 10,
+            outputs: { ore: 200 },
+          },
+        ],
       },
       {
         id: 'coal_mine',
         category: 'extraction',
-        workers: { laborers: 100 },
-        electricity: 10,
-        outputs: { coal: 300 },
+        methods: [
+          {
+            id: 'machines',
+            workers: { laborers: 100 },
+            electricity: 10,
+            outputs: { coal: 300 },
+          },
+        ],
       },
       {
         id: 'power_plant',
         category: 'energy',
-        workers: { skilled_workers: 20 },
-        inputs: { coal: 100 },
-        outputs: { electricity: 200 },
+        methods: [
+          {
+            id: 'turbines',
+            workers: { skilled_workers: 20 },
+            inputs: { coal: 100 },
+            outputs: { electricity: 200 },
+          },
+        ],
       },
       {
         id: 'mill',
         category: 'processing',
-        workers: { laborers: 200, skilled_workers: 100 },
-        electricity: 50,
-        inputs: { ore: 100, coal: 50 },
-        outputs: { steel: 60 },
+        methods: [
+          {
+            id: 'modern',
+            workers: { laborers: 200, skilled_workers: 100 },
+            electricity: 50,
+            inputs: { ore: 100, coal: 50 },
+            outputs: { steel: 60 },
+          },
+          {
+            id: 'old',
+            workers: { laborers: 900, skilled_workers: 100 },
+            electricity: 20,
+            inputs: { ore: 100, coal: 80 },
+            outputs: { steel: 60 },
+          },
+        ],
+      },
+      {
+        id: 'dam',
+        category: 'energy',
+        methods: [
+          { id: 'turbines', workers: { skilled_workers: 10 }, outputs: { electricity: 100 } },
+        ],
       },
     ],
     stockpile: { startingDays: 10, maxDays: 30 },
-    startingBuildings: { anchors },
+    standIns: { otherElectricityShare: 0, standingImportsShare: 0, standingImportsBuffer: 0 },
+  };
+}
+
+/** A building a province starts with: `[building, method, level]` (F85). */
+export type TestStartingBuilding = [string, string, number];
+
+/** A valid `building_start.json` (F85): no starting buildings unless a test gives some. */
+export function testBuildingStart(provinces: Record<string, TestStartingBuilding[]> = {}) {
+  return {
+    year: 2025,
+    sources: [],
+    provinces: Object.entries(provinces).map(([id, buildings]) => ({ id, buildings })),
   };
 }
 
@@ -495,6 +542,7 @@ export function testRawData(
     pops: testPops(),
     goods: testGoods(),
     buildings: testBuildings(),
+    buildingStart: testBuildingStart(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

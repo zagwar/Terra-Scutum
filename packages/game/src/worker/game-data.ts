@@ -1,4 +1,5 @@
 import type { RawGameData } from '@terra-scutum/sim';
+import buildingStart from '../../../../data/building_start.json';
 import buildings from '../../../../data/buildings.json';
 import countries from '../../../../data/countries.json';
 import countryFlags from '../../../../data/country_flags.json';
@@ -35,6 +36,7 @@ export const RAW_GAME_DATA: RawGameData = {
   pops,
   goods,
   buildings,
+  buildingStart,
   mapView,
   terrainTiles,
   notifications,

@@ -3,6 +3,7 @@ import {
   buildingNameKey,
   countryNameKey,
   goodNameKey,
+  productionMethodNameKey,
   provinceNameKey,
 } from '@terra-scutum/sim';
 import { useState } from 'react';
@@ -11,6 +12,7 @@ import { Flag } from '../flag';
 import {
   formatAmount,
   formatMoneyShort,
+  formatPercent,
   formatPeopleShort,
   formatPopulation,
   t,
@@ -24,12 +26,13 @@ import {
   amountsText,
   limitText,
 } from './building-parts';
-import { countryBuildings, countryStockpile, recipeAmounts } from './buildings-view';
+import { countryBuildings, countryStockpile, otherElectricity } from './buildings-view';
 
 /**
  * The Buildings screen (Economy lens; a first pass in F07, section 8.3): the
- * player's country's buildings by type with their workers and output, where
- * each type stands, and the national stockpile. F11 and F87 fill it out;
+ * player's country's buildings by type with their workers, output and
+ * production methods (F85), where each type stands, and the national
+ * stockpile with its standing imports. F11 and F87 fill it out;
  * construction joins it with F12.
  */
 export function BuildingsScreen({
@@ -45,8 +48,10 @@ export function BuildingsScreen({
   if (playerCountry === null) return null;
   const country = playerCountry;
   const countryName = tKey(countryNameKey(world.countryIds[country]));
-  const types = countryBuildings(buildings, buildingTypes, provinceOwner, country);
+  const types = countryBuildings(buildings, buildingTypes, goods, provinceOwner, country);
   const stock = countryStockpile(buildings, goods, country);
+  const other = otherElectricity(buildings, country);
+  const electricityUnit = goods.goods.find((good) => good.id === goods.electricity)?.unit ?? 'MWh';
   const flagCode = state.countryScreen?.flagCodes[country];
   const total = (pick: (type: (typeof types)[number]) => number) =>
     types.reduce((sum, type) => sum + pick(type), 0);
@@ -115,11 +120,6 @@ export function BuildingsScreen({
               <tbody>
                 {types.map((type) => {
                   const id = type.definition.id;
-                  const makes = recipeAmounts(
-                    type.definition,
-                    goods,
-                    type.levels * type.output,
-                  ).makes;
                   return (
                     <tr
                       key={id}
@@ -136,6 +136,22 @@ export function BuildingsScreen({
                         >
                           {tKey(buildingNameKey(id))}
                         </button>
+                        <span
+                          className="building-methods"
+                          title={t('BUILDINGS_METHOD_HINT')}
+                          data-testid={`buildings-methods-${id}`}
+                        >
+                          {type.methods
+                            .map(({ method, levels }) =>
+                              t('BUILDINGS_METHOD_SHARE', {
+                                method: tKey(
+                                  productionMethodNameKey(type.definition.methods[method].id),
+                                ),
+                                share: formatPercent(type.levels > 0 ? levels / type.levels : 0, 0),
+                              }),
+                            )
+                            .join(', ')}
+                        </span>
                       </th>
                       <td>{type.levels.toLocaleString('en')}</td>
                       <td>{type.buildings.toLocaleString('en')}</td>
@@ -155,7 +171,7 @@ export function BuildingsScreen({
                           testId={`buildings-output-${id}`}
                         />
                       </td>
-                      <td>{amountsText(makes, goods)}</td>
+                      <td>{amountsText(type.makes, goods)}</td>
                       <td data-status={type.heldBack > 0 ? 'bad' : undefined}>
                         {type.heldBack.toLocaleString('en')}
                       </td>
@@ -180,6 +196,7 @@ export function BuildingsScreen({
                     <tr>
                       <th>{t('POPULATION_PROVINCE')}</th>
                       <th>{t('BUILDINGS_SCREEN_LEVELS')}</th>
+                      <th>{t('BUILDINGS_METHOD')}</th>
                       <th>{t('BUILDINGS_WORKERS')}</th>
                       <th>{t('BUILDINGS_OUTPUT')}</th>
                       <th>{t('BUILDINGS_SCREEN_STATUS')}</th>
@@ -201,6 +218,7 @@ export function BuildingsScreen({
                           </button>
                         </th>
                         <td>{row.level}</td>
+                        <td>{tKey(productionMethodNameKey(row.methodDefinition.id))}</td>
                         <td>
                           {t('BUILDINGS_WORKERS_VALUE', {
                             workers: formatPeopleShort(row.workers),
@@ -234,6 +252,7 @@ export function BuildingsScreen({
                 <th>{t('STOCKPILE_IN_STOCK')}</th>
                 <th>{t('STOCKPILE_MADE')}</th>
                 <th>{t('STOCKPILE_USED')}</th>
+                <th title={t('STOCKPILE_IMPORTED_HINT')}>{t('STOCKPILE_IMPORTED')}</th>
                 <th>{t('STOCKPILE_LASTS')}</th>
               </tr>
             </thead>
@@ -257,6 +276,9 @@ export function BuildingsScreen({
                     <td data-testid={`stockpile-used-${row.good}`}>
                       {formatAmount(row.used, row.unit)}
                     </td>
+                    <td data-testid={`stockpile-imported-${row.good}`}>
+                      {row.imported > 0 ? formatAmount(row.imported, row.unit) : '—'}
+                    </td>
                     <td
                       data-testid={`stockpile-lasts-${row.good}`}
                       data-status={empty || row.daysLeft !== null ? 'bad' : undefined}
@@ -275,6 +297,21 @@ export function BuildingsScreen({
             </tbody>
           </table>
         </div>
+      )}
+      {other.wanted > 0 && (
+        <dl className="facts">
+          <dt title={t('STOCKPILE_OTHER_ELECTRICITY_HINT')}>{t('STOCKPILE_OTHER_ELECTRICITY')}</dt>
+          <dd
+            data-testid="stockpile-other-electricity"
+            data-status={other.used < other.wanted * 0.9995 ? 'bad' : undefined}
+            title={t('STOCKPILE_OTHER_ELECTRICITY_HINT')}
+          >
+            {t('STOCKPILE_OTHER_ELECTRICITY_VALUE', {
+              used: formatAmount(other.used, electricityUnit),
+              wanted: formatAmount(other.wanted, electricityUnit),
+            })}
+          </dd>
+        </dl>
       )}
       {BUILDING_TEST_TOOLS && (
         <p className="test-tools-row">
