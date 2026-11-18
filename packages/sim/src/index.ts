@@ -23,6 +23,8 @@ export * from './economy/buildings-data';
 export * from './economy/economy';
 export * from './economy/market';
 export * from './economy/market-data';
+export * from './economy/trade';
+export * from './economy/trade-data';
 export * from './economy/building-start';
 export * from './economy/starting-economy';
 export * from './economy/pops-data';

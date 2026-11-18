@@ -19,6 +19,7 @@ import {
   testBuildingStart,
   testBuildings,
   testMarket,
+  testTrade,
   testPops,
   testRawData,
 } from './helpers';
@@ -39,7 +40,8 @@ interface GameOptions {
   /** Heating's value in the buy packages at levels 1, 50 and 99 (US$ per worker a day). */
   readonly heating?: [number, number, number];
   readonly restOfEconomyShare?: number;
-  readonly standingImportsShare?: number;
+  /** F19: goods can be traded (as in the game's data; the test data has trade off). */
+  readonly trade?: boolean;
   readonly market?: (market: ReturnType<typeof testMarket>) => void;
   readonly buildings?: (buildings: ReturnType<typeof testBuildings>) => void;
 }
@@ -54,13 +56,13 @@ function game(options: GameOptions = {}) {
   raw.pops = pops;
   const buildings = testBuildings();
   buildings.standIns.restOfEconomyShare = options.restOfEconomyShare ?? 1;
-  buildings.standIns.standingImportsShare = options.standingImportsShare ?? 0;
   options.buildings?.(buildings);
   raw.buildings = buildings;
   const market = testMarket();
   options.market?.(market);
   raw.market = market;
   raw.buildingStart = testBuildingStart(options.start ?? {});
+  if (options.trade) raw.trade = { ...testTrade(), localGoods: ['electricity'] };
   const data = parseGameData(raw);
   const state = new GameState({ data, seed: 1 });
   const country = (id: string) => state.world.countryIndex.get(id)!;
@@ -173,11 +175,11 @@ describe('the start of a campaign (F65)', () => {
       expect(Math.abs(price('AAA', good) - 1)).toBeLessThan(0.02);
   });
 
-  it('gives standing imports for what the pops want but the country doesn’t make', () => {
+  it('imports what the buildings and pops want but the country doesn’t make (F19)', () => {
     // No coal mine in AAA: its power plant and its pops' heating need coal.
     const { state, at } = game({
       start: { alpha_west: [['power_plant', 'turbines', 1]] },
-      standingImportsShare: 1,
+      trade: true,
     });
     const imports = state.buildings.imports[at('AAA', 'coal')];
     const report = ensureBuildingsReport(state);
@@ -362,7 +364,7 @@ describe('markets in saves and snapshots (F65)', () => {
     void _wealth;
     void _income;
     const old = { ...rest, saveVersion: 6, buildings, population };
-    expect(SAVE_FORMAT_VERSION).toBe(7);
+    expect(SAVE_FORMAT_VERSION).toBe(8);
     const loaded = deserializeGameState(old, { data });
     expect(loaded.day).toBe(10);
     expect([...loaded.market.price]).toEqual([...game({ start: COAL_ECONOMY }).state.market.price]);

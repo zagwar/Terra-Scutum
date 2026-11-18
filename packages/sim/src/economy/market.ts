@@ -9,12 +9,17 @@ import type { PopulationState } from './population';
  *
  * - **One market per country** for every good. Buildings sell what they make
  *   there and buy their inputs; pops buy their needs; the rest of the
- *   economy (a stand-in for what the building catalog doesn't cover yet,
- *   and for exports until trade, F19) buys what is left over at the start.
- * - **Prices** (weekly): base price × (1 + sensitivity × (buy − sell) ÷ the
- *   smaller of the two), from the past week's buy and sell orders, between
- *   `min` and `max` times the base price. The national stockpile is the
- *   market's reserve: buyers draw on it, prices ignore it.
+ *   economy (a stand-in for what the building catalog doesn't cover yet)
+ *   buys what is left over at the start after exports; exports (F19,
+ *   `trade.ts`) buy like everyone else, imports are sold like the country's
+ *   own goods.
+ * - **Prices** (weekly): reference price × (1 + sensitivity × (buy − sell) ÷
+ *   the smaller of the two), from the past week's buy and sell orders,
+ *   between `min` and `max` times the base price. The reference price is the
+ *   base price, or (F19) for a good the country trades the average of its
+ *   own goods at the base price and its imports' delivered cost (or its
+ *   exports' world price). The national stockpile is the market's reserve:
+ *   buyers draw on it, prices ignore it.
  * - **Pops** have a **wealth** (1–99, `PopulationState.wealth`) and buy its
  *   **buy package** every day: so many US$ (at base prices) per worker of
  *   each need; a dependent counts as `dependentWeight` of a worker. A need
@@ -62,10 +67,18 @@ export interface MarketState {
   // ── Fixed for the campaign (from the start, `calibrateMarkets`) ──────────
   /** Per country and good: what the rest of the economy buys a day per person (never electricity: that is `BuildingsState.otherPowerPerPerson`). */
   readonly restPerPerson: Float64Array;
+  /** Per country and good: the price at the start; the rest of the economy buys less of a good dearer than this. */
+  readonly restReference: Float64Array;
 
   // ── The state (saved) ────────────────────────────────────────────────────
   /** Per country and good: this week's price, US$ per unit. */
   readonly price: Float64Array;
+  /** Per country and good: where the price formula starts from (F19: the base price, or what trade makes it; saved with trade). */
+  readonly referencePrice: Float64Array;
+  /** Per country and good: what the country's exporters buy a day to ship abroad (F19: this week's plan, set by trade). */
+  readonly exportOrder: Float64Array;
+  /** Per country and good: what a unit fetches abroad (F19: world price less export tariff; 0 for goods that can't be traded). */
+  readonly exportPrice: Float64Array;
   /** Per country and need entry: the share of the need that good covers (0–1). */
   readonly shares: Float64Array;
   /** Per country and good: this week's buy and sell orders so far, and the pops' part of the buy orders. */
@@ -90,11 +103,16 @@ export interface MarketState {
   readonly restOrder: Float64Array;
   readonly popGot: Float64Array;
   readonly restGot: Float64Array;
+  /** Per country and good: what the exporters got today (it leaves for the World Market). */
+  readonly exportGot: Float64Array;
   /** Per country and good: today's sell orders (made + imported; electricity: what the plants could make) and buy orders (everyone). */
   readonly sell: Float64Array;
   readonly buy: Float64Array;
   /** Per country and good: what went over the stockpile's limit today and was lost. */
   readonly lost: Float64Array;
+  /** Per country and good: last week's buy and sell orders a day (for trade's week; worked out every Monday). */
+  readonly lastBuy: Float64Array;
+  readonly lastSell: Float64Array;
   /** Per country: its people today, and the electricity its pops ask for (their heating). */
   readonly countryPeople: Float64Array;
   readonly popPower: Float64Array;
@@ -149,7 +167,11 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
     dependentWeight: wealth.dependentWeight,
     restElasticity: data.market.restOfEconomy.priceElasticity,
     restPerPerson: new Float64Array(countries * goodCount),
+    restReference: price.slice(),
     price,
+    referencePrice: price.slice(),
+    exportOrder: new Float64Array(countries * goodCount),
+    exportPrice: new Float64Array(countries * goodCount),
     shares: new Float64Array(countries * entries.length),
     weekBuy: new Float64Array(countries * goodCount),
     weekSell: new Float64Array(countries * goodCount),
@@ -164,9 +186,12 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
     restOrder: new Float64Array(countries * goodCount),
     popGot: new Float64Array(countries * goodCount),
     restGot: new Float64Array(countries * goodCount),
+    exportGot: new Float64Array(countries * goodCount),
     sell: new Float64Array(countries * goodCount),
     buy: new Float64Array(countries * goodCount),
     lost: new Float64Array(countries * goodCount),
+    lastBuy: new Float64Array(countries * goodCount),
+    lastSell: new Float64Array(countries * goodCount),
     countryPeople: new Float64Array(countries),
     popPower: new Float64Array(countries),
     history: new Float32Array(countries * goodCount * HISTORY_WEEKS),
@@ -309,8 +334,10 @@ export function computeOrders(
     }
   }
   // The rest of the economy buys less of what has become dearer: in
-  // proportion to (base price ÷ price) to the power of `restElasticity`.
-  const { restPerPerson, price, restElasticity } = market;
+  // proportion to (starting price ÷ price) to the power of `restElasticity`.
+  // F19: a good that fetches more abroad than at home costs it what it
+  // fetches abroad (so a high world price frees goods for export).
+  const { restPerPerson, restReference, price, exportPrice, restElasticity } = market;
   for (let c = 0; c < market.countryCount; c++) {
     const at = c * goodCount;
     market.popPower[c] = popOrder[at + market.electricityGood];
@@ -320,7 +347,8 @@ export function computeOrders(
         restOrder[at + g] = 0;
         continue;
       }
-      const ratio = basePrice[g] / price[at + g];
+      const p = exportPrice[at + g] > price[at + g] ? exportPrice[at + g] : price[at + g];
+      const ratio = restReference[at + g] / p;
       restOrder[at + g] =
         restElasticity === 1 ? wanted * ratio : wanted * Math.pow(ratio, restElasticity);
     }
@@ -328,8 +356,9 @@ export function computeOrders(
 }
 
 /**
- * The market's part of a day, after the buildings produced: the pops, then
- * the rest of the economy, buy from what is in the stock; what is above the
+ * The market's part of a day, after the buildings produced: the pops and the
+ * rest of the economy buy from what is in the stock, with equal shares in a
+ * shortage, then the exporters (F19) take what is left; what is above the
  * stockpile's limit is lost; the day's buy and sell orders are counted.
  * With `real`, also this week's sums: orders, incomes, deliveries and each
  * building's sales and costs (the report's trial run passes false).
@@ -343,6 +372,7 @@ export function marketDay(
 ): void {
   const { goodCount, electricityGood, popOrder, restOrder, popGot, restGot, sell, buy, lost } =
     market;
+  const { exportOrder, exportGot } = market;
   const { made, imports, ordered, powerPotential, popPowerUsed, otherPowerUsed } = buildings;
   const { capacityUse, capacityMake, maxDays } = buildings;
   const basePrice = market.basePrice;
@@ -356,12 +386,15 @@ export function marketDay(
         // Electricity was shared out when the plants ran (`runStage`).
         popGot[m] = popPowerUsed[c];
         restGot[m] = otherPowerUsed[c];
+        exportGot[m] = 0;
         sell[m] = powerPotential[c];
         buy[m] = ordered[m];
         lost[m] = 0;
       } else {
         // In a shortage everyone gets the same share (Victoria 3): the pops
-        // and the rest of the economy leave the buildings theirs for tomorrow.
+        // and the rest of the economy leave the buildings theirs for
+        // tomorrow. Exporters (F19) ship what is left after that: a country
+        // looks after its own buyers first (Victoria 3 shares equally).
         let there = stock[m];
         const asked = popOrder[m] + restOrder[m] + ordered[m];
         const share = asked > there ? there / asked : 1;
@@ -369,8 +402,11 @@ export function marketDay(
         restGot[m] = restOrder[m] * share;
         there -= popGot[m] + restGot[m];
         if (there < 0) there = 0;
+        const spare = there - ordered[m] * share;
+        exportGot[m] = spare <= 0 ? 0 : spare < exportOrder[m] ? spare : exportOrder[m];
+        there -= exportGot[m];
         sell[m] = made[m] + imports[m];
-        buy[m] = ordered[m] + popOrder[m] + restOrder[m];
+        buy[m] = ordered[m] + popOrder[m] + restOrder[m] + exportOrder[m];
         // A country keeps only so many days of what its market buys or sells.
         let daily = buy[m] > sell[m] ? buy[m] : sell[m];
         if (capacityUse[m] > daily) daily = capacityUse[m];
@@ -428,6 +464,10 @@ export function marketWeek(
 ): void {
   const days = market.weekDays;
   if (days > 0) {
+    for (let m = 0; m < market.lastBuy.length; m++) {
+      market.lastBuy[m] = market.weekBuy[m] / days;
+      market.lastSell[m] = market.weekSell[m] / days;
+    }
     updatePrices(market, data);
     updateShares(
       market,
@@ -461,7 +501,7 @@ export function marketWeek(
   population.reportOwnershipVersion = -1;
 }
 
-/** Victoria 3's price: base × (1 + sensitivity × (buy − sell) ÷ min(buy, sell)), within its limits. */
+/** Victoria 3's price: base × (1 + sensitivity × (buy − sell) ÷ min(buy, sell)), within its limits (`base` may be a reference price, F19). */
 export function marketPrice(
   base: number,
   buy: number,
@@ -483,11 +523,17 @@ export function marketPrice(
   return base * factor;
 }
 
+/** The week's prices: Victoria 3's formula from each market's reference price (F19), kept within `min` and `max` times the base price. */
 function updatePrices(market: MarketState, data: GameData): void {
-  const { price, weekBuy, weekSell, basePrice, goodCount } = market;
+  const { price, weekBuy, weekSell, basePrice, referencePrice, goodCount } = market;
   const rules = data.market.prices;
-  for (let m = 0; m < price.length; m++)
-    price[m] = marketPrice(basePrice[m % goodCount], weekBuy[m], weekSell[m], rules);
+  for (let m = 0; m < price.length; m++) {
+    const base = basePrice[m % goodCount];
+    let p = marketPrice(referencePrice[m], weekBuy[m], weekSell[m], rules);
+    if (p < rules.min * base) p = rules.min * base;
+    else if (p > rules.max * base) p = rules.max * base;
+    price[m] = p;
+  }
 }
 
 function recordHistory(market: MarketState): void {

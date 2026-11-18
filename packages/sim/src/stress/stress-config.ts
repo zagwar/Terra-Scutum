@@ -32,8 +32,6 @@ export const simStressSchema = z.strictObject({
   buildingsPerProvince: count,
   inputsPerBuilding: z.int().min(0).max(10),
   outputsPerBuilding: z.int().min(1).max(10),
-  /** Trade routes between two countries' markets, each moving every good. */
-  tradeRoutes: count,
   /** Military units (divisions, fleets, air wings) drawing supply every day. */
   units: count,
   /** Battles fought at the same time, and the units on each side of one. */

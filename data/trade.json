@@ -1,0 +1,26 @@
+{
+  "localGoods": ["electricity"],
+  "shipping": {
+    "seaPerThousandKm": 1.5,
+    "landPerThousandKm": 20
+  },
+  "tariffs": {
+    "import": 0.05,
+    "export": 0
+  },
+  "volumes": {
+    "gapShare": 0.25,
+    "stockTargetDays": 15,
+    "stockRestoreWeeks": 4
+  },
+  "partners": {
+    "halvingShare": 0.1,
+    "rounds": 8
+  },
+  "worldPrice": {
+    "speed": 0.2
+  },
+  "restOfWorld": {
+    "shippingShare": 0.1
+  }
+}

@@ -1,6 +1,7 @@
 import type { GameState } from './game-state';
 import type { TextParams } from './sim-error';
 import { fillStockpile, setBuildingLevel } from '../economy/buildings';
+import { resplitTrade, setEmbargo, setTradeAgreement } from '../economy/trade';
 
 /**
  * Sim commands: the ONLY way anything outside the sim changes sim state.
@@ -51,7 +52,29 @@ export type SimCommand =
    * many days of what its buildings use at full output, as emergency imports
    * will later (trade, F19). Used by tests and by the game's test buttons.
    */
-  | { readonly type: 'debugFillStockpile'; readonly country: string; readonly days: number };
+  | { readonly type: 'debugFillStockpile'; readonly country: string; readonly days: number }
+  /**
+   * Diagnostic (F19): two countries (by id) stop trading with each other
+   * (`on`) or start again, as embargoes and sanctions will with diplomacy
+   * and the UN (M6). Importers turn to other suppliers at once. Used by
+   * tests and the Trade screen's test buttons.
+   */
+  | {
+      readonly type: 'debugSetEmbargo';
+      readonly country: string;
+      readonly target: string;
+      readonly on: boolean;
+    }
+  /**
+   * Diagnostic (F19): two countries (by id) sign (`on`) or end a trade
+   * agreement: no tariffs between them, as diplomacy will (M6). Used by tests.
+   */
+  | {
+      readonly type: 'debugSetTradeAgreement';
+      readonly country: string;
+      readonly target: string;
+      readonly on: boolean;
+    };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -109,6 +132,8 @@ const HANDLERS: CommandHandlers = {
     if (state.day > 0) return { ok: false, reasonKey: 'COMMAND_PLAYER_COUNTRY_LOCKED' };
     if (state.playerCountry !== country) {
       state.playerCountry = country;
+      // The markets' and trade's snapshots show the player's country.
+      state.buildings.changes += 1;
       state.emit({ type: 'playerCountryChosen', country: command.country });
     }
     return OK;
@@ -178,7 +203,33 @@ const HANDLERS: CommandHandlers = {
     fillStockpile(state, country, command.days);
     return OK;
   },
+  debugSetEmbargo(state, command): CommandResult {
+    return pairCommand(state, command, setEmbargo);
+  },
+  debugSetTradeAgreement(state, command): CommandResult {
+    return pairCommand(state, command, setTradeAgreement);
+  },
 };
+
+/** An embargo or a trade agreement between two countries; trade is split among partners again at once. */
+function pairCommand(
+  state: GameState,
+  command: { readonly country: string; readonly target: string; readonly on: boolean },
+  change: (trade: GameState['trade'], a: number, b: number, on: boolean) => boolean,
+): CommandResult {
+  for (const id of [command.country, command.target]) {
+    if (!state.world.countryIndex.has(id))
+      return { ok: false, reasonKey: 'COMMAND_UNKNOWN_COUNTRY', params: { country: String(id) } };
+  }
+  const a = state.world.countryIndex.get(command.country) ?? 0;
+  const b = state.world.countryIndex.get(command.target) ?? 0;
+  if (a === b || typeof command.on !== 'boolean') return { ok: false, reasonKey: 'COMMAND_INVALID' };
+  if (change(state.trade, a, b, command.on)) {
+    resplitTrade(state.trade, state.market);
+    state.buildings.changes += 1;
+  }
+  return OK;
+}
 
 /** Applies one command to the state. Never throws for a bad command; it returns a refusal instead. */
 export function applyCommand(state: GameState, command: SimCommand): CommandResult {

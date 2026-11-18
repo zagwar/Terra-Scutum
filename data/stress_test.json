@@ -6,7 +6,6 @@
     "buildingsPerProvince": 16,
     "inputsPerBuilding": 3,
     "outputsPerBuilding": 2,
-    "tradeRoutes": 3000,
     "units": 5000,
     "battles": 30,
     "unitsPerBattleSide": 40,

@@ -19,6 +19,7 @@ import regions from '../../../../data/regions.json';
 import seaZones from '../../../../data/sea_zones.json';
 import stressTest from '../../../../data/stress_test.json';
 import terrainTiles from '../../../../data/terrain_tiles.json';
+import trade from '../../../../data/trade.json';
 
 /**
  * The game's data files, bundled into the sim worker at build time. The sim
@@ -39,6 +40,7 @@ export const RAW_GAME_DATA: RawGameData = {
   buildings,
   buildingStart,
   market,
+  trade,
   mapView,
   terrainTiles,
   notifications,

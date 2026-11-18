@@ -15,12 +15,13 @@ import {
   updateWealth,
 } from './market';
 import { type PopulationState, ensurePopulationReport } from './population';
+import { type TradeState, settleStartingTrade, tradeDay, tradeWeek } from './trade';
 
 /**
- * The economy's day (F07, F85, F65): the buildings' three production steps
- * (energy, resourceProduction, industry), then the market (the pops and the
- * rest of the economy buy; on Mondays first the week's prices, wages,
- * dividends and wealth). This module ties `buildings.ts` and `market.ts`
+ * The economy's day (F07, F85, F65, F19): the buildings' three production
+ * steps (energy, resourceProduction, industry), then the market (the pops,
+ * the rest of the economy and the exporters buy; on Mondays first the
+ * week's prices, wages, dividends and wealth), then trade (`trade.ts`). This module ties `buildings.ts` and `market.ts`
  * together, runs the report's trial day and sets up the markets at the
  * start of a campaign (`calibrateMarkets`).
  */
@@ -94,15 +95,32 @@ export const marketSystem: SimSystem = {
 };
 
 /**
+ * The trade step (tick slot `trade`, F19): on Mondays first the week (new
+ * plans, world prices, partners, reference prices), then the day (what was
+ * shipped reaches the World Market and is shared among importers).
+ */
+export const tradeSystem: SimSystem = {
+  weekly(state) {
+    tradeWeek(state.trade, state.market, state.buildings, state.data);
+    state.buildings.changes += 1;
+  },
+  daily(state) {
+    tradeDay(state.trade, state.market, state.buildings);
+    state.buildings.changes += 1;
+  },
+};
+
+/**
  * The economy's systems: the three production steps, each in its slot of
- * the tick (energy, resourceProduction, industry), and the market. They
- * belong together: the first prepares the day for the others.
+ * the tick (energy, resourceProduction, industry), the market and trade.
+ * They belong together: the first prepares the day for the others.
  */
 export const economySystems: SystemRegistry = {
   energy: stageSystem(0),
   resourceProduction: stageSystem(1),
   industry: stageSystem(2),
   market: marketSystem,
+  trade: tradeSystem,
 };
 
 /**
@@ -144,21 +162,31 @@ export function ensureBuildingsReport(state: GameState): BuildingsState {
   return buildings;
 }
 
+/** The rest of the economy's starting prices: what each good costs it today (the higher of its price and what it fetches abroad). */
+function setRestReference(market: MarketState): void {
+  const { restReference, price, exportPrice } = market;
+  for (let m = 0; m < price.length; m++)
+    restReference[m] = exportPrice[m] > price[m] ? exportPrice[m] : price[m];
+}
+
 /**
  * The markets at the start of a campaign, so that every market starts in
- * balance at its base prices (a trial of the first day decides):
+ * balance (a trial of the first day decides):
  * 1. Each building pays the going wage, or the lower wage it can afford at
- *    base prices with `startingMargin` of its sales left as profit; its
- *    cash reserves start at `startingReserves` of the most they hold.
+ *    the starting prices with `startingMargin` of its sales left as profit;
+ *    its cash reserves start at `startingReserves` of the most they hold.
  * 2. Each pop's income (wages, its share of a subsistence building, the
  *    rest of the economy's wages, dividends from the buildings' profits)
  *    sets its wealth, the most its income buys; that is also the standard of
  *    living it expects. The substitution shares follow what is on sale.
- * 3. Standing imports grow to cover what the pops want but the country
- *    doesn't get (until trade, F19); the rest of the economy buys what is
- *    left over, per person; the pops' electricity comes out of the rest of
- *    the economy's (F85); the stockpiles start with `startingDays` of
- *    everyone's buying.
+ * 3. Trade (F19, `settleStartingTrade`): each country imports what its
+ *    buildings and pops want but it doesn't make, countries with spare
+ *    export, the rest of the world sells what the world can't make; the rest
+ *    of the economy buys what is left over, per person; prices start at the
+ *    reference prices trade gives them (importers pay for shipping and
+ *    tariffs). The pops' electricity comes out of the rest of the economy's
+ *    (F85); the stockpiles start with `startingDays` of everyone's buying.
+ * These settle together over a few rounds (each depends on the others).
  */
 export function calibrateMarkets(
   data: GameData,
@@ -166,6 +194,7 @@ export function calibrateMarkets(
   population: PopulationState,
   buildings: BuildingsState,
   market: MarketState,
+  trade: TradeState,
 ): void {
   const owner = world.provinceCountry;
   const rules = data.market.buildings;
@@ -173,38 +202,33 @@ export function calibrateMarkets(
   const groups = population.groupCount;
   ensureLayout(buildings, owner, buildings.layoutOwnershipVersion);
 
-  // 1. Wages each building can afford; its reserves.
-  for (let i = 0; i < cellCount; i++) {
-    const cell = cells[i];
-    const province = (cell / typeCount) | 0;
-    if (recipeSubsistence[recipeOf(buildings, cell)] === 1) continue;
-    const unit = unitEconomics(market, buildings, population, cell, owner[province], 1);
-    const afford =
-      unit.wages > 0 ? ((unit.sales - unit.costs) * (1 - rules.startingMargin)) / unit.wages : 1;
-    wageFactor[cell] = Math.max(rules.minWage, Math.min(1, afford));
-    reserves[cell] =
-      rules.startingReserves * reserveCap(buildings, population, cell, rules.reserveDays);
-  }
-
-  // 2. Production, pay, profits, wealth, the substitution shares, the
-  // standing imports for the pops and the rest of the economy settle
-  // together over a few rounds (each depends on the others): each round a
-  // trial of the first day, then the pops' incomes and wealth, their orders,
-  // the imports they need and what the rest of the economy buys.
   const trial = buildings.trialStock;
   const ownersGroup = data.pops.groups.findIndex((group) => group.id === 'owners');
   const keep =
     rules.depositWhenEmpty -
     (rules.depositWhenEmpty - rules.depositAtFull) * rules.startingReserves;
   const { size, standInJobs, wage, income } = population;
-  const { goodCount, electricityGood, popOrder, restOrder, sell, buy } = market;
+  const { goodCount, electricityGood, popOrder, sell, buy } = market;
   const { made, imports, ordered, otherPowerPerPerson } = buildings;
-  const { restPerPerson, countryPeople, popPower } = market;
-  const importShare = data.buildings.standIns.standingImportsShare;
+  const { countryPeople, popPower } = market;
   const restShare = data.buildings.standIns.restOfEconomyShare;
   // F85's electricity for the rest of the economy and homes: the pops' part comes out of it.
   const otherPower = otherPowerPerPerson.slice();
   for (let round = 0; round < 6; round++) {
+    // 1. Wages each building can afford at today's prices; its reserves.
+    for (let i = 0; i < cellCount; i++) {
+      const cell = cells[i];
+      const province = (cell / typeCount) | 0;
+      if (recipeSubsistence[recipeOf(buildings, cell)] === 1) continue;
+      const unit = unitEconomics(market, buildings, population, cell, owner[province], 1);
+      const afford =
+        unit.wages > 0 ? ((unit.sales - unit.costs) * (1 - rules.startingMargin)) / unit.wages : 1;
+      wageFactor[cell] = Math.max(rules.minWage, Math.min(1, afford));
+      reserves[cell] =
+        rules.startingReserves * reserveCap(buildings, population, cell, rules.reserveDays);
+    }
+    // 2. A trial of the first day; incomes, wealth, the shares.
+    setRestReference(market);
     trial.set(buildings.stock);
     wholeDay(population, buildings, market, owner, data, trial);
     market.dividend.fill(0);
@@ -231,30 +255,20 @@ export function calibrateMarkets(
         buy[m] = ordered[m];
       } else {
         sell[m] = made[m] + imports[m];
-        buy[m] = ordered[m] + popOrder[m] + restOrder[m];
+        buy[m] = ordered[m] + popOrder[m] + market.restOrder[m] + market.exportOrder[m];
       }
     }
     updateShares(market, sell, buy, popOrder, data.pops.wealth.substitution.otherBuyersWeight);
     updateWealth(market, population, owner, data, true);
     computeOrders(market, population, owner);
-    for (let c = 0; c < market.countryCount; c++) {
-      const people = countryPeople[c];
-      for (let g = 0; g < goodCount; g++) {
-        const m = c * goodCount + g;
-        if (g === electricityGood) continue;
-        // What the pops want but the country doesn't get comes in (until trade, F19)…
-        const missing = ordered[m] + popOrder[m] - made[m] - imports[m];
-        if (missing > 0) imports[m] += importShare * missing;
-        // …and the rest of the economy buys what is left over.
-        const left = made[m] + imports[m] - ordered[m] - popOrder[m];
-        restPerPerson[m] = left > 0 && people > 0 ? (restShare * left) / people : 0;
-      }
-    }
+    // 3. Trade and the rest of the economy; the starting prices.
+    settleStartingTrade(trade, market, buildings, restShare);
     for (let p = 0; p < otherPowerPerPerson.length; p++) {
       const c = owner[p];
       const pops = countryPeople[c] > 0 ? popPower[c] / countryPeople[c] : 0;
       otherPowerPerPerson[p] = Math.max(0, otherPower[p] - pops);
     }
+    setRestReference(market);
     computeOrders(market, population, owner);
   }
   const below = data.pops.wealth.expectedBelowStart;
@@ -265,7 +279,7 @@ export function calibrateMarkets(
   const { stock, capacityUse, startingDays } = buildings;
   for (let m = 0; m < stock.length; m++) {
     if (m % goodCount === electricityGood) continue;
-    const daily = capacityUse[m] + popOrder[m] + market.restOrder[m];
+    const daily = capacityUse[m] + popOrder[m] + market.restOrder[m] + market.exportOrder[m];
     stock[m] = Math.max(stock[m], startingDays * daily);
   }
   buildings.changes += 1;

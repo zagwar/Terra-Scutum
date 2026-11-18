@@ -89,6 +89,21 @@ export interface CampaignSummary {
     readonly layingOff: number;
     readonly standardOfLiving: number;
   };
+  /**
+   * Trade on the last day (F19): the world's imports a day (US$, delivered),
+   * the share the rest of the world sold (by value), the biggest exporter and
+   * importer (by value), the cheapest and dearest world price (× base), and
+   * the smallest share of planned imports that arrived.
+   */
+  readonly trade: {
+    readonly value: number;
+    readonly restOfWorldShare: number;
+    readonly topExporter: { readonly country: string; readonly value: number };
+    readonly topImporter: { readonly country: string; readonly value: number };
+    readonly lowestWorld: { readonly good: string; readonly price: number };
+    readonly highestWorld: { readonly good: string; readonly price: number };
+    readonly leastDelivered: number;
+  };
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
   /** The most memory seen during the run and at its end, in bytes (null without a `memory` option). */
@@ -135,6 +150,46 @@ function marketSummary(state: GameState): CampaignSummary['markets'] {
     averageWage: buildings.cellCount > 0 ? wages / buildings.cellCount : 0,
     layingOff,
     standardOfLiving: people > 0 ? living / people : 0,
+  };
+}
+
+function tradeSummary(state: GameState): CampaignSummary['trade'] {
+  const { trade, market, world, buildings } = state;
+  const goods = trade.goodCount;
+  let value = 0;
+  let fromRest = 0;
+  let topExporter = { country: '', value: 0 };
+  let topImporter = { country: '', value: 0 };
+  for (let c = 0; c < trade.countryCount; c++) {
+    let exported = 0;
+    let imported = 0;
+    for (let g = 0; g < goods; g++) {
+      exported += trade.exportValue[c * goods + g];
+      imported += trade.importValue[c * goods + g];
+    }
+    value += imported;
+    if (exported > topExporter.value) topExporter = { country: world.countryIds[c], value: exported };
+    if (imported > topImporter.value) topImporter = { country: world.countryIds[c], value: imported };
+  }
+  let lowestWorld = { good: '', price: Infinity };
+  let highestWorld = { good: '', price: 0 };
+  let leastDelivered = 1;
+  for (let g = 0; g < goods; g++) {
+    if (!trade.tradable[g]) continue;
+    const factor = trade.worldPrice[g] / market.basePrice[g];
+    fromRest += trade.restOfWorld[g] * trade.worldPrice[g];
+    if (factor < lowestWorld.price) lowestWorld = { good: buildings.goodIds[g], price: factor };
+    if (factor > highestWorld.price) highestWorld = { good: buildings.goodIds[g], price: factor };
+    if (trade.delivered[g] < leastDelivered) leastDelivered = trade.delivered[g];
+  }
+  return {
+    value,
+    restOfWorldShare: value > 0 ? fromRest / value : 0,
+    topExporter,
+    topImporter,
+    lowestWorld,
+    highestWorld,
+    leastDelivered,
   };
 }
 
@@ -241,6 +296,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     endPopulation: worldPopulation(state.population),
     buildings,
     markets,
+    trade: tradeSummary(state),
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,
