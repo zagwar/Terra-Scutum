@@ -1,10 +1,9 @@
 import type { PopulationSnapshot } from '@terra-scutum/sim';
 
 /**
- * Reads the population snapshot (F06) for the screens: pure helpers, unit
- * tested. Per-pop arrays hold group g of province p at `p * groupCount + g`,
- * per-country ones the same way by country; need tiers come three at a time
- * (basic, everyday, luxury).
+ * Reads the population snapshot (F06, F65) for the screens: pure helpers,
+ * unit tested. Per-pop arrays hold group g of province p at
+ * `p * groupCount + g`, per-country ones the same way by country.
  */
 
 /** One pop group of a province or a country, as the tables show it. */
@@ -15,9 +14,9 @@ export interface PopRow {
   readonly employed: number;
   /** The share without a job, 0–1. */
   readonly unemployment: number;
-  /** US$ per worker per year. */
-  readonly wagePerYear: number;
-  /** 0–100. */
+  /** What a worker earned last week, as US$ a year (wages and, for owners, dividends; F65). */
+  readonly incomePerYear: number;
+  /** 1–99 (F65: the pop's wealth, less what shortages take). */
   readonly standardOfLiving: number;
 }
 
@@ -29,10 +28,8 @@ export interface PopulationSummary {
   readonly employed: number;
   /** The share of the workforce without a job, 0–1. */
   readonly unemployment: number;
-  /** The workforce's average standard of living, 0–100. */
+  /** The workforce's average standard of living, 1–99. */
   readonly standardOfLiving: number;
-  /** How much of the basic, everyday and luxury needs people can afford, 0–1 each. */
-  readonly needs: readonly [number, number, number];
 }
 
 const DAYS_PER_YEAR = 365;
@@ -50,7 +47,7 @@ export function provincePops(population: PopulationSnapshot, province: number): 
       people,
       employed,
       unemployment: 1 - share(employed, people || 1),
-      wagePerYear: population.popWage[at] * DAYS_PER_YEAR,
+      incomePerYear: population.popIncome[at] * DAYS_PER_YEAR,
       standardOfLiving: population.popStandardOfLiving[at],
     };
   }).map((row) => (row.people > 0 ? row : { ...row, unemployment: 0 }));
@@ -71,19 +68,11 @@ export function provinceSummary(
     employed,
     unemployment: workforce > 0 ? 1 - employed / workforce : 0,
     standardOfLiving: population.provinceStandardOfLiving[province],
-    needs: [
-      population.provinceNeeds[province * 3],
-      population.provinceNeeds[province * 3 + 1],
-      population.provinceNeeds[province * 3 + 2],
-    ],
   };
 }
 
-/** The pop groups of a country (the provinces it owns now), with the needs each can afford. */
-export function countryPops(
-  population: PopulationSnapshot,
-  country: number,
-): (PopRow & { readonly needs: readonly [number, number, number] })[] {
+/** The pop groups of a country (the provinces it owns now). */
+export function countryPops(population: PopulationSnapshot, country: number): PopRow[] {
   const groups = population.groupCount;
   return Array.from({ length: groups }, (_, group) => {
     const at = country * groups + group;
@@ -94,13 +83,8 @@ export function countryPops(
       people,
       employed,
       unemployment: people > 0 ? 1 - employed / people : 0,
-      wagePerYear: population.countryGroupWage[at] * DAYS_PER_YEAR,
+      incomePerYear: population.countryGroupIncome[at] * DAYS_PER_YEAR,
       standardOfLiving: population.countryGroupStandardOfLiving[at],
-      needs: [
-        population.countryGroupNeeds[at * 3],
-        population.countryGroupNeeds[at * 3 + 1],
-        population.countryGroupNeeds[at * 3 + 2],
-      ] as const,
     };
   });
 }
@@ -121,10 +105,5 @@ export function countrySummary(population: PopulationSnapshot, country: number):
     employed,
     unemployment: workforce > 0 ? 1 - employed / workforce : 0,
     standardOfLiving: weighted((row) => row.standardOfLiving),
-    needs: [
-      weighted((row) => row.needs[0]),
-      weighted((row) => row.needs[1]),
-      weighted((row) => row.needs[2]),
-    ],
   };
 }

@@ -329,9 +329,9 @@ describe('wealth and standard of living (F06, F65: Victoria 3)', () => {
       'cost more than the one before',
     );
     expect(issues((pops) => (pops.wealth.packages[2].level = 98))).toContain('level 99');
-    expect(issues((pops) => ((pops.wealth.packages[0].needs as Record<string, number>).food = 1))).toContain(
-      'unknown need "food"',
-    );
+    expect(
+      issues((pops) => ((pops.wealth.packages[0].needs as Record<string, number>).food = 1)),
+    ).toContain('unknown need "food"');
     expect(issues((pops) => (pops.needs[0].goods![0].good = 'gold'))).toContain(
       'unknown good "gold"',
     );

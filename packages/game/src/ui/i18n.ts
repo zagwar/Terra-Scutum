@@ -102,6 +102,20 @@ export function formatMoneyShort(dollars: number): string {
   return t('MONEY_VALUE', { amount });
 }
 
+/** An amount of money that can be negative (a loss), as in a table: "$1.2M", "−$64.7k". */
+export function formatMoneySigned(dollars: number): string {
+  return dollars < 0 ? `−${formatMoneyShort(-dollars)}` : formatMoneyShort(dollars);
+}
+
+/** A price per unit of a good (F65): "$612 per t", "$9.40 per MWh". */
+export function formatPrice(price: number, unit: GoodUnit): string {
+  const amount =
+    price >= 100
+      ? Math.round(price).toLocaleString('en')
+      : price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return t('PRICE_PER_UNIT', { amount, unit: t(unit === 't' ? 'UNIT_T' : 'UNIT_MWH') });
+}
+
 /** A share (0–1) as a percentage: "4.2 %", or "100 %" without decimals when asked. */
 export function formatPercent(share: number, decimals = 1): string {
   return t('PERCENT_VALUE', {

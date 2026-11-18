@@ -1,22 +1,15 @@
-import {
-  NEED_TIERS,
-  countryNameKey,
-  needNameKey,
-  needTierNameKey,
-  popGroupNameKey,
-  provinceNameKey,
-} from '@terra-scutum/sim';
+import { countryNameKey, popGroupNameKey, provinceNameKey } from '@terra-scutum/sim';
 import type { AppState } from '../../app-store';
 import { Flag } from '../flag';
 import { formatDensity, formatMoney, formatPercent, formatPopulation, t, tKey } from '../i18n';
 import type { ShellActions } from '../shell/shell-actions';
-import { NeedsBars, PopulationFacts, standardOfLivingHint } from './population-parts';
+import { NeedsList, PopulationFacts, standardOfLivingHint } from './population-parts';
 import { countryPops, countrySummary, provinceSummary } from './population-view';
 
 /**
  * The Population screen (Society lens; a first pass in F06, section 8.1):
- * the player's country in numbers, its pop groups with jobs, wages and the
- * needs each can afford, and its provinces. F11 fills it out.
+ * the player's country in numbers, what people buy (F65), its pop groups
+ * with jobs, incomes and standard of living, and its provinces. F11 fills it out.
  */
 export function PopulationScreen({
   state,
@@ -58,25 +51,12 @@ export function PopulationScreen({
       </div>
 
       <div className="population-top">
-        <PopulationFacts summary={summary} pops={pops} testId="population" />
+        <PopulationFacts summary={summary} testId="population" />
         <div>
-          <h4 className="list-title" title={standardOfLivingHint(pops)}>
+          <h4 className="list-title" title={standardOfLivingHint()}>
             {t('POPULATION_NEEDS')}
           </h4>
-          <NeedsBars needs={summary.needs} testId="population-needs" />
-          <ul className="needs-list">
-            {NEED_TIERS.map((tier) => (
-              <li key={tier}>
-                {t('POPULATION_NEEDS_LIST', {
-                  tier: tKey(needTierNameKey(tier)),
-                  needs: pops.needs
-                    .filter((need) => need.tier === tier)
-                    .map((need) => tKey(needNameKey(need.id)))
-                    .join(', '),
-                })}
-              </li>
-            ))}
-          </ul>
+          <NeedsList pops={pops} testId="population-needs" />
         </div>
       </div>
 
@@ -89,11 +69,8 @@ export function PopulationScreen({
               <th>{t('POPULATION_PEOPLE')}</th>
               <th>{t('POPULATION_SHARE')}</th>
               <th>{t('POPULATION_UNEMPLOYED')}</th>
-              <th title={t('POPULATION_WAGE_HINT')}>{t('POPULATION_WAGE')}</th>
-              <th title={standardOfLivingHint(pops)}>{t('POPULATION_LIVING_SHORT')}</th>
-              {NEED_TIERS.map((tier) => (
-                <th key={tier}>{tKey(needTierNameKey(tier))}</th>
-              ))}
+              <th title={t('POPULATION_INCOME_HINT')}>{t('POPULATION_INCOME')}</th>
+              <th title={standardOfLivingHint()}>{t('POPULATION_LIVING_SHORT')}</th>
             </tr>
           </thead>
           <tbody>
@@ -109,11 +86,8 @@ export function PopulationScreen({
                     {formatPercent(summary.workforce > 0 ? row.people / summary.workforce : 0)}
                   </td>
                   <td>{formatPercent(row.unemployment)}</td>
-                  <td>{formatMoney(row.wagePerYear)}</td>
+                  <td>{formatMoney(row.incomePerYear)}</td>
                   <td>{Math.round(row.standardOfLiving)}</td>
-                  {row.needs.map((met, index) => (
-                    <td key={index}>{formatPercent(met, 0)}</td>
-                  ))}
                 </tr>
               );
             })}
@@ -130,7 +104,7 @@ export function PopulationScreen({
               <th>{t('POPULATION_PEOPLE')}</th>
               <th>{t('POPULATION_DENSITY')}</th>
               <th>{t('POPULATION_UNEMPLOYED')}</th>
-              <th title={standardOfLivingHint(pops)}>{t('POPULATION_LIVING_SHORT')}</th>
+              <th title={standardOfLivingHint()}>{t('POPULATION_LIVING_SHORT')}</th>
             </tr>
           </thead>
           <tbody>

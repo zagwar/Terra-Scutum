@@ -65,7 +65,14 @@ function produce(state: GameState, stage: number): void {
     ensureLayout(buildings, state.provinceOwner, state.ownershipVersion);
     startDay(population, buildings, market, state.provinceOwner, state.data);
   }
-  runStage(buildings, stage, buildings.stock, state.provinceOwner, market.price, population.groupCount);
+  runStage(
+    buildings,
+    stage,
+    buildings.stock,
+    state.provinceOwner,
+    market.price,
+    population.groupCount,
+  );
   buildings.changes += 1;
 }
 
@@ -175,7 +182,8 @@ export function calibrateMarkets(
     const afford =
       unit.wages > 0 ? ((unit.sales - unit.costs) * (1 - rules.startingMargin)) / unit.wages : 1;
     wageFactor[cell] = Math.max(rules.minWage, Math.min(1, afford));
-    reserves[cell] = rules.startingReserves * reserveCap(buildings, population, cell, rules.reserveDays);
+    reserves[cell] =
+      rules.startingReserves * reserveCap(buildings, population, cell, rules.reserveDays);
   }
 
   // 2. Production, pay, profits, wealth, the substitution shares, the
@@ -186,7 +194,8 @@ export function calibrateMarkets(
   const trial = buildings.trialStock;
   const ownersGroup = data.pops.groups.findIndex((group) => group.id === 'owners');
   const keep =
-    rules.depositWhenEmpty - (rules.depositWhenEmpty - rules.depositAtFull) * rules.startingReserves;
+    rules.depositWhenEmpty -
+    (rules.depositWhenEmpty - rules.depositAtFull) * rules.startingReserves;
   const { size, standInJobs, wage, income } = population;
   const { goodCount, electricityGood, popOrder, restOrder, sell, buy } = market;
   const { made, imports, ordered, otherPowerPerPerson } = buildings;

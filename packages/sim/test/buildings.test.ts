@@ -20,7 +20,7 @@ import {
   type TestStartingBuilding,
   testBuildingStart,
   testBuildings,
-  testMarket,
+  type testMarket,
   testRawData,
 } from './helpers';
 

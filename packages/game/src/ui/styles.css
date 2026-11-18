@@ -2627,3 +2627,37 @@ body {
   color: var(--color-text-dim);
   white-space: normal;
 }
+
+/* ── Markets (F65) ─────────────────────────────────────────────────────── */
+.price-cheap {
+  color: var(--color-good);
+}
+.price-dear {
+  color: var(--color-bad);
+}
+.markets-shortage {
+  margin-left: auto;
+  color: var(--color-text-dim);
+  font-size: 0.85em;
+}
+.markets-shortage.is-short {
+  color: var(--color-bad);
+}
+.price-line {
+  display: block;
+}
+.price-line-base {
+  stroke: var(--color-text-dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.6;
+}
+.price-line-path {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+}
+.price-line-empty {
+  color: var(--color-text-dim);
+  font-size: 0.85em;
+}

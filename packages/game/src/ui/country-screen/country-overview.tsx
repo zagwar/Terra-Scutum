@@ -86,7 +86,7 @@ export function CountryOverview({
             <>
               <dt>{t('POPULATION_UNEMPLOYMENT')}</dt>
               <dd data-testid="country-unemployment">{formatPercent(people.unemployment)}</dd>
-              <dt title={standardOfLivingHint(pops)}>{t('POPULATION_STANDARD_OF_LIVING')}</dt>
+              <dt title={standardOfLivingHint()}>{t('POPULATION_STANDARD_OF_LIVING')}</dt>
               <dd data-testid="country-living">
                 {t('POPULATION_SCORE', { value: Math.round(people.standardOfLiving) })}
               </dd>

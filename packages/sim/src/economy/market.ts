@@ -182,7 +182,10 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
  * The substitution shares of every need in every market (Victoria 3): a
  * good's raw share is its weight × (its sell orders − `otherBuyersWeight` ×
  * what buildings and the rest of the economy buy of it), never below
- * nothing; the shares are the raw ones in proportion, each at most its
+ * nothing, counted by value at base prices (our goods have real units:
+ * tonnes and MWh are not comparable as they are); for electricity, which
+ * can't be stored, all of what others buy counts. The shares are the raw
+ * ones in proportion, each at most its
  * `maxShare` (what one good can't cover goes to the others). A need none of
  * whose goods are on sale is split evenly. `sell`, `buy` and `popBuy` are
  * per country and good (a week's or a day's orders).
@@ -204,9 +207,13 @@ export function updateShares(
       if (count === 0) continue;
       let total = 0;
       for (let e = 0; e < count; e++) {
-        const g = at + entryGood[first + e];
-        const free = sell[g] - otherBuyersWeight * (buy[g] - popBuy[g]);
-        raw[e] = free > 0 ? entryWeight[first + e] * free : 0;
+        const good = entryGood[first + e];
+        const g = at + good;
+        // Electricity can't be stored: what others take is gone, all of it.
+        const others = good === market.electricityGood ? 1 : otherBuyersWeight;
+        const free = sell[g] - others * (buy[g] - popBuy[g]);
+        // Our goods have real units (tonnes, MWh): compare the value on sale.
+        raw[e] = free > 0 ? entryWeight[first + e] * free * market.basePrice[good] : 0;
         total += raw[e];
       }
       if (total <= 0) for (let e = 0; e < count; e++) raw[e] = entryWeight[first + e];
@@ -230,7 +237,6 @@ export function updateShares(
         if (!capped) {
           for (let e = 0; e < count; e++)
             if (shares[out + first + e] < 0) shares[out + first + e] = (left * raw[e]) / open;
-          left = 0;
           break;
         }
       }
@@ -456,7 +462,12 @@ export function marketWeek(
 }
 
 /** Victoria 3's price: base × (1 + sensitivity × (buy − sell) ÷ min(buy, sell)), within its limits. */
-export function marketPrice(base: number, buy: number, sell: number, rules: GameData['market']['prices']): number {
+export function marketPrice(
+  base: number,
+  buy: number,
+  sell: number,
+  rules: GameData['market']['prices'],
+): number {
   let pressure: number;
   if (buy <= 0 && sell <= 0) pressure = 0;
   else if (sell <= 0) pressure = 1;
@@ -492,11 +503,7 @@ function recordHistory(market: MarketState): void {
  * province (writes `rowCost`): goods at the market's prices and shares,
  * the needs without a good at the province's stand-in price level.
  */
-function fillRowCosts(
-  market: MarketState,
-  country: number,
-  priceLevel: number,
-): void {
+function fillRowCosts(market: MarketState, country: number, priceLevel: number): void {
   const { needOffsets, entryGood, shares, price, basePrice, needIndex, packageValue, rowCost } =
     market;
   const at = country * market.goodCount;
@@ -667,8 +674,7 @@ function buildingsWeek(
   const rules = data.market.buildings;
   const { cells, cellCount, typeCount, recipeOffsets, method, recipeSubsistence, level } =
     buildings;
-  const { weekRevenue, weekCost, weekWages, reserves, wageFactor, open, raiseCooldown } =
-    buildings;
+  const { weekRevenue, weekCost, weekWages, reserves, wageFactor, open, raiseCooldown } = buildings;
   const { staffing, workerOffsets, workerGroup, workerCount } = buildings;
   const { expectedLiving, wealth } = population;
   const groups = population.groupCount;
@@ -725,7 +731,8 @@ function buildingsWeek(
     const short = staffing[cell] < rules.raiseBelowStaffing;
     const raise =
       raiseCooldown[cell] === 0 &&
-      ((margin >= rules.raiseMargin && short) || (margin >= rules.largeMargin && living < expected));
+      ((margin >= rules.raiseMargin && short) ||
+        (margin >= rules.largeMargin && living < expected));
     const losing = profit < 0 && reserves[cell] < rules.lowReserves * cap;
     const cut = losing || (margin < rules.minimalMargin && living > rules.wellAbove * expected);
     if (raise) {

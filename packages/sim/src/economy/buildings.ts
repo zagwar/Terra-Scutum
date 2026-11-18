@@ -1043,8 +1043,7 @@ export function runStage(
       // make the rest): all of it when the grid has enough.
       const electricityFactor = recipeOffGrid[r] + grid;
       if (electricityFactor > 0) {
-        const fromGrid =
-          (running * recipeElectricity[r] * powerShare[country]) / electricityFactor;
+        const fromGrid = (running * recipeElectricity[r] * powerShare[country]) / electricityFactor;
         used[market + electricityGood] += fromGrid;
         cost += fromGrid * price[market + electricityGood];
       }
@@ -1054,7 +1053,8 @@ export function runStage(
       powerMade[country] += power;
       sales += power * price[market + electricityGood];
       // What it could have made with the workers and fuel it has.
-      powerPotential[country] += level[cell] * open[cell] * staffing[cell] * inputsThere * recipePower[r];
+      powerPotential[country] +=
+        level[cell] * open[cell] * staffing[cell] * inputsThere * recipePower[r];
     }
     revenue[cell] = sales;
     inputCost[cell] = cost;
@@ -1068,7 +1068,8 @@ export function runStage(
         const levels = level[cell] * open[cell];
         for (let k = workerOffsets[r]; k < workerOffsets[r + 1]; k++) {
           const g = workerGroup[k];
-          const filled = buildings.fill[row + g] < 1 ? buildings.cellFill[cell * groupCount + g] : 1;
+          const filled =
+            buildings.fill[row + g] < 1 ? buildings.cellFill[cell * groupCount + g] : 1;
           popPay[row + g] += (earned * levels * workerCount[k] * filled) / people;
         }
       }

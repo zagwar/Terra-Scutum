@@ -12,8 +12,9 @@ import { Flag } from '../flag';
 import {
   formatAmount,
   formatMoneyShort,
-  formatPercent,
+  formatMoneySigned,
   formatPeopleShort,
+  formatPercent,
   formatPopulation,
   t,
   tKey,
@@ -114,7 +115,10 @@ export function BuildingsScreen({
                   <th>{t('BUILDINGS_WORKERS')}</th>
                   <th title={t('BUILDINGS_OUTPUT_HINT')}>{t('BUILDINGS_OUTPUT')}</th>
                   <th title={t('AMOUNT_HINT')}>{t('BUILDINGS_SCREEN_MAKES')}</th>
+                  <th title={t('BUILDINGS_PROFIT_HINT')}>{t('BUILDINGS_PROFIT')}</th>
+                  <th title={t('BUILDINGS_WAGE_LEVEL_HINT')}>{t('BUILDINGS_WAGE_LEVEL')}</th>
                   <th>{t('BUILDINGS_SCREEN_HELD_BACK')}</th>
+                  <th title={t('BUILDINGS_LAYING_OFF_HINT')}>{t('BUILDINGS_LAYING_OFF')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,8 +176,18 @@ export function BuildingsScreen({
                         />
                       </td>
                       <td>{amountsText(type.makes, goods)}</td>
+                      <td
+                        data-status={type.profit < 0 ? 'bad' : undefined}
+                        data-testid={`buildings-profit-${id}`}
+                      >
+                        {formatMoneySigned(type.profit)}
+                      </td>
+                      <td>{t('BUILDINGS_WAGE_FACTOR', { factor: type.wageFactor.toFixed(2) })}</td>
                       <td data-status={type.heldBack > 0 ? 'bad' : undefined}>
                         {type.heldBack.toLocaleString('en')}
+                      </td>
+                      <td data-status={type.layingOff > 0 ? 'bad' : undefined}>
+                        {type.layingOff.toLocaleString('en')}
                       </td>
                     </tr>
                   );
@@ -199,6 +213,8 @@ export function BuildingsScreen({
                       <th>{t('BUILDINGS_METHOD')}</th>
                       <th>{t('BUILDINGS_WORKERS')}</th>
                       <th>{t('BUILDINGS_OUTPUT')}</th>
+                      <th title={t('BUILDINGS_PROFIT_HINT')}>{t('BUILDINGS_PROFIT')}</th>
+                      <th title={t('BUILDINGS_WAGE_LEVEL_HINT')}>{t('BUILDINGS_WAGE_LEVEL')}</th>
                       <th>{t('BUILDINGS_SCREEN_STATUS')}</th>
                     </tr>
                   </thead>
@@ -227,6 +243,16 @@ export function BuildingsScreen({
                         </td>
                         <td>
                           <OutputBar output={row.output} limitKind={row.limitKind} />
+                        </td>
+                        <td data-status={row.profit < 0 ? 'bad' : undefined}>
+                          {row.subsistence
+                            ? t('BUILDINGS_SUBSISTENCE')
+                            : formatMoneySigned(row.profit)}
+                        </td>
+                        <td>
+                          {row.subsistence
+                            ? '—'
+                            : t('BUILDINGS_WAGE_FACTOR', { factor: row.wageFactor.toFixed(2) })}
                         </td>
                         <td>{limitText(row, pops, goods) ?? '—'}</td>
                       </tr>

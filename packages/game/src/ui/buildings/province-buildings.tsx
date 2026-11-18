@@ -6,7 +6,14 @@ import {
   buildingNameKey,
   productionMethodNameKey,
 } from '@terra-scutum/sim';
-import { formatMoneyShort, formatPopulation, t, tKey } from '../i18n';
+import {
+  formatMoneyShort,
+  formatMoneySigned,
+  formatPercent,
+  formatPopulation,
+  t,
+  tKey,
+} from '../i18n';
 import {
   BUILDING_TEST_TOOLS,
   LevelButtons,
@@ -30,7 +37,8 @@ export interface ProvinceBuildingsProps {
 /**
  * The province panel's buildings part (F07, F85, section 8.3): each building
  * with its level, its output today, what holds it back, its production
- * method, its workers and what it makes and uses. Under it the test tools to change levels by hand until
+ * method, its workers and wages, its money (F65: profit, cash reserves,
+ * jobs kept open) and what it makes and uses. Under it the test tools to change levels by hand until
  * construction exists (F12).
  */
 export function ProvinceBuildings({
@@ -105,7 +113,50 @@ export function ProvinceBuildings({
                       })}
                     </dd>
                     <dt>{t('BUILDINGS_WAGES')}</dt>
-                    <dd>{t('BUILDINGS_WAGES_VALUE', { amount: formatMoneyShort(row.wages) })}</dd>
+                    <dd data-testid={`building-wages-${id}`}>
+                      {row.subsistence
+                        ? t('BUILDINGS_SUBSISTENCE_WAGES', { amount: formatMoneyShort(row.wages) })
+                        : t('BUILDINGS_WAGES_LEVEL_VALUE', {
+                            amount: formatMoneyShort(row.wages),
+                            factor: row.wageFactor.toFixed(2),
+                          })}
+                    </dd>
+                    {!row.subsistence && (
+                      <>
+                        <dt title={t('BUILDINGS_PROFIT_HINT')}>{t('BUILDINGS_PROFIT')}</dt>
+                        <dd
+                          data-testid={`building-profit-${id}`}
+                          data-status={row.profit < 0 ? 'bad' : undefined}
+                          title={t('BUILDINGS_PROFIT_PARTS', {
+                            sales: formatMoneyShort(row.revenue),
+                            costs: formatMoneyShort(row.inputCost),
+                            wages: formatMoneyShort(row.wages),
+                          })}
+                        >
+                          {formatMoneySigned(row.profit)}
+                        </dd>
+                        <dt>{t('BUILDINGS_RESERVES')}</dt>
+                        <dd data-testid={`building-reserves-${id}`}>
+                          {t('BUILDINGS_RESERVES_VALUE', {
+                            amount: formatMoneyShort(row.reserves),
+                            share: formatPercent(
+                              row.reserveCap > 0 ? row.reserves / row.reserveCap : 0,
+                              0,
+                            ),
+                          })}
+                        </dd>
+                        {row.open < 0.999 && (
+                          <>
+                            <dt title={t('BUILDINGS_LAYING_OFF_HINT')}>
+                              {t('BUILDINGS_JOBS_OPEN')}
+                            </dt>
+                            <dd data-status="bad" data-testid={`building-open-${id}`}>
+                              {formatPercent(row.open, 0)}
+                            </dd>
+                          </>
+                        )}
+                      </>
+                    )}
                     <dt>{t('BUILDINGS_MAKES')}</dt>
                     <dd data-testid={`building-makes-${id}`}>
                       {t('BUILDINGS_A_DAY', { amounts: amountsText(today.makes, goods) })}

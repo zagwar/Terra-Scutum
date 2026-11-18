@@ -150,7 +150,10 @@ export function testPops() {
     needs: [
       {
         id: 'heating',
-        goods: [{ good: 'coal', maxShare: 0.6 }, { good: 'electricity', maxShare: 1 }],
+        goods: [
+          { good: 'coal', maxShare: 0.6 },
+          { good: 'electricity', maxShare: 1 },
+        ],
       },
       { id: 'services' },
     ],
