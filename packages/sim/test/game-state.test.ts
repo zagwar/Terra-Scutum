@@ -21,6 +21,7 @@ describe('tick order', () => {
       'energy',
       'resourceProduction',
       'industry',
+      'market',
       'trade',
       'foodConsumption',
       'budget',

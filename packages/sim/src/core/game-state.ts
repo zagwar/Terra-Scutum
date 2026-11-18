@@ -19,6 +19,7 @@ import {
   type PopulationState,
   restorePopulation,
 } from '../economy/population';
+import { type MarketRestore, type MarketState, restoreMarket } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
 
 export interface GameStateOptions {
@@ -40,6 +41,8 @@ export interface GameStateOptions {
     readonly population: PopulationRestore;
     /** The buildings (F07, F85): their levels, methods and the national stockpiles. */
     readonly buildings: BuildingsRestore;
+    /** The markets (F65): prices, this week's sums, shortages; missing in older saves. */
+    readonly market?: MarketRestore;
   };
 }
 
@@ -93,6 +96,13 @@ export class GameState {
    * `setBuildingLevel`; read its report through `ensureBuildingsReport`.
    */
   readonly buildings: BuildingsState;
+  /**
+   * The national markets (F65, section 8.6): prices, what pops and the rest
+   * of the economy buy, and the week's sums. Changed by the market system;
+   * read its report through `ensureBuildingsReport` (they share the day's
+   * trial run).
+   */
+  readonly market: MarketState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -114,6 +124,7 @@ export class GameState {
     const economy = createStartingEconomy(options.data, this.world, this.countryStart);
     this.population = economy.population;
     this.buildings = economy.buildings;
+    this.market = economy.market;
 
     if (options.restore) {
       this.day = options.restore.day;
@@ -126,6 +137,7 @@ export class GameState {
       this.playerCountry = options.restore.playerCountry;
       restorePopulation(this.population, options.restore.population);
       restoreBuildings(this.buildings, this.population, options.restore.buildings);
+      if (options.restore.market) restoreMarket(this.market, options.restore.market);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);

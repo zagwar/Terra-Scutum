@@ -11,10 +11,6 @@ const id = z
   .string()
   .regex(/^[a-z0-9]+(_[a-z0-9]+)*$/, 'ids are lowercase letters, digits and single underscores');
 
-/** The three tiers of needs, bought in this order (section 8.1). */
-export const NEED_TIERS = ['basic', 'everyday', 'luxury'] as const;
-export type NeedTier = (typeof NEED_TIERS)[number];
-
 const share = z.number().min(0).max(1);
 
 export const popsSchema = z.strictObject({
@@ -50,21 +46,64 @@ export const popsSchema = z.strictObject({
     .array(z.strictObject({ gdpPerPerson: z.number().positive(), shares: z.record(id, share) }))
     .min(1),
   /**
-   * What people need, each with its tier and what one person's share costs a
-   * day in US$ at United States prices. Until markets set prices (F65), a
-   * need costs this times the province's price level.
+   * What people need (F65, Victoria 3's pop needs). A need with `goods` is
+   * bought on its country's market: its share of the buy package is split
+   * among those goods (substitution, see `wealth.substitution`). A need
+   * without goods has no good yet (housing, services, luxuries): people pay
+   * for it at the stand-in price of `placeholderEconomy` (how rich the
+   * country is) until its good exists.
    */
   needs: z
-    .array(z.strictObject({ id, tier: z.enum(NEED_TIERS), costPerDay: z.number().positive() }))
+    .array(
+      z.strictObject({
+        id,
+        goods: z
+          .array(
+            z.strictObject({
+              good: id,
+              /** How much pops favor this good over the others of the need (Victoria 3's weight; 1 = normal). */
+              weight: z.number().positive().optional(),
+              /** At most this share of the need comes from this good (default `wealth.substitution.maxShare`). */
+              maxShare: share.optional(),
+            }),
+          )
+          .min(1)
+          .optional(),
+      }),
+    )
     .min(1),
   /**
-   * Standard of living (0–100): each tier of needs counts this much when it
-   * is fully met. The three add up to 100.
+   * Wealth (F65, Victoria 3): every pop has a wealth level from 1 to 99, and
+   * its standard of living is its wealth less what shortages take away.
+   * Each level has a **buy package**: what a worker spends a day on each
+   * need, in US$ at base prices (a dependent counts as `dependentWeight` of
+   * a worker). Between two rows of `packages` the amounts are mixed in
+   * proportion. Wealth climbs while income is above `rise.threshold` × the
+   * package of the next level (by `rise.speed` of the gap a week) and falls
+   * while income is below `fall.threshold` × its own package (by
+   * `fall.speed` of the gap a week).
    */
-  standardOfLiving: z.strictObject({
-    basic: z.number().min(0),
-    everyday: z.number().min(0),
-    luxury: z.number().min(0),
+  wealth: z.strictObject({
+    dependentWeight: share,
+    rise: z.strictObject({ threshold: z.number().min(1).max(2), speed: share }),
+    fall: z.strictObject({ threshold: z.number().min(0).max(1), speed: share }),
+    /** Standard of living lost when a whole package goes undelivered (a shortage); in proportion when part of it does. */
+    shortagePenalty: z.number().min(0).max(99),
+    substitution: z.strictObject({
+      /** The most of a need one good covers unless it says otherwise (Victoria 3: 80 %). */
+      maxShare: share,
+      /** A good's share counts its sell orders less this share of what buildings and the rest of the economy buy (Victoria 3: half). */
+      otherBuyersWeight: share,
+    }),
+    packages: z
+      .array(
+        z.strictObject({
+          level: z.number().min(1).max(99),
+          /** US$ per worker a day at base prices, by need. */
+          needs: z.record(id, z.number().min(0)),
+        }),
+      )
+      .min(2),
   }),
   growth: z.strictObject({
     /** Years a person stays in the workforce before retiring. */
@@ -85,7 +124,8 @@ export const popsSchema = z.strictObject({
   /**
    * The stand-in for the parts of the economy that aren't built yet: the
    * jobs buildings don't offer (the rest of the economy, until the building
-   * catalog is complete, F85), wages, and prices (until markets, F65).
+   * catalog is complete, F85), its wages, and the price of the needs that
+   * have no good yet (F65: the needs with goods are bought on the markets).
    */
   placeholderEconomy: z.strictObject({
     /** The share of a country's GDP that reaches its pops as income. */
@@ -109,9 +149,8 @@ export type PopsConfig = z.infer<typeof popsSchema>;
 
 export const popGroupNameKey = (groupId: string) => `POP_GROUP_${groupId.toUpperCase()}`;
 export const needNameKey = (needId: string) => `NEED_${needId.toUpperCase()}`;
-export const needTierNameKey = (tier: NeedTier) => `NEED_TIER_${tier.toUpperCase()}`;
 
-/** Checks inside `data/pops.json`: ids are unique and known, shares add up. */
+/** Checks `data/pops.json`: ids are unique and known, shares add up, packages grow with wealth. */
 export const checkPops: DataCrossCheck = (data, report) => {
   const file = 'pops.json';
   const pops = data.pops;
@@ -143,15 +182,36 @@ export const checkPops: DataCrossCheck = (data, report) => {
   });
 
   const needIds = pops.needs.map((need) => need.id);
-  needIds.forEach((needId, index) => {
-    if (needIds.indexOf(needId) !== index) issue(`needs.${index}.id`, `duplicate need "${needId}"`);
+  const goodIds = data.goods.goods.map((good) => good.id);
+  pops.needs.forEach((need, index) => {
+    if (needIds.indexOf(need.id) !== index)
+      issue(`needs.${index}.id`, `duplicate need "${need.id}"`);
+    const listed = new Set<string>();
+    need.goods?.forEach((entry, g) => {
+      if (!goodIds.includes(entry.good))
+        issue(`needs.${index}.goods.${g}.good`, `unknown good "${entry.good}"`);
+      if (listed.has(entry.good))
+        issue(`needs.${index}.goods.${g}.good`, `"${entry.good}" is listed twice`);
+      listed.add(entry.good);
+    });
   });
-  for (const tier of NEED_TIERS)
-    if (!pops.needs.some((need) => need.tier === tier))
-      issue('needs', `no need in the "${tier}" tier`);
-  const { basic, everyday, luxury } = pops.standardOfLiving;
-  if (Math.abs(basic + everyday + luxury - 100) > 1e-6)
-    issue('standardOfLiving', `the three tiers add up to ${basic + everyday + luxury}, not 100`);
+  const packages = pops.wealth.packages;
+  packages.forEach((row, index) => {
+    const at = `wealth.packages.${index}`;
+    if (index > 0 && row.level <= packages[index - 1].level)
+      issue(`${at}.level`, 'the rows must go from poor to rich');
+    for (const needId of Object.keys(row.needs))
+      if (!needIds.includes(needId)) issue(`${at}.needs.${needId}`, `unknown need "${needId}"`);
+  });
+  if (packages[0].level !== 1) issue('wealth.packages.0.level', 'the first row must be level 1');
+  if (packages[packages.length - 1].level !== 99)
+    issue(`wealth.packages.${packages.length - 1}.level`, 'the last row must be level 99');
+  const cost = (row: (typeof packages)[number]) =>
+    Object.values(row.needs).reduce((a, b) => a + b, 0);
+  packages.forEach((row, index) => {
+    if (index > 0 && cost(row) <= cost(packages[index - 1]))
+      issue(`wealth.packages.${index}`, 'each row must cost more than the one before');
+  });
 
   pops.jobChanges.forEach((change, index) => {
     const at = `jobChanges.${index}`;

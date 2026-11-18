@@ -1,25 +1,105 @@
 {
   "goods": [
-    { "id": "grain", "unit": "t" },
-    { "id": "livestock_fish", "unit": "t" },
-    { "id": "iron_ore", "unit": "t" },
-    { "id": "coal", "unit": "t" },
-    { "id": "crude_oil", "unit": "t" },
-    { "id": "natural_gas", "unit": "t" },
-    { "id": "copper_ore", "unit": "t" },
-    { "id": "bauxite", "unit": "t" },
-    { "id": "stone", "unit": "t" },
-    { "id": "steel", "unit": "t" },
-    { "id": "fuel", "unit": "t" },
-    { "id": "chemicals", "unit": "t" },
-    { "id": "plastic", "unit": "t" },
-    { "id": "copper", "unit": "t" },
-    { "id": "aluminum", "unit": "t" },
-    { "id": "silicon", "unit": "t" },
-    { "id": "electronics", "unit": "t" },
-    { "id": "processed_food", "unit": "t" },
-    { "id": "consumer_goods", "unit": "t" },
-    { "id": "electricity", "unit": "MWh" }
+    {
+      "id": "grain",
+      "unit": "t",
+      "basePrice": 600
+    },
+    {
+      "id": "livestock_fish",
+      "unit": "t",
+      "basePrice": 1500
+    },
+    {
+      "id": "iron_ore",
+      "unit": "t",
+      "basePrice": 110
+    },
+    {
+      "id": "coal",
+      "unit": "t",
+      "basePrice": 120
+    },
+    {
+      "id": "crude_oil",
+      "unit": "t",
+      "basePrice": 580
+    },
+    {
+      "id": "natural_gas",
+      "unit": "t",
+      "basePrice": 400
+    },
+    {
+      "id": "copper_ore",
+      "unit": "t",
+      "basePrice": 1800
+    },
+    {
+      "id": "bauxite",
+      "unit": "t",
+      "basePrice": 50
+    },
+    {
+      "id": "stone",
+      "unit": "t",
+      "basePrice": 20
+    },
+    {
+      "id": "steel",
+      "unit": "t",
+      "basePrice": 650
+    },
+    {
+      "id": "fuel",
+      "unit": "t",
+      "basePrice": 800
+    },
+    {
+      "id": "chemicals",
+      "unit": "t",
+      "basePrice": 900
+    },
+    {
+      "id": "plastic",
+      "unit": "t",
+      "basePrice": 1300
+    },
+    {
+      "id": "copper",
+      "unit": "t",
+      "basePrice": 9000
+    },
+    {
+      "id": "aluminum",
+      "unit": "t",
+      "basePrice": 2400
+    },
+    {
+      "id": "silicon",
+      "unit": "t",
+      "basePrice": 2500
+    },
+    {
+      "id": "electronics",
+      "unit": "t",
+      "basePrice": 8000
+    },
+    {
+      "id": "processed_food",
+      "unit": "t",
+      "basePrice": 1300
+    },
+    {
+      "id": "consumer_goods",
+      "unit": "t",
+      "basePrice": 5000
+    },
+    {
+      "id": "electricity",
+      "unit": "MWh",
+      "basePrice": 100
+    }
   ],
   "electricity": "electricity"
 }

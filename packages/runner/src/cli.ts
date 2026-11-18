@@ -104,6 +104,15 @@ function runOne(data: GameData, days: number, seed: number): boolean {
     `Buildings       ${buildings.count} with ${buildings.levels} levels, ${(buildings.workers / 1e6).toFixed(2)} million people at work, ` +
       `average output ${(buildings.averageOutput * 100).toFixed(1)} %, ${buildings.heldBack} held back`,
   );
+  const { markets } = summary;
+  const price = (p: { country: string; good: string; price: number }) =>
+    `${p.good} in ${p.country} ×${p.price.toFixed(2)}`;
+  console.log(
+    `Markets         prices on average ×${markets.averagePrice.toFixed(3)} of base; highest ${price(markets.highest)}, ` +
+      `lowest ${price(markets.lowest)}; worst shortage ${markets.worstShortage.country || 'none'} ` +
+      `${(markets.worstShortage.share * 100).toFixed(1)} %; wages ×${markets.averageWage.toFixed(2)} on average, ` +
+      `${markets.layingOff} buildings laying off; standard of living ${markets.standardOfLiving.toFixed(1)}`,
+  );
   console.log(`State hash      ${summary.stateHash}`);
   return summary.dailyTicks.withinBudget && summary.weeklyTicks.withinBudget;
 }
@@ -132,7 +141,7 @@ function runStress(
   const provinces = data.provinces.provinces.length;
   const countries = data.countries.countries.length;
   console.log(
-    'Terra Scutum sim stress test (placeholder load, with the real pops since F06 and the real buildings since F07)',
+    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07 and the real markets since F65)',
   );
   console.log('────────────────────────────────────────────────────────────────────────────');
   console.log(

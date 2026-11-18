@@ -20,6 +20,7 @@ import {
   type TestStartingBuilding,
   testBuildingStart,
   testBuildings,
+  testMarket,
   testRawData,
 } from './helpers';
 
@@ -60,8 +61,10 @@ const STARTING: Record<string, TestStartingBuilding[]> = {
 function newGame(
   start: Record<string, TestStartingBuilding[]> = {},
   change: (buildings: ReturnType<typeof testBuildings>) => void = () => {},
+  changeRaw: (raw: ReturnType<typeof testRawData>) => void = () => {},
 ) {
   const raw = testRawData();
+  changeRaw(raw);
   const buildings = testBuildings();
   change(buildings);
   raw.buildings = buildings;
@@ -244,7 +247,13 @@ describe('partial output (F07)', () => {
   });
 
   it('runs only as far as its scarcest pop group allows, and stops without workers', () => {
-    const { state, build, give, building, pop, province } = newGame();
+    // Nobody buys the mill's steel here: so that it doesn't go broke and lay
+    // its workers off (F65), its wages and jobs stay as they are.
+    const { state, build, give, building, pop, province } = newGame({}, undefined, (raw) => {
+      const market = raw.market as ReturnType<typeof testMarket>;
+      market.buildings.minWage = 1;
+      market.buildings.firingRate = 0;
+    });
     build('beta_main', 'power_plant', 400); // plenty of electricity
     build('beta_main', 'mill', 1000); // 200,000 laborers and 100,000 skilled workers: far too many
     give('BBB', 'coal', 1e9);
@@ -515,7 +524,10 @@ describe('goods.json and buildings.json (F07)', () => {
 
   it('checks goods, workers, inputs and outputs', () => {
     expect(
-      issues((raw) => (raw.goods = { goods: [{ id: 'ore', unit: 't' }], electricity: 'power' })),
+      issues(
+        (raw) =>
+          (raw.goods = { goods: [{ id: 'ore', unit: 't', basePrice: 1 }], electricity: 'power' }),
+      ),
     ).toContain('unknown good "power"');
     expect(withBuildings((b) => b.buildings.push({ ...b.buildings[0] }))).toContain(
       'duplicate building "mine"',
@@ -771,8 +783,8 @@ describe('older saves (F85)', () => {
   });
 });
 
-describe('the game starts with the building systems', () => {
-  it('runs production in the energy, resource production and industry slots', () => {
+describe('the game starts with the building and market systems', () => {
+  it('runs production in the energy, resource production and industry slots, then the market', () => {
     const { state } = newGame();
     state.enableProfiling(() => 0);
     state.advanceDay();
@@ -781,6 +793,7 @@ describe('the game starts with the building systems', () => {
       'energy',
       'resourceProduction',
       'industry',
+      'market',
     ]);
   });
 });

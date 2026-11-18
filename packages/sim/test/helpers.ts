@@ -145,13 +145,27 @@ export function testPops() {
       { gdpPerPerson: 1000, shares: shares(0.7, 0.15, 0.05) },
       { gdpPerPerson: 50000, shares: shares(0.4, 0.3, 0.2) },
     ],
+    // F65: by default the pops buy no goods (heating costs nothing at every
+    // wealth), so the building tests run as before; market tests give it a value.
     needs: [
-      { id: 'food', tier: 'basic', costPerDay: 2 },
-      { id: 'housing', tier: 'basic', costPerDay: 1 },
-      { id: 'consumer_goods', tier: 'everyday', costPerDay: 20 },
-      { id: 'luxury_goods', tier: 'luxury', costPerDay: 100 },
+      {
+        id: 'heating',
+        goods: [{ good: 'coal', maxShare: 0.6 }, { good: 'electricity', maxShare: 1 }],
+      },
+      { id: 'services' },
     ],
-    standardOfLiving: { basic: 40, everyday: 35, luxury: 25 },
+    wealth: {
+      dependentWeight: 0.5,
+      rise: { threshold: 1.02, speed: 0.2 },
+      fall: { threshold: 0.98, speed: 0.1 },
+      shortagePenalty: 10,
+      substitution: { maxShare: 0.8, otherBuyersWeight: 0.5 },
+      packages: [
+        { level: 1, needs: { heating: 0, services: 1 } },
+        { level: 50, needs: { heating: 0, services: 20 } },
+        { level: 99, needs: { heating: 0, services: 400 } },
+      ],
+    },
     growth: { workingYears: 45, dependentMortality: 4 },
     jobChanges: [
       { from: 'skilled_workers', to: 'laborers', weeklyShare: 0.05, training: false },
@@ -167,14 +181,40 @@ export function testPops() {
   };
 }
 
-/** A valid `goods.json` (F07): the goods of the test buildings. */
+/** A valid `market.json` (F65): Victoria 3's rules, as in the game's data. */
+export function testMarket() {
+  return {
+    prices: { sensitivity: 0.75, min: 0.25, max: 1.75 },
+    buildings: {
+      reserveDays: 28,
+      startingReserves: 0.5,
+      depositWhenEmpty: 0.5,
+      depositAtFull: 0.25,
+      raiseMargin: 0.2,
+      largeMargin: 0.4,
+      lowReserves: 0.5,
+      minimalMargin: 0.05,
+      wellAbove: 1.33,
+      wageStep: 0.05,
+      raiseCooldownWeeks: 4,
+      minWage: 0.1,
+      maxWage: 5,
+      firingRate: 0.1,
+      hiringRate: 0.1,
+      startingMargin: 0.1,
+      switchForMorePay: 0.1,
+    },
+  };
+}
+
+/** A valid `goods.json` (F07, F65): the goods of the test buildings, with base prices. */
 export function testGoods() {
   return {
     goods: [
-      { id: 'ore', unit: 't' },
-      { id: 'coal', unit: 't' },
-      { id: 'steel', unit: 't' },
-      { id: 'electricity', unit: 'MWh' },
+      { id: 'ore', unit: 't', basePrice: 100 },
+      { id: 'coal', unit: 't', basePrice: 50 },
+      { id: 'steel', unit: 't', basePrice: 1500 },
+      { id: 'electricity', unit: 'MWh', basePrice: 50 },
     ],
     electricity: 'electricity',
   };
@@ -254,7 +294,12 @@ export function testBuildings() {
       },
     ],
     stockpile: { startingDays: 10, maxDays: 30 },
-    standIns: { otherElectricityShare: 0, standingImportsShare: 0, standingImportsBuffer: 0 },
+    standIns: {
+      otherElectricityShare: 0,
+      standingImportsShare: 0,
+      standingImportsBuffer: 0,
+      restOfEconomyShare: 0,
+    },
   };
 }
 
@@ -543,6 +588,7 @@ export function testRawData(
     goods: testGoods(),
     buildings: testBuildings(),
     buildingStart: testBuildingStart(),
+    market: testMarket(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

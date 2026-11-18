@@ -3,7 +3,7 @@ import type { SimSystem } from '../core/systems';
 import type { GameState } from '../core/game-state';
 import type { CountryStartTable } from '../world/country-start';
 import type { WorldMap } from '../world/world-map';
-import { NEED_TIERS, type PopsConfig } from './pops-data';
+import type { PopsConfig } from './pops-data';
 
 /**
  * The population model (F06, section 8.1).
@@ -11,7 +11,8 @@ import { NEED_TIERS, type PopsConfig } from './pops-data';
  * Every province has **dependents** (children, the elderly and others who
  * don't work) and a **workforce** split into **pops**: one per pop group
  * (laborers, skilled workers, professionals, owners, officials, soldiers).
- * A pop has a size, jobs, a wage and a standard of living.
+ * A pop has a size, jobs, a wage, a **wealth** (F65, Victoria 3) and a
+ * standard of living.
  *
  * - **Every day:** births, deaths, young people entering the workforce and
  *   old ones leaving it. A handful of multiplications per province.
@@ -19,9 +20,10 @@ import { NEED_TIERS, type PopsConfig } from './pops-data';
  *   people change group where jobs are open. A pop's jobs are the ones
  *   buildings offer (F07, `buildings.ts`) plus the stand-in's: "the rest of
  *   the economy", everything the building catalog doesn't cover yet.
- * - **The report** (employment, incomes, needs, standard of living, totals
- *   per province and country) is worked out from the state when it is asked
- *   for, at most once a day.
+ * - **The report** (employment, incomes, standard of living, totals per
+ *   province and country) is worked out from the state when it is asked
+ *   for, at most once a day. What people buy and how their wealth moves is
+ *   the market's (F65, `market.ts`).
  *
  * All numbers live in typed arrays; a pop's place in a per-pop array is
  * `province * groupCount + group`. Nothing is allocated after creation.
@@ -44,6 +46,14 @@ export interface PopulationState {
    * everything buildings don't cover yet [DEFAULT].
    */
   readonly standInJobs: Float64Array;
+  /**
+   * F65 (Victoria 3): each pop's wealth, 1–99. It sets what the pop buys
+   * (its buy package) and its standard of living; the market moves it
+   * every week with the pop's income. Fractional.
+   */
+  readonly wealth: Float64Array;
+  /** F65: each pop's income last week, in US$ per worker per day (wages, dividends). */
+  readonly income: Float64Array;
 
   // ── Jobs (worked out from the state) ─────────────────────────────────────
   /** The jobs buildings offer each pop (F07): from their levels, kept up to date by `buildings.ts`. */
@@ -60,13 +70,23 @@ export interface PopulationState {
   /** Per day: the share of the workforce that retires. */
   readonly leavingRate: number;
   /**
-   * Each pop's wage, in US$ per worker per day: the going local wage, fixed
-   * from the starting data. Buildings pay it too (F07) until markets let
-   * their profits set wages (F65).
+   * Each pop's **going wage**, in US$ per worker per day, fixed from the
+   * starting data: what the rest of the economy pays. Since F65 a building
+   * pays it times its own wage level (`BuildingsState.wageFactor`).
    */
   readonly wage: Float64Array;
-  /** Each province's price level (1 = United States prices), until markets set prices (F65). */
+  /**
+   * Each province's price level (1 = United States prices): since F65 only
+   * the price of the needs that have no good yet (housing, services,
+   * luxuries); goods are priced on the markets.
+   */
   readonly priceLevel: Float64Array;
+  /**
+   * F65: the standard of living each pop expects (Victoria 3's expected
+   * standard of living): what it had at the start. Buildings whose workers
+   * live far below it raise wages; far above it, they may cut them.
+   */
+  readonly expectedLiving: Float32Array;
   /** The share of each pop in work at the start: its country's real employment (1 for groups that are always employed). */
   readonly employmentTarget: Float64Array;
   /**
@@ -79,34 +99,31 @@ export interface PopulationState {
   // ── The report (worked out from the state; not saved) ────────────────────
   /** People of each pop with a job. */
   readonly employed: Float64Array;
-  /** Each pop's standard of living, 0–100. */
+  /** Each pop's standard of living, 1–99 (F65: its wealth less what shortages take). */
   readonly standardOfLiving: Float32Array;
   /** Per province: everyone, the people with a job, the average standard of living. */
   readonly provincePopulation: Float64Array;
   readonly provinceEmployed: Float64Array;
   readonly provinceStandardOfLiving: Float32Array;
-  /** Per province and need tier (basic, everyday, luxury): how much of it people can afford, 0–1. */
-  readonly provinceNeeds: Float32Array;
   /** Per country (the provinces it owns now): everyone, and the dependents among them. */
   readonly countryPopulation: Float64Array;
   readonly countryDependents: Float64Array;
-  /** Per country and pop group: people, people with a job, average wage (US$ per day), standard of living. */
+  /**
+   * Per country and pop group: people, people with a job, average going
+   * wage (US$ per day), standard of living, and (F65) income last week (US$
+   * per worker per day).
+   */
   readonly countryGroupSize: Float64Array;
   readonly countryGroupEmployed: Float64Array;
   readonly countryGroupWage: Float64Array;
   readonly countryGroupStandardOfLiving: Float32Array;
-  /** Per country, pop group and need tier: how much of the tier the group can afford, 0–1. */
-  readonly countryGroupNeeds: Float32Array;
+  readonly countryGroupIncome: Float64Array;
   /** Goes up every time the report is redone, so hosts know when to resend it. */
   version: number;
   /** The `ownershipVersion` the report's country totals were made with; -1 when the report is out of date. */
   reportOwnershipVersion: number;
 
   // ── From the data, ready for the loops ───────────────────────────────────
-  /** What a person's needs of each tier cost a day at price level 1. */
-  readonly tierCost: Float64Array;
-  /** What each tier adds to the standard of living when fully met (the three add up to 100). */
-  readonly tierWeight: Float64Array;
   /** The job changes of `data/pops.json`: from, to (group indices), weekly share, in order. */
   readonly changeFrom: Int32Array;
   readonly changeTo: Int32Array;
@@ -119,9 +136,11 @@ export interface PopulationRestore {
   readonly dependents: Float64Array;
   readonly size: Float64Array;
   readonly standInJobs: Float64Array;
+  /** F65; missing in older saves (the starting wealth stays). */
+  readonly wealth?: Float64Array;
+  readonly income?: Float64Array;
 }
 
-const TIERS = NEED_TIERS.length;
 const DAYS_PER_YEAR = 365;
 
 /**
@@ -265,10 +284,6 @@ export function createPopulation(
     }
   }
 
-  const tierCost = new Float64Array(TIERS);
-  for (const need of pops.needs) tierCost[NEED_TIERS.indexOf(need.tier)] += need.costPerDay;
-  const tierWeight = Float64Array.from(NEED_TIERS, (tier) => pops.standardOfLiving[tier]);
-
   return {
     groupIds: pops.groups.map((group) => group.id),
     groupCount: groups,
@@ -276,6 +291,8 @@ export function createPopulation(
     dependents,
     size,
     standInJobs: jobs.slice(),
+    wealth: new Float64Array(provinces * groups).fill(1),
+    income: new Float64Array(provinces * groups),
     buildingJobs: new Float64Array(provinces * groups),
     jobs,
     birthRate,
@@ -285,6 +302,7 @@ export function createPopulation(
     leavingRate,
     wage,
     priceLevel,
+    expectedLiving: new Float32Array(provinces * groups),
     employmentTarget,
     standInTarget: employmentTarget.slice(),
     employed: new Float64Array(provinces * groups),
@@ -292,18 +310,15 @@ export function createPopulation(
     provincePopulation: new Float64Array(provinces),
     provinceEmployed: new Float64Array(provinces),
     provinceStandardOfLiving: new Float32Array(provinces),
-    provinceNeeds: new Float32Array(provinces * TIERS),
     countryPopulation: new Float64Array(countries),
     countryDependents: new Float64Array(countries),
     countryGroupSize: new Float64Array(countries * groups),
     countryGroupEmployed: new Float64Array(countries * groups),
     countryGroupWage: new Float64Array(countries * groups),
     countryGroupStandardOfLiving: new Float32Array(countries * groups),
-    countryGroupNeeds: new Float32Array(countries * groups * TIERS),
+    countryGroupIncome: new Float64Array(countries * groups),
     version: 0,
     reportOwnershipVersion: -1,
-    tierCost,
-    tierWeight,
     changeFrom: Int32Array.from(pops.jobChanges, (change) => groupIndex.get(change.from) ?? 0),
     changeTo: Int32Array.from(pops.jobChanges, (change) => groupIndex.get(change.to) ?? 0),
     changeShare: Float64Array.from(pops.jobChanges, (change) => change.weeklyShare),
@@ -325,6 +340,16 @@ export function restorePopulation(population: PopulationState, saved: Population
   population.dependents.set(saved.dependents);
   population.size.set(saved.size);
   population.standInJobs.set(saved.standInJobs);
+  if (saved.wealth) {
+    if (saved.wealth.length !== population.wealth.length)
+      throw new Error('Population: the restored wealth does not match the pops');
+    population.wealth.set(saved.wealth);
+  }
+  if (saved.income) {
+    if (saved.income.length !== population.income.length)
+      throw new Error('Population: the restored incomes do not match the pops');
+    population.income.set(saved.income);
+  }
   for (let i = 0; i < population.jobs.length; i++)
     population.jobs[i] = population.standInJobs[i] + population.buildingJobs[i];
   population.reportOwnershipVersion = -1;
@@ -406,17 +431,19 @@ export function updateJobs(population: PopulationState): void {
 }
 
 /**
- * Redoes the report from the state: who has a job, what people can afford
- * (needs are bought tier by tier: basic, then everyday, then luxury), the
- * standard of living, and the totals per province and per country.
+ * Redoes the report from the state: who has a job, the standard of living
+ * (F65: each pop's wealth, less `shortagePenalty` × the share of its
+ * country's pops' goods that went undelivered last week, `shortage`), and
+ * the totals per province and per country.
  */
 export function refreshPopulationReport(
   population: PopulationState,
   provinceOwner: Uint16Array,
   ownershipVersion: number,
+  shortage: Float32Array,
+  shortagePenalty: number,
 ): void {
-  const { dependents, size, jobs, wage, priceLevel, employed, standardOfLiving } = population;
-  const { tierCost, tierWeight } = population;
+  const { dependents, size, jobs, wage, employed, standardOfLiving, wealth, income } = population;
   const groups = population.groupCount;
   const provinces = dependents.length;
   const countryPopulation = population.countryPopulation.fill(0);
@@ -425,40 +452,24 @@ export function refreshPopulationReport(
   const countryEmployed = population.countryGroupEmployed.fill(0);
   const countryWage = population.countryGroupWage.fill(0);
   const countryLiving = population.countryGroupStandardOfLiving.fill(0);
-  const countryNeeds = population.countryGroupNeeds.fill(0);
+  const countryIncome = population.countryGroupIncome.fill(0);
 
   for (let p = 0; p < provinces; p++) {
     const row = p * groups;
     const owner = provinceOwner[p];
+    const penalty = shortagePenalty * shortage[owner];
     let workforce = 0;
-    for (let g = 0; g < groups; g++) workforce += size[row + g];
-    // Every worker's income also feeds this many dependents.
-    const mouths = workforce > 0 ? 1 + dependents[p] / workforce : 1;
-    const price = priceLevel[p];
     let working = 0;
     let living = 0;
-    let need0 = 0;
-    let need1 = 0;
-    let need2 = 0;
     for (let g = 0; g < groups; g++) {
       const people = size[row + g];
+      workforce += people;
       const withJob = people < jobs[row + g] ? people : jobs[row + g];
       employed[row + g] = withJob;
       working += withJob;
-      // What one person of this pop can spend a day, at price level 1.
-      let budget =
-        people > 0 && price > 0 ? (wage[row + g] * withJob) / (people * mouths) / price : 0;
-      let score = 0;
-      const tiers = (owner * groups + g) * TIERS;
-      for (let t = 0; t < TIERS; t++) {
-        const met = budget >= tierCost[t] ? 1 : budget / tierCost[t];
-        budget -= met * tierCost[t];
-        score += met * tierWeight[t];
-        countryNeeds[tiers + t] += met * people;
-        if (t === 0) need0 += met * people;
-        else if (t === 1) need1 += met * people;
-        else need2 += met * people;
-      }
+      let score = wealth[row + g] - penalty;
+      if (score < 1) score = 1;
+      else if (score > 99) score = 99;
       standardOfLiving[row + g] = score;
       living += score * people;
       const country = owner * groups + g;
@@ -466,13 +477,11 @@ export function refreshPopulationReport(
       countryEmployed[country] += withJob;
       countryWage[country] += wage[row + g] * withJob;
       countryLiving[country] += score * people;
+      countryIncome[country] += income[row + g] * people;
     }
     population.provincePopulation[p] = workforce + dependents[p];
     population.provinceEmployed[p] = working;
     population.provinceStandardOfLiving[p] = workforce > 0 ? living / workforce : 0;
-    population.provinceNeeds[p * TIERS] = workforce > 0 ? need0 / workforce : 0;
-    population.provinceNeeds[p * TIERS + 1] = workforce > 0 ? need1 / workforce : 0;
-    population.provinceNeeds[p * TIERS + 2] = workforce > 0 ? need2 / workforce : 0;
     countryPopulation[owner] += workforce + dependents[p];
     countryDependents[owner] += dependents[p];
   }
@@ -482,8 +491,7 @@ export function refreshPopulationReport(
     const people = countrySize[i];
     countryWage[i] = countryEmployed[i] > 0 ? countryWage[i] / countryEmployed[i] : 0;
     countryLiving[i] = people > 0 ? countryLiving[i] / people : 0;
-    for (let t = 0; t < TIERS; t++)
-      countryNeeds[i * TIERS + t] = people > 0 ? countryNeeds[i * TIERS + t] / people : 0;
+    countryIncome[i] = people > 0 ? countryIncome[i] / people : 0;
   }
   population.reportOwnershipVersion = ownershipVersion;
   population.version += 1;
@@ -498,7 +506,13 @@ export function refreshPopulationReport(
 export function ensurePopulationReport(state: GameState): PopulationState {
   const population = state.population;
   if (population.reportOwnershipVersion !== state.ownershipVersion)
-    refreshPopulationReport(population, state.provinceOwner, state.ownershipVersion);
+    refreshPopulationReport(
+      population,
+      state.provinceOwner,
+      state.ownershipVersion,
+      state.market.shortage,
+      state.data.pops.wealth.shortagePenalty,
+    );
   return population;
 }
 
