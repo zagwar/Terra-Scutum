@@ -40,10 +40,12 @@ test('the top bar, lenses, screens, alerts and outliner (UI shell, F122)', async
   const shot = (name: string) =>
     page.screenshot({ path: join(SCREENSHOT_DIR, `shell-${name}-${testInfo.project.name}.png`) });
 
-  // The top bar: the player's country, then every key number as "—" (none exists in the sim yet).
+  // The top bar: the player's country, then the key numbers: "—" where the sim has none yet;
+  // since F08 the food reserves in days.
   await expect(page.getByTestId('top-bar-flag')).toContainText('United States');
-  for (const id of ['treasury', 'stability', 'manpower', 'food', 'swarmControl', 'arrival'])
+  for (const id of ['treasury', 'stability', 'manpower', 'swarmControl', 'arrival'])
     await expect(page.getByTestId(`top-bar-${id}`)).toContainText('—');
+  await expect(page.getByTestId('top-bar-food-value')).toHaveText(/^\d+ d$/);
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   // Hovering a number says which feature brings it; clicking it opens its screen.
   await page.getByTestId('top-bar-stability').hover();

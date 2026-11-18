@@ -62,7 +62,7 @@ test('the game starts: 3D scene, sim worker and UI are all running', async ({ pa
   await expect(page.getByTestId('map-status')).toHaveText(/^[\d,]+ provinces$/);
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   await expect(page.getByTestId('sim-day')).toHaveText('0');
-  await expect(page.getByTestId('save-format')).toHaveText('Version 8');
+  await expect(page.getByTestId('save-format')).toHaveText('Version 9');
   await expect(page.getByTestId('build-commit')).toHaveText(/^[0-9a-f]{7}$|^dev$/);
   await expect(page.getByTestId('error-overlay')).toHaveCount(0);
   await page.keyboard.press('Escape');
