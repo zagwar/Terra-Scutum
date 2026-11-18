@@ -38,15 +38,15 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F86 | Transport capacity per province, transport costs, industrial cluster bonus | M3 | Planned | Section 8.3 |
 | F87 | Production chain view (flow diagram), bottleneck highlighting, build suggestions, per-good overlays, alerts | M3 | Planned | Section 8.3 |
 | F88 | Production methods (alternative recipes unlocked by research) | M4 | Planned | Section 8.3. **The method system came with F85** (designer decision): methods per building type in data, each building runs one, every country starts on its real methods. Left for F88: switching a building's method (time and cost), research unlocking better methods, the steel mill's electric arc furnace (scrap) |
-| F08 | Food production, consumption, reserves, shortages | M2 | Planned | Section 8.5 |
+| F08 | Food production, consumption, reserves, shortages | M2 | Done | Section 8.5 ("How food works in the game"). **Done** (M2 build order step 6), **on Victoria 3's food rules since its version 1.8** (designer decision). **Food** is grain, livestock and fish, and processed food, bought as basic food and better food (F65). **Food security** per pop, weekly: 100 % − the share of income spent on basic food − **1.5×** the basic food shortage (designer decision; Victoria 3 counts it once), moving half the way a week; livestock and fish count at most 40 % of basic food. **Starvation** below 40 % (mild: up to −35 % births, +30 % deaths) and 20 % (severe: −90 % births, +100 % deaths, **plus up to 5 % of the starving a year**, designer decision), and up to −5/−15 standard of living (a stand-in for radicals). **Famine** per province while 35 % starve and 15 % severely; deaths and lost births counted. **Food reserves** = the national stockpile's food goods (designer decision): start 30 days, trade tops up toward 30, at most 90. **Rationing** None/Light/Strict/Emergency (the Rationing law's effects ahead of F16): cuts the rest of the economy's food, then better food, stops food exports; automatic for other countries, the player chooses (Automatic by default; designer decision). **In the game:** the **Food key number** in the top bar, the **Food screen** (Economy lens; with a food crisis test tool), the province panel's food, the **Food map mode**, **famine** and **low reserves** alerts, famine toasts. Save version 9. Ten years on the real world: nobody starves, no famine; the stress test 6.3 ms a day, 19.3 ms a Monday (budgets 30 and 150). Details in section 14 ("What F08 built") |
 | F09 | Treasury, taxes, budget lines, debt, inflation | M2 | Planned | Section 8.2 |
-| F10 | Stability and happiness calculation; strikes and unrest | M2 | Planned | Section 8.9 |
+| F10 | Stability and happiness calculation; strikes and unrest | M2 | Planned | Section 8.9. Reads food (F08): `FoodState` has each province's and country's starving shares and famines, and starvation already lowers the standard of living; the design's "riots and a big stability drop" in a famine belong here |
 | F11 | Economy UI screens: budget, population, food, industry | M2 | Planned | |
 | F12 | Construction system: private construction (corporations build for profit), state construction (cost depends on economic system), government build contracts, building ownership | M3 | Planned | Section 8.3 |
 | F13 | Resource stockpiles: steel, oil, rare metals, energy | M3 | Planned | Section 8.6 |
 | F14 | Military production chains: ammunition, small arms, vehicles, aircraft, missiles, rations | M3 | Planned | Sections 8.3, 8.7; mech chains and disruptor rounds come with M8b |
 | F15 | Manpower, conscription, division recruitment and training | M3 | Planned | |
-| F16 | Laws system (economy mode, conscription, rationing, etc.) | M3 | Planned | Section 8.8 |
+| F16 | Laws system (economy mode, conscription, rationing, etc.) | M3 | Planned | Section 8.8. The Rationing law's effects exist since F08 (`data/food.json` → `rationing`, the `setRationing` command, the Food screen's buttons); F16 adds enacting it (time, political capital, support) |
 | F72 | Government types, political capital, parties, elections | M3 | Planned | Section 8.12 |
 | F73 | Economic systems: ownership, procurement (contracts vs quotas), state-owned enterprises, reforms | M3 | Planned | Section 8.13 |
 | F74 | Power grid: power plants, substations, blackouts, rolling-blackout priorities | M3 | Planned | Section 5.5 |
@@ -90,7 +90,7 @@ Status values: `Planned` → `In progress` → `Done` (or `Cut`). Build in miles
 | F51 | Mech Designer: frames, module slots, stats, saved designs, refits | M8b | Planned | Section 5.4.9 |
 | F52 | Division templates mixing mech and conventional battalions | M8a | Planned | Section 5.4.3 |
 | F53 | Heavy-metal pollution: build-up, spread, effects, cleanup | M8b | Planned | Section 5.4.2 |
-| F54 | Weather and seasons: per-region weather, forecasts, effects on lasers, disruption, movement, food | M3 | Planned | Section 5.4.8; food seasons are needed early |
+| F54 | Weather and seasons: per-region weather, forecasts, effects on lasers, disruption, movement, food | M3 | Planned | Section 5.4.8; food seasons are needed early. For food, copy Victoria 3 1.8's **harvest conditions** (droughts, floods… changing farm output in a region for months; F08 left them here) |
 | F33 | Refugee flow, border policies, camps, integration | M9 | Planned | |
 | F34 | Refugee agreements, stability effects | M9 | Planned | |
 | F35 | Nuclear strikes, fallout, diplomatic penalties | M9 | Planned | |

@@ -16,6 +16,7 @@ export const MAP_MODES = [
   'seaZones',
   'population',
   'industry',
+  'food',
 ] as const;
 export type MapMode = (typeof MAP_MODES)[number];
 
@@ -72,6 +73,32 @@ export function industryColor(workers: number, steps: Colors['industry']): Rgb {
   return scaleColor(workers, steps, (step) => step.workers);
 }
 
+/**
+ * The color for a province's food security (F08, 0–1) on the food map
+ * mode's scale, mixed in proportion between two steps; a province in
+ * famine has the famine color.
+ */
+export function foodColor(security: number, famine: boolean, colors: Colors['food']): Rgb {
+  if (famine) return parseHexColor(colors.famine);
+  const steps = colors.steps;
+  const last = steps[steps.length - 1];
+  if (!(security > steps[0].security)) return parseHexColor(steps[0].color);
+  if (security >= last.security) return parseHexColor(last.color);
+  let i = 1;
+  while (steps[i].security < security) i++;
+  const low = steps[i - 1];
+  const high = steps[i];
+  const amount = (security - low.security) / (high.security - low.security);
+  return mix(parseHexColor(low.color), parseHexColor(high.color), amount);
+}
+
+/** Food security and famine per province (F08), for the food map mode. */
+export interface ProvinceFood {
+  readonly security: ArrayLike<number>;
+  /** The day each province's famine began, or -1. */
+  readonly famineSince: ArrayLike<number>;
+}
+
 /** The color for a value on a scale of steps: the steps' colors, mixed by the logarithm of the value. */
 function scaleColor<Step extends { readonly color: string }>(
   value: number,
@@ -96,7 +123,8 @@ function scaleColor<Step extends { readonly color: string }>(
  * `provincePopulation` is everyone living in each province (F06), for the
  * population map mode; without it that mode shows plain land.
  * `provinceIndustry` is the people at work in each province's buildings
- * (F07), for the industry map mode, likewise.
+ * (F07), for the industry map mode, likewise; `provinceFood` (F08) for the
+ * food map mode.
  */
 export function provinceBaseColors(
   mode: MapMode,
@@ -105,9 +133,22 @@ export function provinceBaseColors(
   provinceOwner: ArrayLike<number>,
   provincePopulation?: ArrayLike<number> | null,
   provinceIndustry?: ArrayLike<number> | null,
+  provinceFood?: ProvinceFood | null,
 ): Uint8Array {
   const result = new Uint8Array(world.provinceIds.length * 4);
-  if (mode === 'industry' && provinceIndustry) {
+  if (mode === 'food' && provinceFood) {
+    world.provinceIds.forEach((_, province) =>
+      write(
+        result,
+        province,
+        foodColor(
+          provinceFood.security[province],
+          provinceFood.famineSince[province] >= 0,
+          colors.food,
+        ),
+      ),
+    );
+  } else if (mode === 'industry' && provinceIndustry) {
     world.provinceIds.forEach((_, province) =>
       write(result, province, industryColor(provinceIndustry[province], colors.industry)),
     );

@@ -2,6 +2,7 @@ import { buildingNameKey, goodNameKey, provinceNameKey } from '@terra-scutum/sim
 import type { AppState, AppStore } from '../../app-store';
 import { formatPeopleShort, formatPercent, tKey } from '../i18n';
 import { countryMarket } from '../markets/markets-view';
+import { countryFood, hungryProvinces, reserveDaysText } from '../food/food-view';
 import type { ShellAlert } from '../shell/shell-types';
 import { limitText } from './building-parts';
 import { layingOffBuildings, stoppedBuildings } from './buildings-view';
@@ -10,6 +11,8 @@ import { layingOffBuildings, stoppedBuildings } from './buildings-view';
 export const IDLE_BUILDINGS_ALERT_ID = 1_000_007;
 export const LAYOFFS_ALERT_ID = 1_000_008;
 export const SHORTAGE_ALERT_ID = 1_000_009;
+export const FAMINE_ALERT_ID = 1_000_010;
+export const FOOD_LOW_ALERT_ID = 1_000_011;
 
 /** The shortage alert shows once the pops went without at least this share of their goods last week [DEFAULT]. */
 export const SHORTAGE_ALERT_AT_LEAST = 0.02;
@@ -109,12 +112,57 @@ const ALERTS: readonly EconomyAlert[] = [
       };
     },
   },
+  {
+    // F08: provinces of the player's country in famine; the click shows the worst.
+    id: FAMINE_ALERT_ID,
+    compute(state) {
+      const { food, population } = state;
+      if (!food || !population) return null;
+      if (food.famineCount[state.playerCountry] <= 0) return null;
+      const worst = hungryProvinces(food, population, state.provinceOwner, state.playerCountry)[0];
+      if (!worst || worst.famineSince === null) return null;
+      return {
+        typeId: 'famine',
+        titleKey: 'ALERT_FAMINE_TITLE',
+        textKey: 'ALERT_FAMINE_TEXT',
+        params: {
+          count: food.famineCount[state.playerCountry],
+          province: tKey(provinceNameKey(state.world.provinceIds[worst.province])),
+          starving: formatPercent(worst.starving, 0),
+          deaths: formatPeopleShort(food.starvationDeaths[state.playerCountry]),
+        },
+        target: { kind: 'province', index: worst.province },
+      };
+    },
+  },
+  {
+    // F08: the player's food reserves are low (and no famine says so louder).
+    id: FOOD_LOW_ALERT_ID,
+    compute(state) {
+      const { food } = state;
+      if (!food) return null;
+      const summary = countryFood(food, state.buildings, state.playerCountry, true);
+      if (summary.famines > 0 || summary.reserveDays >= food.lowReserveDays) return null;
+      return {
+        typeId: 'food_reserves_low',
+        titleKey: 'ALERT_FOOD_LOW_TITLE',
+        textKey: 'ALERT_FOOD_LOW_TEXT',
+        params: {
+          days: reserveDaysText(summary.reserveDays),
+          shortage: formatPercent(summary.shortage),
+          rationing: tKey(`FOOD_RATIONING_${summary.rationing.toUpperCase()}`),
+        },
+        target: { kind: 'country', index: state.playerCountry },
+      };
+    },
+  },
 ];
 
 /**
  * Keeps the economy's alerts (section 12.1) in step with the sim: the "idle
  * factory" alert (F07: buildings of the player's country held back at half
- * output or less), the layoffs alert and the shortage alert (F65). Each
+ * output or less), the layoffs alert and the shortage alert (F65), the
+ * famine and low food reserves alerts (F08). Each
  * names the worst case; a click shows its province or the country.
  * Dismissed (right-click), an alert stays away until its problem is over
  * and comes back with the next one.
@@ -137,6 +185,7 @@ export function createBuildingAlerts(store: AppStore): { readonly sync: () => vo
       const looking = [
         buildings,
         state.market,
+        state.food,
         provinceOwner,
         playerCountry,
         state.choosingCountry,
@@ -177,7 +226,7 @@ export function createBuildingAlerts(store: AppStore): { readonly sync: () => vo
       if (!changed) return;
       // Changing the alerts calls `sync` again (the store tells its listeners):
       // remember the new list first, so that call finds nothing to do.
-      seen = [...looking.slice(0, 5), alerts];
+      seen = [...looking.slice(0, 6), alerts];
       store.update({ alerts });
     },
   };

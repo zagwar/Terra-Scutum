@@ -406,6 +406,13 @@ export function testMapView() {
         { workers: 100, color: '#ffffff' },
         { workers: 10000, color: '#0000ff' },
       ],
+      food: {
+        steps: [
+          { security: 0, color: '#ff0000' },
+          { security: 1, color: '#00ff00' },
+        ],
+        famine: '#000000',
+      },
     },
     lines: {
       provinceBorder: line,

@@ -102,6 +102,8 @@ In January 2025 an unknown object is detected heading for Earth. The player lead
 | **Embargo** / **trade agreement** / **sanctions** | Two countries stop trading / trade without tariffs / embargoes from many countries at once (F19 built the effects; diplomacy and the UN make them, M6) |
 | **Rest of the world** | A stand-in seller on the World Market for what the world's buildings can't make enough of at the start (electronics, fuel, iron ore, copper ore), per person of the world (F19) |
 | **Output** (of a building) / **held back** | How much of its full output a building makes today, 0–100 % / running below that for lack of workers, electricity or an input |
+| **Food security** / **starvation** / **famine** | How well a pop is fed, 0–100 % (F08, Victoria 3: income spent on basic food and basic food missing) / below 40 % (mild) or 20 % (severe): fewer births, more deaths / a province where at least 35 % of the people starve and 15 % severely |
+| **Food reserves** / **rationing** | The national stockpile's food goods (F08: 30 days at the start, at most 90) / cutting food use when reserves fall (none, light, strict, emergency): the rest of the economy's food first, then better food, then food exports |
 | **National stockpile** | A country's store of goods (since F65 its market's reserve): what is made and not bought goes in; buyers draw on it when a day's goods run short |
 | **Off the grid** | The share of its output a building keeps without electricity from the grid (its own generators, hand work) |
 | **Ideology** | A political belief with stances on laws, government types and economic systems |

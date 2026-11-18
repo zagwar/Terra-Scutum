@@ -57,7 +57,18 @@
       { "workers": 100000, "color": "#2a5b98" },
       { "workers": 300000, "color": "#1a3672" },
       { "workers": 1000000, "color": "#101c48" }
-    ]
+    ],
+    "food": {
+      "steps": [
+        { "security": 0, "color": "#5a0f0f" },
+        { "security": 0.2, "color": "#c0392b" },
+        { "security": 0.4, "color": "#e8893a" },
+        { "security": 0.6, "color": "#f0d36b" },
+        { "security": 0.8, "color": "#e6ebc4" },
+        { "security": 1, "color": "#f4f4ee" }
+      ],
+      "famine": "#2a0a2e"
+    }
   },
   "lines": {
     "provinceBorder": { "color": "#0a0e14", "opacity": 0.4, "widthPx": 1 },

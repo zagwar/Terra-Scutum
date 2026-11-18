@@ -77,6 +77,11 @@ function showMapWhenPossible(): void {
           if (state.provinceOwner) map.setProvinceOwners(state.provinceOwner);
           if (state.population) map.setProvincePopulation(state.population.provincePopulation);
           if (state.buildings) map.setProvinceIndustry(state.buildings.provinceWorkers);
+          if (state.food)
+            map.setProvinceFood({
+              security: state.food.provinceSecurity,
+              famineSince: state.food.famineSince,
+            });
           map.setSelectedProvince(state.selectedProvince);
           map.setSelectedSeaZone(state.selectedSeaZone);
           map.setHighlightedCountry(state.choosingCountry ? state.candidateCountry : null);
@@ -134,6 +139,8 @@ const sim = createSimClient({
       buildings: message.snapshot.buildings ?? null,
       market: message.snapshot.market ?? null,
       trade: message.snapshot.trade ?? null,
+      food: message.snapshot.food ?? null,
+      foodColors: message.mapView.colors.food,
       buildingTypes: message.buildings,
       goods: message.goods,
       industryColors: message.mapView.colors.industry,
@@ -159,13 +166,14 @@ const sim = createSimClient({
       ...(snapshot.buildings ? { buildings: snapshot.buildings } : {}),
       ...(snapshot.market ? { market: snapshot.market } : {}),
       ...(snapshot.trade ? { trade: snapshot.trade } : {}),
+      ...(snapshot.food ? { food: snapshot.food } : {}),
     });
     debugHooks?.recordEvents(events);
     // Sim events that have a message type become messages (toasts, pop-ups, the log).
     const { world } = store.getState();
     if (world) {
       for (const event of events) {
-        const message = messageFromEvent(event, world, snapshot.date);
+        const message = messageFromEvent(event, world, snapshot.date, snapshot.playerCountry);
         if (message) actions.deliverMessage(message);
       }
     }

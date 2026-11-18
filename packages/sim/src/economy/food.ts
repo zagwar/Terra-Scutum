@@ -171,9 +171,16 @@ export function foodReserveDays(
   return used > 0 ? held / used : Infinity;
 }
 
-/** The share of the basic food a country's pops asked for today that they got (1 when they asked for none). */
+/**
+ * The share of the basic food a country's pops needed today that they got
+ * (1 when they asked for none). Each good counts at most its `maxShare` of
+ * the need (`data/pops.json`): when nothing else is on sale, the markets let
+ * people buy livestock and fish for all their basic food (F65's
+ * substitution), but they can live on it for at most 40 % (we add: our needs
+ * are counted in money, and a little meat costs as much as a lot of grain).
+ */
 function basicDelivered(food: FoodState, market: MarketState, country: number): number {
-  const { needOffsets, entryGood, shares, popOrder, popGot } = market;
+  const { needOffsets, entryGood, entryMaxShare, shares, popOrder, popGot } = market;
   const at = country * market.goodCount;
   const out = country * market.entryCount;
   let got = 0;
@@ -182,7 +189,8 @@ function basicDelivered(food: FoodState, market: MarketState, country: number): 
     const m = at + entryGood[e];
     const share = shares[out + e];
     weight += share;
-    got += share * (popOrder[m] > 0 ? popGot[m] / popOrder[m] : 1);
+    const counted = share < entryMaxShare[e] ? share : entryMaxShare[e];
+    got += counted * (popOrder[m] > 0 ? popGot[m] / popOrder[m] : 1);
   }
   return weight > 0 ? got / weight : 1;
 }

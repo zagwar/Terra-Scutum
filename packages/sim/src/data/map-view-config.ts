@@ -322,6 +322,21 @@ export const mapViewSchema = z.strictObject({
       .refine((steps) => steps.every((step, i) => i === 0 || step.workers > steps[i - 1].workers), {
         message: 'the steps must go from few workers to many',
       }),
+    /**
+     * The food map mode (F08): the color for a province's food security
+     * (0–1, its people's average), from none to full; mixed in proportion
+     * between two steps. Provinces in famine have the `famine` color.
+     */
+    food: z.strictObject({
+      steps: z
+        .array(z.strictObject({ security: z.number().min(0).max(1), color: hexColor }))
+        .min(2)
+        .refine(
+          (steps) => steps.every((step, i) => i === 0 || step.security > steps[i - 1].security),
+          { message: 'the steps must go from no food security to full' },
+        ),
+      famine: hexColor,
+    }),
   }),
   lines: z.strictObject({
     provinceBorder: lineStyle,

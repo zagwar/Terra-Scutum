@@ -42,6 +42,8 @@ export const SCREENS = {
   // Built in F65 (a first pass; F11 fills it out).
   markets: { lens: 'economy', comesWith: null },
   trade: { lens: 'economy', comesWith: null },
+  // Built in F08 (a first pass; F11 fills it out).
+  food: { lens: 'economy', comesWith: null },
   corporations: { lens: 'economy', comesWith: at('F89', 'M4') },
   government: { lens: 'politics', comesWith: at('F119', 'M3') },
   laws: { lens: 'politics', comesWith: at('F16', 'M3') },
@@ -86,7 +88,7 @@ export type ScreenId = keyof typeof SCREENS;
  * bar only; decisions and the ledger from the country screen).
  */
 export const LENS_SCREENS: Readonly<Record<LensId, readonly ScreenId[]>> = {
-  economy: ['budget', 'buildings', 'productionChains', 'markets', 'trade', 'corporations'],
+  economy: ['budget', 'buildings', 'productionChains', 'markets', 'trade', 'food', 'corporations'],
   politics: ['government', 'laws', 'movements', 'characters', 'elections'],
   military: [
     'armies',
@@ -163,7 +165,8 @@ export const TOP_BAR_ITEMS: Readonly<Record<TopBarItemId, TopBarItemInfo>> = {
   manpower: { comesWith: at('F15', 'M3'), screen: 'armies' },
   pilots: { comesWith: at('F102', 'M8b'), screen: 'unitRoster' },
   research: { comesWith: at('F36', 'M10'), screen: 'research' },
-  food: { comesWith: at('F08', 'M2'), screen: 'markets' },
+  // F08: built; the top bar shows the food reserves in days.
+  food: { comesWith: at('F08', 'M2'), screen: 'food' },
   ammo: { comesWith: at('F14', 'M3'), screen: 'markets' },
   fuel: { comesWith: at('F13', 'M3'), screen: 'markets' },
   steel: { comesWith: at('F13', 'M3'), screen: 'markets' },
