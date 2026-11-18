@@ -156,6 +156,7 @@
       "speed": 0.1
     },
     "shortagePenalty": 10,
+    "expectedBelowStart": 5,
     "substitution": {
       "maxShare": 0.8,
       "otherBuyersWeight": 0.5

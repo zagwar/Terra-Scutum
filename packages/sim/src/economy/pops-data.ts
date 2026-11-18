@@ -89,6 +89,12 @@ export const popsSchema = z.strictObject({
     fall: z.strictObject({ threshold: z.number().min(0).max(1), speed: share }),
     /** Standard of living lost when a whole package goes undelivered (a shortage); in proportion when part of it does. */
     shortagePenalty: z.number().min(0).max(99),
+    /**
+     * The standard of living a pop expects (Victoria 3's expected standard of
+     * living): its starting wealth less this many levels [DEFAULT]. Buildings
+     * whose workers live below it raise wages; far above it, they may cut them.
+     */
+    expectedBelowStart: z.number().min(0).max(98),
     substitution: z.strictObject({
       /** The most of a need one good covers unless it says otherwise (Victoria 3: 80 %). */
       maxShare: share,

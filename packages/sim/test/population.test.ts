@@ -271,9 +271,12 @@ describe('wealth and standard of living (F06, F65: Victoria 3)', () => {
       if (state.population.size[i] <= 0) continue;
       expect(report.standardOfLiving[i]).toBeGreaterThanOrEqual(1);
       expect(report.standardOfLiving[i]).toBeLessThanOrEqual(99);
-      // No shortages yet: the standard of living is the wealth, which the pop also expects.
+      // No shortages yet: the standard of living is the wealth; the pop expects a little less.
       expect(report.standardOfLiving[i]).toBeCloseTo(state.population.wealth[i], 4);
-      expect(state.population.expectedLiving[i]).toBeCloseTo(state.population.wealth[i], 4);
+      expect(state.population.expectedLiving[i]).toBeCloseTo(
+        Math.max(1, state.population.wealth[i] - 5),
+        4,
+      );
     }
     // The rich country lives better than the poor one, owners better than laborers.
     const living = (id: string, group: number) =>

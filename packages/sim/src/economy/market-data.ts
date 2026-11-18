@@ -21,6 +21,13 @@ export const marketSchema = z.strictObject({
     min: z.number().positive(),
     max: z.number().positive(),
   }),
+  /**
+   * The rest of the economy (a stand-in for the buildings the catalog
+   * doesn't have yet, and for exports until trade, F19): it buys less of a
+   * good that has become dearer, in proportion to (base price ÷ price) to
+   * the power of `priceElasticity` (0 = it always buys the same) [DEFAULT].
+   */
+  restOfEconomy: z.strictObject({ priceElasticity: z.number().min(0).max(5) }),
   /** Buildings' money, wages and workers (Victoria 3, version 1.2 rules). */
   buildings: z.strictObject({
     /** A building's cash reserves hold at most this many days of its wages at full staff (Victoria 3: £25,000 per level). */
@@ -30,8 +37,14 @@ export const marketSchema = z.strictObject({
     /** Of a profit, this share goes into the reserves when they are empty, `depositAtFull` when nearly full (Victoria 3: 50 % to 25 %); the rest is paid to the province's owners as dividends. */
     depositWhenEmpty: share,
     depositAtFull: share,
-    /** A building raises its wages when its profit is at least `raiseMargin` of its sales and it can't fill its jobs, or at least `largeMargin` and its workers live below what they expect. */
+    /**
+     * A building raises its wages when its profit is at least `raiseMargin`
+     * of its sales and it fills less than `raiseBelowStaffing` of its jobs
+     * (Victoria 3: 50 %), or its profit is at least `largeMargin` and its
+     * workers live below what they expect.
+     */
     raiseMargin: share,
+    raiseBelowStaffing: share,
     largeMargin: share,
     /** It lowers its wages (or lays workers off) when it loses money with reserves below `lowReserves` of the most, or when its profit is below `minimalMargin` of its sales and its workers live more than `wellAbove` times what they expect. */
     lowReserves: share,

@@ -159,6 +159,7 @@ export function testPops() {
       rise: { threshold: 1.02, speed: 0.2 },
       fall: { threshold: 0.98, speed: 0.1 },
       shortagePenalty: 10,
+      expectedBelowStart: 5,
       substitution: { maxShare: 0.8, otherBuyersWeight: 0.5 },
       packages: [
         { level: 1, needs: { heating: 0, services: 1 } },
@@ -185,12 +186,14 @@ export function testPops() {
 export function testMarket() {
   return {
     prices: { sensitivity: 0.75, min: 0.25, max: 1.75 },
+    restOfEconomy: { priceElasticity: 1 },
     buildings: {
       reserveDays: 28,
       startingReserves: 0.5,
       depositWhenEmpty: 0.5,
       depositAtFull: 0.25,
       raiseMargin: 0.2,
+      raiseBelowStaffing: 0.5,
       largeMargin: 0.4,
       lowReserves: 0.5,
       minimalMargin: 0.05,

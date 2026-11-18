@@ -221,7 +221,9 @@ export function calibrateMarkets(
       if (missing > 0) imports[m] += importShare * missing;
     }
   }
-  for (let i = 0; i < size.length; i++) population.expectedLiving[i] = population.wealth[i];
+  const below = data.pops.wealth.expectedBelowStart;
+  for (let i = 0; i < size.length; i++)
+    population.expectedLiving[i] = Math.max(1, population.wealth[i] - below);
 
   // The rest of the economy buys what is left over; the pops' electricity
   // comes out of what F85 gave the rest of the economy and homes.

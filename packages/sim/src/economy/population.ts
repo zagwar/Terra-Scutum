@@ -83,7 +83,8 @@ export interface PopulationState {
   readonly priceLevel: Float64Array;
   /**
    * F65: the standard of living each pop expects (Victoria 3's expected
-   * standard of living): what it had at the start. Buildings whose workers
+   * standard of living): its starting wealth less `expectedBelowStart`
+   * levels. Buildings whose workers
    * live far below it raise wages; far above it, they may cut them.
    */
   readonly expectedLiving: Float32Array;

@@ -1,11 +1,19 @@
 {
-  "prices": { "sensitivity": 0.75, "min": 0.25, "max": 1.75 },
+  "prices": {
+    "sensitivity": 0.75,
+    "min": 0.25,
+    "max": 1.75
+  },
+  "restOfEconomy": {
+    "priceElasticity": 1
+  },
   "buildings": {
     "reserveDays": 28,
     "startingReserves": 0.5,
     "depositWhenEmpty": 0.5,
     "depositAtFull": 0.25,
     "raiseMargin": 0.2,
+    "raiseBelowStaffing": 0.5,
     "largeMargin": 0.4,
     "lowReserves": 0.5,
     "minimalMargin": 0.05,

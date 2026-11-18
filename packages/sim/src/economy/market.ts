@@ -56,6 +56,8 @@ export interface MarketState {
   readonly packageLevel: Float64Array;
   readonly packageValue: Float64Array;
   readonly dependentWeight: number;
+  /** How much less the rest of the economy buys of a dearer good (`data/market.json` → `restOfEconomy.priceElasticity`). */
+  readonly restElasticity: number;
 
   // ── Fixed for the campaign (from the start, `calibrateMarkets`) ──────────
   /** Per country and good: what the rest of the economy buys a day per person (never electricity: that is `BuildingsState.otherPowerPerPerson`). */
@@ -145,6 +147,7 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
       rows.flatMap((row) => needs.map((need) => row.needs[need.id] ?? 0)),
     ),
     dependentWeight: wealth.dependentWeight,
+    restElasticity: data.market.restOfEconomy.priceElasticity,
     restPerPerson: new Float64Array(countries * goodCount),
     price,
     shares: new Float64Array(countries * entries.length),
@@ -299,11 +302,22 @@ export function computeOrders(
       }
     }
   }
-  const { restPerPerson } = market;
+  // The rest of the economy buys less of what has become dearer: in
+  // proportion to (base price ÷ price) to the power of `restElasticity`.
+  const { restPerPerson, price, restElasticity } = market;
   for (let c = 0; c < market.countryCount; c++) {
     const at = c * goodCount;
     market.popPower[c] = popOrder[at + market.electricityGood];
-    for (let g = 0; g < goodCount; g++) restOrder[at + g] = restPerPerson[at + g] * countryPeople[c];
+    for (let g = 0; g < goodCount; g++) {
+      const wanted = restPerPerson[at + g] * countryPeople[c];
+      if (wanted <= 0) {
+        restOrder[at + g] = 0;
+        continue;
+      }
+      const ratio = basePrice[g] / price[at + g];
+      restOrder[at + g] =
+        restElasticity === 1 ? wanted * ratio : wanted * Math.pow(ratio, restElasticity);
+    }
   }
 }
 
@@ -340,11 +354,15 @@ export function marketDay(
         buy[m] = ordered[m];
         lost[m] = 0;
       } else {
+        // In a shortage everyone gets the same share (Victoria 3): the pops
+        // and the rest of the economy leave the buildings theirs for tomorrow.
         let there = stock[m];
-        popGot[m] = popOrder[m] < there ? popOrder[m] : there;
-        there -= popGot[m];
-        restGot[m] = restOrder[m] < there ? restOrder[m] : there;
-        there -= restGot[m];
+        const asked = popOrder[m] + restOrder[m] + ordered[m];
+        const share = asked > there ? there / asked : 1;
+        popGot[m] = popOrder[m] * share;
+        restGot[m] = restOrder[m] * share;
+        there -= popGot[m] + restGot[m];
+        if (there < 0) there = 0;
         sell[m] = made[m] + imports[m];
         buy[m] = ordered[m] + popOrder[m] + restOrder[m];
         // A country keeps only so many days of what its market buys or sells.
@@ -704,7 +722,7 @@ function buildingsWeek(
       expected /= weight;
     }
     if (raiseCooldown[cell] > 0) raiseCooldown[cell] -= 1;
-    const short = staffing[cell] < 0.9995;
+    const short = staffing[cell] < rules.raiseBelowStaffing;
     const raise =
       raiseCooldown[cell] === 0 &&
       ((margin >= rules.raiseMargin && short) || (margin >= rules.largeMargin && living < expected));
