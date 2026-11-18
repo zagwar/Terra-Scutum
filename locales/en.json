@@ -569,6 +569,7 @@
   "CREDITS_STATISTICS": "Starting population and economy: World Bank (World Development Indicators) and International Monetary Fund (World Economic Outlook).",
   "CREDITS_POPULATION": "Where people live: Kontur Population, Global Population Density for 400m H3 Hexagons, © Kontur. Licensed under CC BY 4.0; reduced to the people counted in each province.",
   "CREDITS_PRODUCTION": "Starting buildings: energy production and electricity by source from Our World in Data's energy dataset (Energy Institute Statistical Review of World Energy; Ember), licensed under CC BY 4.0; farm, fishery and industry figures from the World Bank; steel, iron ore, copper, bauxite, aluminum and silicon approximately from worldsteel and the U.S. Geological Survey.",
+  "CREDITS_MARKETS": "Markets: base prices are approximate 2024 world prices (World Bank commodity price data), typed in by hand; the market and pop rules are modelled on Paradox Interactive's Victoria 3 (as described on its community wiki and in Paradox's developer diaries).",
   "CREDITS_FLAGS": "Flags: flag-icons (MIT licence).",
   "MESSAGE_TYPE_PROVINCE_OWNER_CHANGED": "A province changes hands",
   "MESSAGE_PROVINCE_OWNER_CHANGED_TITLE": "Province changed hands",
