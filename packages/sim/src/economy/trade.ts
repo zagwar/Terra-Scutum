@@ -742,6 +742,7 @@ export interface TradeRestore {
   readonly exports: Float64Array;
   readonly arriving: Float64Array;
   readonly worldPrice: Float64Array;
+  readonly restOfWorld: Float64Array;
   readonly referencePrice: Float64Array;
   readonly weekArrived: Float64Array;
   readonly weekShipped: Float64Array;
@@ -765,6 +766,7 @@ export function restoreTrade(
   check('exports', saved.exports, trade.exports);
   check('arriving', saved.arriving, buildings.imports);
   check('worldPrice', saved.worldPrice, trade.worldPrice);
+  check('restOfWorld', saved.restOfWorld, trade.restOfWorld);
   check('referencePrice', saved.referencePrice, market.referencePrice);
   check('weekArrived', saved.weekArrived, trade.weekArrived);
   check('weekShipped', saved.weekShipped, trade.weekShipped);
@@ -773,6 +775,7 @@ export function restoreTrade(
   market.exportOrder.set(saved.exports);
   buildings.imports.set(saved.arriving);
   trade.worldPrice.set(saved.worldPrice);
+  trade.restOfWorld.set(saved.restOfWorld);
   market.referencePrice.set(saved.referencePrice);
   for (let c = 0; c < trade.countryCount; c++)
     for (let g = 0; g < trade.goodCount; g++)

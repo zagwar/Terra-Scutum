@@ -110,7 +110,8 @@ const saveFileSchema = z.strictObject({
    * order of `buildings.goods`) what it imports and exports a day (this
    * week's plan), what arrives tomorrow morning (`arriving`), its market's
    * reference price, and this week's arrivals and shipments so far; per good
-   * the world price; the days counted this week; the countries that don't
+   * the world price and what the rest of the world sells a day; the days
+   * counted this week; the countries that don't
    * trade (`embargoes`) and those without tariffs between them
    * (`agreements`), as pairs of indexes into `map.countries`, two numbers each.
    */
@@ -122,6 +123,7 @@ const saveFileSchema = z.strictObject({
     weekArrived: z.array(z.number().min(0)),
     weekShipped: z.array(z.number().min(0)),
     worldPrice: z.array(z.number().positive()),
+    restOfWorld: z.array(z.number().min(0)),
     weekDays: z.number().int().min(0).max(7),
     embargoes: z.array(z.number().int().min(0)),
     agreements: z.array(z.number().int().min(0)),
@@ -290,6 +292,7 @@ function tradeSave(
     weekArrived: Array.from(trade.weekArrived),
     weekShipped: Array.from(trade.weekShipped),
     worldPrice: Array.from(trade.worldPrice),
+    restOfWorld: Array.from(trade.restOfWorld),
     weekDays: trade.weekDays,
     embargoes: pairList(trade.embargo, trade.countryCount),
     agreements: pairList(trade.agreement, trade.countryCount),
@@ -493,6 +496,7 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
     t.weekArrived.length !== markets ||
     t.weekShipped.length !== markets ||
     t.worldPrice.length !== goods.length ||
+    t.restOfWorld.length !== goods.length ||
     !pairsFit(t.embargoes) ||
     !pairsFit(t.agreements)
   ) {
@@ -540,6 +544,7 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         weekArrived: Float64Array.from(t.weekArrived),
         weekShipped: Float64Array.from(t.weekShipped),
         worldPrice: Float64Array.from(t.worldPrice),
+        restOfWorld: Float64Array.from(t.restOfWorld),
         weekDays: t.weekDays,
         embargoes: t.embargoes,
         agreements: t.agreements,
