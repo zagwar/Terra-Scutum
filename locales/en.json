@@ -660,7 +660,7 @@
   "MARKETS_STOCK_DAYS": "{amount} ({days} days)",
   "MARKETS_SHORTAGE": "Last week your people went without {share} of the goods they wanted.",
   "MARKETS_NO_SHORTAGE": "Last week your people got all the goods they wanted.",
-  "MARKETS_HINT": "Every Monday each price moves with last week's buy and sell orders (Victoria 3's rule): price = base price × (1 + 0.75 × (buy − sell) ÷ the smaller of the two), between ×0.25 and ×1.75. The stock is a reserve: buyers draw on it, prices ignore it.",
+  "MARKETS_HINT": "Every Monday each price moves with last week's buy and sell orders (Victoria 3's rule): price = reference price × (1 + 0.75 × (buy − sell) ÷ the smaller of the two), between ×0.25 and ×1.75 of the base price. The reference price is the base price, or for a good your country imports, the average of its own goods and the imports' delivered cost (world price + shipping + tariff). The stock is a reserve: buyers draw on it, prices ignore it.",
   "MARKETS_NOTE": "Imports are sold here like your own goods; exporters buy here like everyone else, after your own buyers. See the Trade screen for who you trade with.",
   "BUILDINGS_PROFIT": "Profit a day",
   "BUILDINGS_PROFIT_HINT": "What the buildings sell today, less their inputs and electricity at market prices and their wages (US dollars). Part of a profit goes into the building's cash reserves, the rest to the province's owners as dividends.",
