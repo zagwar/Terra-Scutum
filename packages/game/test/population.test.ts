@@ -19,15 +19,14 @@ const province = (id: string) => world.provinceIndex.get(id)!;
 const country = (id: string) => world.countryIndex.get(id)!;
 
 describe('reading the population snapshot', () => {
-  it('sums up a province: people, workforce, unemployment, needs', () => {
+  it('sums up a province: people, workforce, unemployment, standard of living', () => {
     const bavaria = provinceSummary(population, province('deu_bavaria'));
     expect(bavaria.people / 1e6).toBeCloseTo(13.2, 0);
     expect(bavaria.workforce + bavaria.dependents).toBeCloseTo(bavaria.people, 3);
     expect(bavaria.workforce / bavaria.people).toBeCloseTo(0.5216, 3);
     expect(bavaria.unemployment).toBeCloseTo(0.0371, 3);
     expect(bavaria.standardOfLiving).toBeGreaterThan(80);
-    expect(bavaria.needs[0]).toBeCloseTo(1, 6);
-    expect(bavaria.needs[2]).toBeLessThan(1);
+    expect(bavaria.standardOfLiving).toBeLessThanOrEqual(99);
   });
 
   it('lists the pops of a province in the pop groups’ order', () => {
@@ -41,7 +40,9 @@ describe('reading the population snapshot', () => {
       'soldiers',
     ]);
     const [laborers, , professionals, owners] = rows;
-    expect(professionals.wagePerYear).toBeCloseTo(2.6 * laborers.wagePerYear, 0);
+    // F65: incomes are last week's; a new game has the start's (wages, dividends).
+    expect(professionals.incomePerYear).toBeGreaterThan(2 * laborers.incomePerYear);
+    expect(owners.incomePerYear).toBeGreaterThan(professionals.incomePerYear);
     expect(owners.unemployment).toBeCloseTo(0, 6);
     expect(laborers.unemployment).toBeGreaterThan(0.03);
     expect(owners.standardOfLiving).toBeGreaterThan(laborers.standardOfLiving);
@@ -56,7 +57,7 @@ describe('reading the population snapshot', () => {
     expect(germany.unemployment).toBeCloseTo(0.0371, 4);
     const rows = countryPops(population, country('DEU'));
     expect(rows.reduce((sum, row) => sum + row.people, 0)).toBeCloseTo(germany.workforce, 3);
-    expect(rows[0].needs[0]).toBeCloseTo(1, 6);
+    expect(rows[0].incomePerYear).toBeGreaterThan(0);
     // Richer countries live better.
     const living = (id: string) => countrySummary(population, country(id)).standardOfLiving;
     expect(living('DEU')).toBeGreaterThan(living('IND'));

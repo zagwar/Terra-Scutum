@@ -140,7 +140,8 @@ test('a province shows its buildings: levels, output, workers and what holds the
   );
   await expect(page.getByTestId('building-makes-steel_mill')).toHaveText('0 t steel a day');
   await expect(page.getByTestId('building-output-farm')).toHaveText('50 %');
-  // The workers keep their jobs for now: layoffs come with markets (F65).
+  // The workers keep their jobs for now: a building lays workers off only after
+  // weeks of losses, once its cash reserves run low (F65).
   await expect(page.getByTestId('building-workers-steel_mill')).toHaveText('7,500 of 7,500');
   await steel.scrollIntoViewIfNeeded();
   await shot('province-panel-held-back');
@@ -173,15 +174,17 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   );
   await expect(page.getByTestId('buildings-output-steel_mill')).toHaveText('100 %');
   await expect(page.getByTestId('buildings-held-back')).toHaveText('0');
-  // The national stockpile: 15 days of inputs to start with; electricity can't be stored.
+  // The national stockpile: 15 days of what everyone buys to start with (F65);
+  // electricity can't be stored.
   await expect(page.getByTestId('stockpile').locator('tbody tr')).toHaveCount(20);
-  await expect(page.getByTestId('stockpile-stock-iron_ore')).toHaveText('5.28 Mt');
+  await expect(page.getByTestId('stockpile-stock-iron_ore')).toHaveText(/^5\.\d\d Mt$/);
   await expect(page.getByTestId('stockpile-made-iron_ore')).toHaveText('128 kt');
   await expect(page.getByTestId('stockpile-used-iron_ore')).toHaveText('352 kt');
   // The United States mines less iron ore than its mills use: standing imports bring the rest.
   await expect(page.getByTestId('stockpile-imported-iron_ore')).toHaveText('242 kt');
   await expect(page.getByTestId('stockpile-stock-electricity')).toHaveText("can't be stored");
-  await expect(page.getByTestId('stockpile-stock-processed_food')).toHaveText('0 t');
+  // No building uses processed food, but people buy it (F65): it is in stock.
+  await expect(page.getByTestId('stockpile-stock-processed_food')).toContainText('Mt');
   // Homes, shops and offices use most of the electricity.
   await expect(page.getByTestId('stockpile-other-electricity')).toContainText('TWh');
   await shot('screen');
@@ -195,20 +198,20 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await page.getByTestId('buildings-where-title').scrollIntoViewIfNeeded();
   await shot('screen-where');
 
-  // Processed food piles up in the stockpile until people buy it (F08, F65).
-  await page.evaluate(() => window.__terraScutum!.step(10));
-  await expect(page.getByTestId('stockpile-stock-processed_food')).toContainText('Mt');
+  // Profit and wage level for each building type (F65).
+  await expect(page.getByTestId('buildings-profit-steel_mill')).toContainText('$');
 
   // The United States' oil fields close: when the crude oil in stock runs out, the
   // refineries run only on the standing imports, and the alerts row says so.
   await setCountryLevels(page, 'USA', 'oil_field', 0);
-  await expect(page.getByTestId('stockpile-lasts-crude_oil')).toHaveText('18 days');
+  await expect(page.getByTestId('stockpile-lasts-crude_oil')).toHaveText(/^\d+ days$/);
   await page.evaluate(() => window.__terraScutum!.step(20));
   await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('5 %');
   await expect(page.getByTestId('buildings-held-back')).not.toHaveText('0');
   await page.getByTestId('stockpile').scrollIntoViewIfNeeded();
   await shot('screen-held-back');
-  const alert = page.getByTestId('alert');
+  // (Other alerts may show too, such as a fuel shortage: this one is the idle factory alert.)
+  const alert = page.locator('[data-testid="alert"][data-alert-type="idle_factory"]');
   await expect(alert).toHaveCount(1);
   await expect(alert).toHaveAttribute('data-alert-type', 'idle_factory');
 

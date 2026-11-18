@@ -1,6 +1,8 @@
 import type { CalendarDate } from './calendar';
 import type { GameState } from './game-state';
-import { type BuildingsState, ensureBuildingsReport } from '../economy/buildings';
+import { type BuildingsState, recipeOf } from '../economy/buildings';
+import { ensureBuildingsReport } from '../economy/economy';
+import { HISTORY_WEEKS, type MarketState, reserveCap } from '../economy/market';
 import { ensurePopulationReport } from '../economy/population';
 
 /**
@@ -37,6 +39,39 @@ export interface SimSnapshot {
    * of this `buildingsVersion`: keep the last one received.
    */
   readonly buildings?: BuildingsSnapshot;
+  /**
+   * The markets (F65), sent together with the buildings (they share the
+   * day's report and `buildingsVersion`).
+   */
+  readonly market?: MarketSnapshot;
+}
+
+/**
+ * The markets as the game shows them (F65). Per country and good at
+ * `c * goodCount + g`.
+ */
+export interface MarketSnapshot {
+  readonly goodCount: number;
+  /** Each good's base price (US$ per unit). */
+  readonly basePrice: Float64Array;
+  /** This week's prices. */
+  readonly price: Float64Array;
+  /** Today: sell orders (made + imported; electricity: what the plants could make) and buy orders (everyone). */
+  readonly sell: Float64Array;
+  readonly buy: Float64Array;
+  /** Today: what the pops and the rest of the economy wanted, and what they got. */
+  readonly popOrder: Float64Array;
+  readonly popGot: Float64Array;
+  readonly restOrder: Float64Array;
+  readonly restGot: Float64Array;
+  /** Today: what the buildings asked for (their buy orders), and what was lost over the stockpile's limit. */
+  readonly buildingOrder: Float64Array;
+  readonly lost: Float64Array;
+  /** Per country: the share of its pops' goods that went undelivered last week (0–1). */
+  readonly shortage: Float32Array;
+  /** The player's country's prices of the last weeks, oldest first: `historyWeeks` per good (`g * historyWeeks + week`). */
+  readonly history: Float32Array;
+  readonly historyWeeks: number;
 }
 
 /**
@@ -59,6 +94,15 @@ export interface BuildingsSnapshot {
   /** People at work, and the wages paid them (US$ a day). */
   readonly workers: Float32Array;
   readonly wages: Float32Array;
+  /** F65: today's sales and input costs (US$), the wage level (× the going wage), the share of jobs kept open, the cash reserves (US$) and the most they hold. */
+  readonly revenue: Float32Array;
+  readonly inputCost: Float32Array;
+  readonly wageFactor: Float32Array;
+  readonly open: Float32Array;
+  readonly reserves: Float32Array;
+  readonly reserveCap: Float32Array;
+  /** F65: 1 where the building is a subsistence one (its workers share what it makes). */
+  readonly subsistence: Uint8Array;
   /** What holds the building back most (`BUILDING_LIMIT`), and which pop group or good. */
   readonly limitKind: Uint8Array;
   readonly limitWhat: Uint8Array;
@@ -84,28 +128,32 @@ export interface BuildingsSnapshot {
  */
 export interface PopulationSnapshot {
   readonly groupCount: number;
-  /** Per province: everyone, the dependents among them, the people with a job, the average standard of living (0–100). */
+  /** Per province: everyone, the dependents among them, the people with a job, the average standard of living (1–99). */
   readonly provincePopulation: Float64Array;
   readonly provinceDependents: Float64Array;
   readonly provinceEmployed: Float64Array;
   readonly provinceStandardOfLiving: Float32Array;
-  /** Per province and need tier (basic, everyday, luxury): how much of it people can afford, 0–1. */
-  readonly provinceNeeds: Float32Array;
-  /** Per pop: people, people with a job, the wage (US$ per worker per day), the standard of living (0–100). */
+  /**
+   * Per pop: people, people with a job, the going wage (US$ per worker per
+   * day), the standard of living (1–99), and (F65) the wealth (1–99), the
+   * standard of living it expects and last week's income (US$ per worker per day).
+   */
   readonly popSize: Float32Array;
   readonly popEmployed: Float32Array;
   readonly popWage: Float32Array;
   readonly popStandardOfLiving: Float32Array;
+  readonly popWealth: Float32Array;
+  readonly popExpected: Float32Array;
+  readonly popIncome: Float32Array;
   /** Per country (the provinces it owns now): everyone, and the dependents among them. */
   readonly countryPopulation: Float64Array;
   readonly countryDependents: Float64Array;
-  /** Per country and pop group: people, people with a job, average wage (US$ per day), standard of living (0–100). */
+  /** Per country and pop group: people, people with a job, average going wage (US$ per day), standard of living (1–99), income last week (US$ per worker per day). */
   readonly countryGroupSize: Float64Array;
   readonly countryGroupEmployed: Float64Array;
   readonly countryGroupWage: Float64Array;
   readonly countryGroupStandardOfLiving: Float32Array;
-  /** Per country, pop group and need tier: how much of the tier the group can afford, 0–1. */
-  readonly countryGroupNeeds: Float32Array;
+  readonly countryGroupIncome: Float64Array;
 }
 
 /** What the receiver of a snapshot already has, so unchanged parts aren't sent again. */
@@ -145,27 +193,67 @@ export function createSnapshot(state: GameState, known?: SnapshotKnown): SimSnap
             provinceDependents: population.dependents.slice(),
             provinceEmployed: population.provinceEmployed.slice(),
             provinceStandardOfLiving: population.provinceStandardOfLiving.slice(),
-            provinceNeeds: population.provinceNeeds.slice(),
             popSize: Float32Array.from(population.size),
             popEmployed: Float32Array.from(population.employed),
             popWage: Float32Array.from(population.wage),
             popStandardOfLiving: population.standardOfLiving.slice(),
+            popWealth: Float32Array.from(population.wealth),
+            popExpected: population.expectedLiving.slice(),
+            popIncome: Float32Array.from(population.income),
             countryPopulation: population.countryPopulation.slice(),
             countryDependents: population.countryDependents.slice(),
             countryGroupSize: population.countryGroupSize.slice(),
             countryGroupEmployed: population.countryGroupEmployed.slice(),
             countryGroupWage: population.countryGroupWage.slice(),
             countryGroupStandardOfLiving: population.countryGroupStandardOfLiving.slice(),
-            countryGroupNeeds: population.countryGroupNeeds.slice(),
+            countryGroupIncome: population.countryGroupIncome.slice(),
           },
         }
       : {}),
     buildingsVersion: buildings.version,
-    ...(buildingsChanged ? { buildings: buildingsSnapshot(buildings) } : {}),
+    ...(buildingsChanged
+      ? {
+          buildings: buildingsSnapshot(state, buildings),
+          market: marketSnapshot(state.market, buildings, state.playerCountry),
+        }
+      : {}),
   };
 }
 
-function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
+function marketSnapshot(
+  market: MarketState,
+  buildings: BuildingsState,
+  country: number,
+): MarketSnapshot {
+  const goods = market.goodCount;
+  const weeks = market.historyCount;
+  const history = new Float32Array(goods * weeks);
+  // The ring holds the last weeks; the oldest is at `historyNext` once it is full.
+  const first = weeks < HISTORY_WEEKS ? 0 : market.historyNext;
+  for (let g = 0; g < goods; g++) {
+    const base = (country * goods + g) * HISTORY_WEEKS;
+    for (let w = 0; w < weeks; w++)
+      history[g * weeks + w] = market.history[base + ((first + w) % HISTORY_WEEKS)];
+  }
+  return {
+    goodCount: goods,
+    basePrice: market.basePrice.slice(),
+    price: market.price.slice(),
+    sell: market.sell.slice(),
+    buy: market.buy.slice(),
+    popOrder: market.popOrder.slice(),
+    popGot: market.popGot.slice(),
+    restOrder: market.restOrder.slice(),
+    restGot: market.restGot.slice(),
+    buildingOrder: buildings.ordered.slice(),
+    lost: market.lost.slice(),
+    shortage: market.shortage.slice(),
+    history,
+    historyWeeks: weeks,
+  };
+}
+
+function buildingsSnapshot(state: GameState, buildings: BuildingsState): BuildingsSnapshot {
   const count = buildings.cellCount;
   const cells = buildings.cells.slice(0, count);
   const level = new Uint16Array(count);
@@ -176,6 +264,14 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
   const wages = new Float32Array(count);
   const limitKind = new Uint8Array(count);
   const limitWhat = new Uint8Array(count);
+  const revenue = new Float32Array(count);
+  const inputCost = new Float32Array(count);
+  const wageFactor = new Float32Array(count);
+  const open = new Float32Array(count);
+  const reserves = new Float32Array(count);
+  const cap = new Float32Array(count);
+  const subsistence = new Uint8Array(count);
+  const reserveDays = state.data.market.buildings.reserveDays;
   for (let i = 0; i < count; i++) {
     const cell = cells[i];
     level[i] = buildings.level[cell];
@@ -186,6 +282,13 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
     wages[i] = buildings.wages[cell];
     limitKind[i] = buildings.limitKind[cell];
     limitWhat[i] = buildings.limitWhat[cell];
+    revenue[i] = buildings.revenue[cell];
+    inputCost[i] = buildings.inputCost[cell];
+    wageFactor[i] = buildings.wageFactor[cell];
+    open[i] = buildings.open[cell];
+    reserves[i] = buildings.reserves[cell];
+    cap[i] = reserveCap(buildings, state.population, cell, reserveDays);
+    subsistence[i] = buildings.recipeSubsistence[recipeOf(buildings, cell)];
   }
   const { capacityUse, capacityMake, maxDays } = buildings;
   return {
@@ -198,6 +301,13 @@ function buildingsSnapshot(buildings: BuildingsState): BuildingsSnapshot {
     staffing,
     workers,
     wages,
+    revenue,
+    inputCost,
+    wageFactor,
+    open,
+    reserves,
+    reserveCap: cap,
+    subsistence,
     limitKind,
     limitWhat,
     provinceJobs: buildings.provinceJobs.slice(),

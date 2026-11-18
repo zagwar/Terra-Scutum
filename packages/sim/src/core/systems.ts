@@ -1,4 +1,4 @@
-import { buildingSystems } from '../economy/buildings';
+import { economySystems } from '../economy/economy';
 import { populationSystem } from '../economy/population';
 import type { GameState } from './game-state';
 
@@ -13,6 +13,7 @@ export const TICK_ORDER = [
   'energy',
   'resourceProduction',
   'industry',
+  'market',
   'trade',
   'foodConsumption',
   'budget',
@@ -61,6 +62,6 @@ export type SystemRegistry = Readonly<Partial<Record<SystemId, SimSystem>>>;
  */
 export const SYSTEMS: SystemRegistry = {
   population: populationSystem,
-  // Buildings (F07): energy, resourceProduction and industry.
-  ...buildingSystems,
+  // Buildings (F07) and markets (F65): energy, resourceProduction, industry and market.
+  ...economySystems,
 };

@@ -1,11 +1,32 @@
 {
   "groups": [
-    { "id": "laborers", "wage": 1 },
-    { "id": "skilled_workers", "wage": 1.6 },
-    { "id": "professionals", "wage": 2.6 },
-    { "id": "owners", "wage": 6, "alwaysEmployed": true },
-    { "id": "officials", "wage": 1.8 },
-    { "id": "soldiers", "wage": 1.2, "alwaysEmployed": true, "military": true }
+    {
+      "id": "laborers",
+      "wage": 1
+    },
+    {
+      "id": "skilled_workers",
+      "wage": 1.6
+    },
+    {
+      "id": "professionals",
+      "wage": 2.6
+    },
+    {
+      "id": "owners",
+      "wage": 6,
+      "alwaysEmployed": true
+    },
+    {
+      "id": "officials",
+      "wage": 1.8
+    },
+    {
+      "id": "soldiers",
+      "wage": 1.2,
+      "alwaysEmployed": true,
+      "military": true
+    }
   ],
   "startingShares": [
     {
@@ -40,23 +61,298 @@
     }
   ],
   "needs": [
-    { "id": "food", "tier": "basic", "costPerDay": 1.2 },
-    { "id": "housing", "tier": "basic", "costPerDay": 0.9 },
-    { "id": "energy", "tier": "basic", "costPerDay": 0.4 },
-    { "id": "consumer_goods", "tier": "everyday", "costPerDay": 8 },
-    { "id": "services", "tier": "everyday", "costPerDay": 12 },
-    { "id": "luxury_goods", "tier": "luxury", "costPerDay": 150 }
+    {
+      "id": "basic_food",
+      "goods": [
+        {
+          "good": "grain"
+        },
+        {
+          "good": "livestock_fish",
+          "maxShare": 0.4
+        },
+        {
+          "good": "processed_food"
+        }
+      ]
+    },
+    {
+      "id": "heating",
+      "goods": [
+        {
+          "good": "electricity",
+          "maxShare": 1
+        },
+        {
+          "good": "fuel",
+          "maxShare": 0.6
+        },
+        {
+          "good": "coal",
+          "maxShare": 0.6
+        },
+        {
+          "good": "natural_gas",
+          "maxShare": 0.6
+        }
+      ]
+    },
+    {
+      "id": "consumer_goods",
+      "goods": [
+        {
+          "good": "consumer_goods",
+          "maxShare": 1
+        }
+      ]
+    },
+    {
+      "id": "luxury_food",
+      "goods": [
+        {
+          "good": "livestock_fish"
+        },
+        {
+          "good": "processed_food"
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "goods": [
+        {
+          "good": "fuel",
+          "maxShare": 1
+        }
+      ]
+    },
+    {
+      "id": "communication",
+      "goods": [
+        {
+          "good": "electronics",
+          "maxShare": 1
+        }
+      ]
+    },
+    {
+      "id": "housing"
+    },
+    {
+      "id": "services"
+    },
+    {
+      "id": "luxury_items"
+    }
   ],
-  "standardOfLiving": { "basic": 40, "everyday": 35, "luxury": 25 },
-  "growth": { "workingYears": 45, "dependentMortality": 4 },
+  "wealth": {
+    "dependentWeight": 0.5,
+    "rise": {
+      "threshold": 1.02,
+      "speed": 0.2
+    },
+    "fall": {
+      "threshold": 0.98,
+      "speed": 0.1
+    },
+    "shortagePenalty": 10,
+    "expectedBelowStart": 5,
+    "substitution": {
+      "maxShare": 0.8,
+      "otherBuyersWeight": 0.5
+    },
+    "packages": [
+      {
+        "level": 1,
+        "needs": {
+          "basic_food": 0.0458,
+          "heating": 0.0076,
+          "consumer_goods": 0.0061,
+          "housing": 0.0107,
+          "services": 0.0061
+        }
+      },
+      {
+        "level": 10,
+        "needs": {
+          "basic_food": 0.0818,
+          "heating": 0.0164,
+          "consumer_goods": 0.0196,
+          "housing": 0.0229,
+          "services": 0.0229
+        }
+      },
+      {
+        "level": 20,
+        "needs": {
+          "basic_food": 0.1373,
+          "heating": 0.0343,
+          "consumer_goods": 0.061,
+          "housing": 0.0496,
+          "services": 0.0839,
+          "luxury_food": 0.0153
+        }
+      },
+      {
+        "level": 30,
+        "needs": {
+          "basic_food": 0.1958,
+          "heating": 0.0712,
+          "consumer_goods": 0.1513,
+          "housing": 0.1068,
+          "services": 0.267,
+          "luxury_food": 0.0534,
+          "transport": 0.0267,
+          "communication": 0.0178
+        }
+      },
+      {
+        "level": 40,
+        "needs": {
+          "basic_food": 0.2491,
+          "heating": 0.1246,
+          "consumer_goods": 0.3114,
+          "housing": 0.2284,
+          "services": 0.789,
+          "luxury_food": 0.1453,
+          "transport": 0.1038,
+          "communication": 0.0623,
+          "luxury_items": 0.0623
+        }
+      },
+      {
+        "level": 50,
+        "needs": {
+          "basic_food": 0.2906,
+          "heating": 0.1937,
+          "consumer_goods": 0.5812,
+          "housing": 0.4844,
+          "services": 2.0343,
+          "luxury_food": 0.2906,
+          "transport": 0.2906,
+          "communication": 0.1937,
+          "luxury_items": 0.4844
+        }
+      },
+      {
+        "level": 60,
+        "needs": {
+          "basic_food": 0.34,
+          "heating": 0.28,
+          "consumer_goods": 1.02,
+          "housing": 1.02,
+          "services": 4.97,
+          "luxury_food": 0.56,
+          "transport": 0.68,
+          "communication": 0.45,
+          "luxury_items": 1.98
+        }
+      },
+      {
+        "level": 70,
+        "needs": {
+          "basic_food": 0.4,
+          "heating": 0.4,
+          "consumer_goods": 1.85,
+          "housing": 2.11,
+          "services": 11.6,
+          "luxury_food": 1.05,
+          "transport": 1.32,
+          "communication": 1.05,
+          "luxury_items": 6.59
+        }
+      },
+      {
+        "level": 80,
+        "needs": {
+          "basic_food": 0.61,
+          "heating": 0.61,
+          "consumer_goods": 3.07,
+          "housing": 4.3,
+          "services": 26.44,
+          "luxury_food": 1.84,
+          "transport": 2.46,
+          "communication": 1.84,
+          "luxury_items": 20.29
+        }
+      },
+      {
+        "level": 90,
+        "needs": {
+          "basic_food": 0.72,
+          "heating": 0.86,
+          "consumer_goods": 5.74,
+          "housing": 8.61,
+          "services": 60.25,
+          "luxury_food": 2.87,
+          "transport": 4.3,
+          "communication": 3.44,
+          "luxury_items": 56.66
+        }
+      },
+      {
+        "level": 99,
+        "needs": {
+          "basic_food": 0.92,
+          "heating": 1.23,
+          "consumer_goods": 9.22,
+          "housing": 15.37,
+          "services": 126.06,
+          "luxury_food": 4.61,
+          "transport": 7.69,
+          "communication": 6.15,
+          "luxury_items": 136.21
+        }
+      }
+    ]
+  },
+  "growth": {
+    "workingYears": 45,
+    "dependentMortality": 4
+  },
   "jobChanges": [
-    { "from": "professionals", "to": "skilled_workers", "weeklyShare": 0.05, "training": false },
-    { "from": "officials", "to": "skilled_workers", "weeklyShare": 0.05, "training": false },
-    { "from": "skilled_workers", "to": "laborers", "weeklyShare": 0.05, "training": false },
-    { "from": "laborers", "to": "skilled_workers", "weeklyShare": 0.004, "training": true },
-    { "from": "skilled_workers", "to": "professionals", "weeklyShare": 0.002, "training": true },
-    { "from": "professionals", "to": "officials", "weeklyShare": 0.004, "training": true },
-    { "from": "skilled_workers", "to": "officials", "weeklyShare": 0.002, "training": true }
+    {
+      "from": "professionals",
+      "to": "skilled_workers",
+      "weeklyShare": 0.05,
+      "training": false
+    },
+    {
+      "from": "officials",
+      "to": "skilled_workers",
+      "weeklyShare": 0.05,
+      "training": false
+    },
+    {
+      "from": "skilled_workers",
+      "to": "laborers",
+      "weeklyShare": 0.05,
+      "training": false
+    },
+    {
+      "from": "laborers",
+      "to": "skilled_workers",
+      "weeklyShare": 0.004,
+      "training": true
+    },
+    {
+      "from": "skilled_workers",
+      "to": "professionals",
+      "weeklyShare": 0.002,
+      "training": true
+    },
+    {
+      "from": "professionals",
+      "to": "officials",
+      "weeklyShare": 0.004,
+      "training": true
+    },
+    {
+      "from": "skilled_workers",
+      "to": "officials",
+      "weeklyShare": 0.002,
+      "training": true
+    }
   ],
   "placeholderEconomy": {
     "incomeShareOfGdp": 0.6,

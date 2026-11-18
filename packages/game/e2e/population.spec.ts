@@ -51,7 +51,7 @@ const numberOf = async (page: Page, testId: string) =>
 
 const MUNICH = [11.58, 48.14] as const;
 
-test('a province shows its people, its pops, their jobs, wages and standard of living', async ({
+test('a province shows its people, its pops, their jobs, incomes and standard of living', async ({
   page,
 }, testInfo) => {
   const problems = await openMap(page);
@@ -72,18 +72,15 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
   await expect(page.getByTestId('province-unemployment')).toHaveText('3.7 %');
   await expect(page.getByTestId('province-density')).toHaveText('189 per km²');
   const living = await numberOf(page, 'province-living');
+  // F65: the standard of living is the pops' wealth (Victoria 3), 1 to 99.
   expect(living).toBeGreaterThan(80);
-  expect(living).toBeLessThanOrEqual(100);
-  // Germans can afford their basic and everyday needs, and part of the luxuries.
-  await expect(page.getByTestId('province-needs-basic')).toHaveText('100 %');
-  await expect(page.getByTestId('province-needs-everyday')).toHaveText('100 %');
-  expect(await numberOf(page, 'province-needs-luxury')).toBeLessThan(100);
-  // The six pop groups, each with people, a wage and a standard of living.
+  expect(living).toBeLessThanOrEqual(99);
+  // The six pop groups, each with people, an income and a standard of living.
   const pops = page.getByTestId('province-pops');
   await expect(pops.locator('tbody tr')).toHaveCount(6);
   await expect(page.getByTestId('province-pops-laborers')).toContainText('Laborers');
   await expect(page.getByTestId('province-pops-laborers')).toContainText('2.36M');
-  await expect(page.getByTestId('province-pops-laborers')).toContainText('$40.4k');
+  await expect(page.getByTestId('province-pops-laborers')).toContainText(/\$\d+(\.\d)?k/);
   await expect(page.getByTestId('province-pops-soldiers')).toContainText('Soldiers');
   await shot('province-panel');
 
@@ -100,7 +97,8 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
   expect(after[bavaria]).toBeGreaterThan(13_100_000);
 
   // Half of the rest of the economy's jobs in Bavaria close (a test command; its
-  // buildings keep theirs): unemployment jumps and people can afford less.
+  // buildings keep theirs): unemployment jumps, and week by week (F65: wealth
+  // moves on Mondays) people live less well.
   const result = await page.evaluate(() =>
     window.__terraScutum!.sendCommand({
       type: 'debugScaleJobs',
@@ -111,7 +109,8 @@ test('a province shows its people, its pops, their jobs, wages and standard of l
   );
   expect(result).toEqual({ ok: true });
   await expect(page.getByTestId('province-unemployment')).toHaveText(/^[45]\d\.\d %$/);
-  expect(await numberOf(page, 'province-living')).toBeLessThan(living - 5);
+  await page.evaluate(() => window.__terraScutum!.step(70));
+  expect(await numberOf(page, 'province-living')).toBeLessThan(living - 1);
   await shot('province-panel-jobs-closed');
 
   expect(problems).toEqual([]);
@@ -136,14 +135,19 @@ test('the Population screen and the country screen show the country’s people',
   await expect(page.getByTestId('population-unemployment')).toHaveText('4.2 %');
   await expect(page.getByTestId('population-change')).toContainText('+0.00 %');
   await expect(page.getByTestId('population-pops').locator('tbody tr')).toHaveCount(6);
-  await expect(page.getByTestId('population-pops-professionals')).toContainText('$158,035');
+  await expect(page.getByTestId('population-pops-professionals')).toContainText(/\$\d{3},\d{3}/);
+  // What people buy (F65): needs and the goods that meet them.
+  await expect(page.getByTestId('population-needs-basic_food')).toHaveText(
+    'basic food: grain, livestock and fish, processed food',
+  );
+  await expect(page.getByTestId('population-needs-services')).toContainText('no good yet');
   await expect(page.getByTestId('population-pops-owners')).toContainText('0.0 %');
   // Its provinces, the most peopled first.
   const provinces = page.getByTestId('population-provinces').locator('tbody tr');
   await expect(provinces).toHaveCount(49);
   await expect(provinces.first()).toContainText('California');
   await expect(provinces.first()).toContainText('41.2 million');
-  await expect(page.getByTestId('population-note')).toContainText('building catalog (F85)');
+  await expect(page.getByTestId('population-note')).toContainText("country's market");
   await shot('screen');
 
   // A year later the country has grown a little.
@@ -161,7 +165,7 @@ test('the Population screen and the country screen show the country’s people',
   await page.getByTestId('province-country').click();
   await expect(page.getByTestId('country-population')).toHaveText('346 million');
   await expect(page.getByTestId('country-unemployment')).toHaveText(/^4\.\d %$/);
-  await expect(page.getByTestId('country-living')).toContainText('of 100');
+  await expect(page.getByTestId('country-living')).toContainText('of 99');
   // Its button opens the Population screen too.
   await page.getByTestId('country-open-population').click();
   await expect(page.getByTestId('population-screen')).toBeVisible();

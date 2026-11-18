@@ -5,7 +5,12 @@ import { SimError } from './sim-error';
 import type { SystemRegistry } from './systems';
 import { buildCountryStartTable } from '../world/country-start';
 import { buildWorldMap } from '../world/world-map';
-import { buildingLevelList } from '../economy/buildings';
+import {
+  BUILDING_ECONOMY_FIELDS,
+  buildingEconomyList,
+  buildingLevelList,
+} from '../economy/buildings';
+import { MARKET_SAVED_ARRAYS, type MarketState } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
 
 /**
@@ -21,7 +26,7 @@ import { createStartingEconomy } from '../economy/starting-economy';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 6;
+export const SAVE_FORMAT_VERSION = 7;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -47,14 +52,17 @@ const saveFileSchema = z.strictObject({
    * The population (F06). `groups` are the pop groups' ids in the order the
    * arrays use; `dependents` has one number per province (in the order of
    * `map.provinces`), `size` and `standInJobs` (the jobs the stand-in
-   * economy offers; buildings offer the rest) one per pop (province by
-   * province, the groups in order).
+   * economy offers; buildings offer the rest), `wealth` (1–99) and
+   * `income` (last week's, US$ per worker per day; F65) one per pop
+   * (province by province, the groups in order).
    */
   population: z.strictObject({
     groups: z.array(z.string()),
     dependents: z.array(z.number().min(0)),
     size: z.array(z.number().min(0)),
     standInJobs: z.array(z.number().min(0)),
+    wealth: z.array(z.number().min(1).max(99)),
+    income: z.array(z.number().min(0)),
   }),
   /**
    * The buildings (F07, F85). `types` and `goods` are the building types' and
@@ -63,7 +71,10 @@ const saveFileSchema = z.strictObject({
    * its province (an index into `map.provinces`), its type, its level and its
    * method (an index into its type's `methods`). `stock` is each country's
    * national stockpile: one number per country and good (country by country,
-   * the goods in order).
+   * the goods in order). `economy` (F65) lists each building's money and
+   * workers, seven numbers in the order of `levels`: its wage level, the
+   * share of its jobs kept open, its cash reserves, the weeks until it may
+   * raise wages, and this week's sales, costs and wages so far.
    */
   buildings: z.strictObject({
     types: z.array(z.string()),
@@ -71,6 +82,27 @@ const saveFileSchema = z.strictObject({
     methods: z.array(z.array(z.string())),
     levels: z.array(z.number().int().min(0)),
     stock: z.array(z.number().min(0)),
+    economy: z.array(z.number()),
+  }),
+  /**
+   * The markets (F65): per country and good (`price`, the week's buy and
+   * sell orders and the pops' buy orders), per country and need entry
+   * (`shares`), per country (the week's pop goods wanted and got, last
+   * week's `shortage`), per pop (the week's `weekIncome`, the daily
+   * `dividend`), and the days counted this week.
+   */
+  market: z.strictObject({
+    price: z.array(z.number().positive()),
+    shares: z.array(z.number().min(0).max(1)),
+    weekBuy: z.array(z.number().min(0)),
+    weekSell: z.array(z.number().min(0)),
+    weekPopBuy: z.array(z.number().min(0)),
+    weekPopWanted: z.array(z.number().min(0)),
+    weekPopGot: z.array(z.number().min(0)),
+    shortage: z.array(z.number().min(0).max(1)),
+    weekIncome: z.array(z.number().min(0)),
+    dividend: z.array(z.number().min(0)),
+    weekDays: z.number().int().min(0).max(7),
   }),
 });
 
@@ -187,7 +219,39 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
       },
     };
   },
+  // Version 7 (F65) adds the markets, the pops' wealth and income, and each
+  // building's money and workers. Older saves get the markets of a new
+  // campaign (base prices, the starting wealth); their buildings pay the
+  // going wage with empty reserves.
+  6: (save, data) => {
+    const world = buildWorldMap(data);
+    const countryStart = buildCountryStartTable(data.countryStart, world);
+    const { population, market } = createStartingEconomy(data, world, countryStart);
+    const old = save.population as UnknownRecord;
+    const buildings = save.buildings as { levels?: unknown } & UnknownRecord;
+    const count = Array.isArray(buildings.levels) ? buildings.levels.length / 4 : 0;
+    const economy: number[] = [];
+    for (let b = 0; b < count; b++) economy.push(1, 1, 0, 0, 0, 0, 0);
+    return {
+      ...save,
+      population: {
+        ...old,
+        wealth: Array.from(population.wealth),
+        income: Array.from(population.income),
+      },
+      buildings: { ...buildings, economy },
+      market: marketSave(market),
+    };
+  },
 };
+
+/** The markets as a save stores them. */
+function marketSave(market: MarketState): SaveFile['market'] {
+  const out = Object.fromEntries(
+    MARKET_SAVED_ARRAYS.map((key) => [key, Array.from(market[key])]),
+  ) as Record<(typeof MARKET_SAVED_ARRAYS)[number], number[]>;
+  return { ...out, weekDays: market.weekDays };
+}
 
 /** Writes the state as a plain JSON-compatible object. */
 export function serializeGameState(state: GameState): SaveFile {
@@ -206,6 +270,8 @@ export function serializeGameState(state: GameState): SaveFile {
       dependents: Array.from(state.population.dependents),
       size: Array.from(state.population.size),
       standInJobs: Array.from(state.population.standInJobs),
+      wealth: Array.from(state.population.wealth),
+      income: Array.from(state.population.income),
     },
     buildings: {
       types: [...state.buildings.typeIds],
@@ -213,7 +279,9 @@ export function serializeGameState(state: GameState): SaveFile {
       methods: state.buildings.methodIds.map((ids) => [...ids]),
       levels: buildingLevelList(state.buildings),
       stock: Array.from(state.buildings.stock),
+      economy: buildingEconomyList(state.buildings),
     },
+    market: marketSave(state.market),
   };
 }
 
@@ -307,7 +375,9 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   if (
     save.population.dependents.length !== map.provinces.length ||
     save.population.size.length !== pops ||
-    save.population.standInJobs.length !== pops
+    save.population.standInJobs.length !== pops ||
+    save.population.wealth.length !== pops ||
+    save.population.income.length !== pops
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'population does not match the map');
   }
@@ -335,8 +405,30 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
       levels[i + 1] < types.length &&
       levels[i + 2] <= 65535 &&
       levels[i + 3] < methods[levels[i + 1]].length;
-  if (!levelsFit || save.buildings.stock.length !== map.countries.length * goods.length) {
+  if (
+    !levelsFit ||
+    save.buildings.stock.length !== map.countries.length * goods.length ||
+    save.buildings.economy.length !== (levels.length / 4) * BUILDING_ECONOMY_FIELDS
+  ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'buildings do not match the map');
+  }
+  // The markets' arrays are in the order of the map, the goods, the needs and the pops.
+  const markets = map.countries.length * goods.length;
+  const entries = options.data.pops.needs.reduce((sum, need) => sum + (need.goods?.length ?? 0), 0);
+  const m = save.market;
+  if (
+    m.price.length !== markets ||
+    m.weekBuy.length !== markets ||
+    m.weekSell.length !== markets ||
+    m.weekPopBuy.length !== markets ||
+    m.shares.length !== map.countries.length * entries ||
+    m.weekPopWanted.length !== map.countries.length ||
+    m.weekPopGot.length !== map.countries.length ||
+    m.shortage.length !== map.countries.length ||
+    m.weekIncome.length !== pops ||
+    m.dividend.length !== pops
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'markets do not match the map and the goods');
   }
   return new GameState({
     data: options.data,
@@ -351,8 +443,27 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         dependents: Float64Array.from(save.population.dependents),
         size: Float64Array.from(save.population.size),
         standInJobs: Float64Array.from(save.population.standInJobs),
+        wealth: Float64Array.from(save.population.wealth),
+        income: Float64Array.from(save.population.income),
       },
-      buildings: { levels, stock: Float64Array.from(save.buildings.stock) },
+      buildings: {
+        levels,
+        stock: Float64Array.from(save.buildings.stock),
+        economy: save.buildings.economy,
+      },
+      market: {
+        price: Float64Array.from(m.price),
+        shares: Float64Array.from(m.shares),
+        weekBuy: Float64Array.from(m.weekBuy),
+        weekSell: Float64Array.from(m.weekSell),
+        weekPopBuy: Float64Array.from(m.weekPopBuy),
+        weekPopWanted: Float64Array.from(m.weekPopWanted),
+        weekPopGot: Float64Array.from(m.weekPopGot),
+        shortage: Float32Array.from(m.shortage),
+        weekIncome: Float64Array.from(m.weekIncome),
+        dividend: Float64Array.from(m.dividend),
+        weekDays: m.weekDays,
+      },
     },
   });
 }

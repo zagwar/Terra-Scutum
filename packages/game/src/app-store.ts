@@ -1,6 +1,7 @@
 import type {
   BuildingsConfig,
   BuildingsSnapshot,
+  MarketSnapshot,
   CountryStartTable,
   GoodsConfig,
   MapViewConfig,
@@ -50,6 +51,12 @@ export interface AppState extends PanelState {
    * apart from the snapshot like the population.
    */
   readonly buildings: BuildingsSnapshot | null;
+  /**
+   * The national markets (F65): prices, today's flows and the player's
+   * country's price history; null until the sim is ready. Sent with the
+   * buildings and kept apart from the snapshot like them.
+   */
+  readonly market: MarketSnapshot | null;
   /** Building types with their recipes (`data/buildings.json`) and the goods (`data/goods.json`); null until the sim is ready. */
   readonly buildingTypes: BuildingsConfig | null;
   readonly goods: GoodsConfig | null;
@@ -118,6 +125,7 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     pops: null,
     populationDensityColors: [],
     buildings: null,
+    market: null,
     buildingTypes: null,
     goods: null,
     industryColors: [],

@@ -46,7 +46,8 @@
           },
           "outputs": {
             "grain": 500
-          }
+          },
+          "subsistence": true
         }
       ]
     },
@@ -80,7 +81,8 @@
           },
           "outputs": {
             "livestock_fish": 300
-          }
+          },
+          "subsistence": true
         }
       ]
     },
@@ -750,6 +752,7 @@
   "standIns": {
     "otherElectricityShare": 0.9,
     "standingImportsShare": 1,
-    "standingImportsBuffer": 0.05
+    "standingImportsBuffer": 0.05,
+    "restOfEconomyShare": 1
   }
 }

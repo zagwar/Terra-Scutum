@@ -20,7 +20,20 @@ export type GoodUnit = (typeof GOOD_UNITS)[number];
 
 export const goodsSchema = z.strictObject({
   /** The goods, in the order every per-good array uses. */
-  goods: z.array(z.strictObject({ id, unit: z.enum(GOOD_UNITS) })).min(1),
+  goods: z
+    .array(
+      z.strictObject({
+        id,
+        unit: z.enum(GOOD_UNITS),
+        /**
+         * The base price (F65, Victoria 3), in US$ per unit: every market's
+         * price starts here and moves with buy and sell orders around it.
+         * Real-world 2024 prices where the good has one [DEFAULT].
+         */
+        basePrice: z.number().positive(),
+      }),
+    )
+    .min(1),
   /**
    * The good that is electricity. It can't be stored: what power plants make
    * in a day is used that day or lost, and plants only make what is asked for.
@@ -73,6 +86,12 @@ export const productionMethodSchema = z.strictObject({
   inputs: amounts.optional(),
   /** Goods made per level and day. */
   outputs: amounts,
+  /**
+   * A subsistence method (F65, Victoria 3's subsistence farms): its workers
+   * live on what they make. They earn its output's value less its inputs,
+   * between them; it pays no wage, makes no profit and lays nobody off.
+   */
+  subsistence: z.boolean().optional(),
 });
 
 export type ProductionMethod = z.infer<typeof productionMethodSchema>;
@@ -94,13 +113,13 @@ export const buildingsSchema = z.strictObject({
     .min(1)
     .max(250),
   /**
-   * The national stockpile, a stand-in until markets (F65): each country
-   * keeps the goods its buildings make until its buildings use them.
+   * The national stockpile: since F65 the market's reserve. Goods made and
+   * not bought go in; buyers draw on it when the day's goods run short.
    */
   stockpile: z.strictObject({
     /** A campaign starts with this many days of what the country's buildings use at full output. */
     startingDays: z.number().min(0).max(365),
-    /** A country keeps at most this many days of what its buildings use or make at full output; the rest is lost. */
+    /** A country keeps at most this many days of what its market buys or sells in a day (its buildings at full output at least); the rest is lost. */
     maxDays: z.number().min(1).max(3650),
   }),
   /** Stand-ins until markets (F65), trade (F19) and the power grid (F74) [DEFAULT]. */
@@ -114,8 +133,8 @@ export const buildingsSchema = z.strictObject({
     otherElectricityShare: z.number().min(0).max(1),
     /**
      * Standing imports: every day a country gets this share of what its
-     * starting buildings use at full output but don't make at home, in its
-     * stockpile, free (until trade, F19).
+     * starting buildings and (F65) its pops want but it doesn't make at
+     * home. They are sold on its market like its own goods (until trade, F19).
      */
     standingImportsShare: z.number().min(0).max(10),
     /**
@@ -124,6 +143,12 @@ export const buildingsSchema = z.strictObject({
      * electricity short doesn't start a spiral (a stand-in for everyday trade).
      */
     standingImportsBuffer: z.number().min(0).max(1),
+    /**
+     * F65: the rest of the economy (and exports, until trade, F19) buys this
+     * share of what each country's market has left over at the start, after
+     * its buildings and pops, per person from then on.
+     */
+    restOfEconomyShare: z.number().min(0).max(1),
   }),
 });
 

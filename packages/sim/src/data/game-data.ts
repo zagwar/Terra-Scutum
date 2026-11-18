@@ -48,6 +48,7 @@ import {
   checkBuildings,
   goodsSchema,
 } from '../economy/buildings-data';
+import { type MarketConfig, checkMarket, marketSchema } from '../economy/market-data';
 import {
   type BuildingStartFile,
   buildingStartFileSchema,
@@ -81,6 +82,7 @@ export const DATA_FILES = {
   goods: { file: 'goods.json', schema: goodsSchema },
   buildings: { file: 'buildings.json', schema: buildingsSchema },
   buildingStart: { file: 'building_start.json', schema: buildingStartFileSchema },
+  market: { file: 'market.json', schema: marketSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
@@ -109,12 +111,14 @@ export interface GameData {
   readonly provinceStart: ProvinceStartFile;
   /** Pop groups, needs, growth and job changes (F06). */
   readonly pops: PopsConfig;
-  /** The goods buildings make and use (F07; F65 adds prices and the rest). */
+  /** The goods buildings make and use, with their base prices (F07, F65). */
   readonly goods: GoodsConfig;
   /** Building types with their production methods, the stockpile rules and the stand-ins (F07, F85). */
   readonly buildings: BuildingsConfig;
   /** Every province's starting buildings (F85). */
   readonly buildingStart: BuildingStartFile;
+  /** How markets set prices and buildings handle money, wages and workers (F65). */
+  readonly market: MarketConfig;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
   /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
@@ -257,6 +261,7 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkPops,
   checkBuildings,
   checkBuildingStart,
+  checkMarket,
   checkNotifications,
   checkPlayerCountry,
   checkCountryScreen,

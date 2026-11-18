@@ -1,6 +1,7 @@
 import type { GameState } from '../core/game-state';
 import type { SystemRegistry } from '../core/systems';
-import { buildingSystems, fillStockpile, setBuildingLevel } from '../economy/buildings';
+import { fillStockpile, setBuildingLevel } from '../economy/buildings';
+import { economySystems } from '../economy/economy';
 import { populationSystem } from '../economy/population';
 import { neighborsOf } from '../world/world-map';
 import type { SimStressConfig } from './stress-config';
@@ -26,8 +27,11 @@ import type { SimStressConfig } from './stress-config';
  * The placeholder buildings only make up the rest of `buildingsPerProvince`;
  * since the building catalog (F85, 26 types) there are none left.
  *
- * Daily: pops buy their needs (population), buildings produce from recipes
- * (industry), trade routes move goods (trade), taxes are collected (budget),
+ * **Since F65 the real markets run too** (the `market` slot): pops buy their
+ * needs there, prices, wages and wealth move weekly. The placeholder's own
+ * markets only feed the placeholder trade routes (until trade, F19).
+ *
+ * Daily: buildings produce from recipes (industry), trade routes move goods (trade), taxes are collected (budget),
  * supply flows over the province graph and units draw it (supply), the
  * Swarm grows and spreads (swarmGrowth, swarmSpread), laser coverage
  * (laserCoverage), battles (combat).
@@ -59,25 +63,21 @@ export function createPlaceholderLoad(
   const loadOf = (state: GameState) => (load ??= createLoad(state, config, scaled));
 
   const systems: SystemRegistry = {
-    population: {
-      // The real population system (F06), then the pops' shopping on the placeholder markets.
-      daily: (state) => {
-        populationSystem.daily?.(state);
-        loadOf(state).buyNeeds(state);
-      },
-      weekly: (state) => populationSystem.weekly?.(state),
-    },
+    // The real population system (F06).
+    population: populationSystem,
     // The real buildings (F07): power plants, then farms and mines, then the rest.
-    energy: buildingSystems.energy,
-    resourceProduction: buildingSystems.resourceProduction,
+    energy: economySystems.energy,
+    resourceProduction: economySystems.resourceProduction,
     industry: {
       // The real industry step, then the placeholder buildings that make up the number.
       daily: (state) => {
-        buildingSystems.industry?.daily?.(state);
+        economySystems.industry?.daily?.(state);
         loadOf(state).produce(state);
       },
       weekly: (state) => loadOf(state).corporationsInvest(state),
     },
+    // The real markets (F65): the pops' shopping, prices, wages and wealth.
+    market: economySystems.market,
     trade: {
       daily: (state) => loadOf(state).trade(),
       weekly: (state) => loadOf(state).updatePrices(),
@@ -94,7 +94,6 @@ export function createPlaceholderLoad(
 }
 
 interface Load {
-  buyNeeds(state: GameState): void;
   produce(state: GameState): void;
   corporationsInvest(state: GameState): void;
   trade(): void;
@@ -222,25 +221,6 @@ function createLoad(
 
   return {
     bytes,
-
-    buyNeeds(current) {
-      // Yesterday's market is what pops see today.
-      const owner = current.provinceOwner;
-      for (let p = 0; p < pops; p++) {
-        const market = owner[(p / groups) | 0] * goods;
-        const size = popSize[p];
-        let satisfied = 0;
-        for (let n = 0; n < needs; n++) {
-          const good = market + popNeed[p * needs + n];
-          const wanted = size * 0.001;
-          demandToday[good] += wanted;
-          const available = supplyWeek[good] / (demandWeek[good] + 1e-9);
-          satisfied += available > 1 ? 1 : available;
-          popWealth[p] -= wanted * price[good] * 1e-6;
-        }
-        popSatisfaction[p] = satisfied / needs;
-      }
-    },
 
     produce(current) {
       workers.fill(0);

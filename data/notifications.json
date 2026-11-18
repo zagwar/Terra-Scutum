@@ -7,6 +7,7 @@
     { "id": "bankrupt_corporation", "kind": "problem", "feature": "F90" },
     { "id": "angry_interest_group", "kind": "problem", "feature": "F119" },
     { "id": "idle_factory", "kind": "problem", "feature": "F07" },
+    { "id": "layoffs", "kind": "problem", "feature": "F65" },
     { "id": "law_can_be_passed", "kind": "opportunity", "feature": "F120" },
     { "id": "un_emergency_session", "kind": "opportunity", "feature": "F114" }
   ]

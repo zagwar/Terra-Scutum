@@ -8,10 +8,11 @@ import {
 } from '@terra-scutum/sim';
 
 /**
- * Reads the buildings snapshot (F07, F85) for the screens: a province's
- * buildings, a country's buildings by type with their production methods,
- * its national stockpile with the standing imports, and the buildings that
- * are held back. Pure code, unit tested.
+ * Reads the buildings snapshot (F07, F85, F65) for the screens: a
+ * province's buildings with their money (sales, costs, profit, wage level,
+ * open jobs, reserves), a country's buildings by type with their production
+ * methods, its national stockpile with the standing imports, and the
+ * buildings that are held back or laying workers off. Pure code, unit tested.
  */
 
 /** One building as the screens show it. */
@@ -26,10 +27,25 @@ export interface BuildingRow {
   readonly methodDefinition: ProductionMethod;
   /** Output as a share of full output (0–1). */
   readonly output: number;
-  /** The jobs it offers, the people at work in it, and the wages paid them (US$ a day). */
+  /** The jobs it offers (the ones it keeps open), the people at work in it, and the wages paid them (US$ a day). */
   readonly jobs: number;
   readonly workers: number;
   readonly wages: number;
+  /**
+   * F65, US$ a day: its sales, its inputs and grid electricity, and its
+   * profit (sales − costs − wages; 0 for a subsistence building, whose
+   * workers share what it makes).
+   */
+  readonly revenue: number;
+  readonly inputCost: number;
+  readonly profit: number;
+  /** F65: its wage level (× the going local wage), the share of its jobs it keeps open (0–1), its cash reserves and the most they hold (US$). */
+  readonly wageFactor: number;
+  readonly open: number;
+  readonly reserves: number;
+  readonly reserveCap: number;
+  /** F65: true for a subsistence building. */
+  readonly subsistence: boolean;
   /** What holds it back most (`BUILDING_LIMIT`), and which pop group or good. */
   readonly limitKind: number;
   readonly limitWhat: number;
@@ -52,6 +68,9 @@ function rowAt(buildings: BuildingsSnapshot, config: BuildingsConfig, i: number)
   const definition = config.buildings[type];
   const method = buildings.method[i];
   const methodDefinition = definition.methods[method] ?? definition.methods[0];
+  const subsistence = buildings.subsistence[i] === 1;
+  const revenue = buildings.revenue[i];
+  const inputCost = buildings.inputCost[i];
   return {
     province,
     type,
@@ -60,9 +79,17 @@ function rowAt(buildings: BuildingsSnapshot, config: BuildingsConfig, i: number)
     method,
     methodDefinition,
     output: buildings.output[i],
-    jobs: buildings.level[i] * jobsPerLevel(methodDefinition),
+    jobs: buildings.level[i] * buildings.open[i] * jobsPerLevel(methodDefinition),
     workers: buildings.workers[i],
     wages: buildings.wages[i],
+    revenue,
+    inputCost,
+    profit: subsistence ? 0 : revenue - inputCost - buildings.wages[i],
+    wageFactor: buildings.wageFactor[i],
+    open: buildings.open[i],
+    reserves: buildings.reserves[i],
+    reserveCap: buildings.reserveCap[i],
+    subsistence,
     limitKind: buildings.limitKind[i],
     limitWhat: buildings.limitWhat[i],
   };
@@ -138,6 +165,11 @@ export interface BuildingTypeSummary {
   readonly wages: number;
   /** Average output by level (0–1). */
   readonly output: number;
+  /** F65: today's sales and profit (US$), the average wage level by level, and how many are laying workers off. */
+  readonly revenue: number;
+  readonly profit: number;
+  readonly wageFactor: number;
+  readonly layingOff: number;
   /** What its buildings make today, all together. */
   readonly makes: readonly GoodAmount[];
   /** Levels on each production method (by method index; methods with none left out), most first. */
@@ -199,6 +231,10 @@ export function countryBuildings(
         workers: sum((row) => row.workers),
         wages: sum((row) => row.wages),
         output: levels > 0 ? sum((row) => row.level * row.output) / levels : 0,
+        revenue: sum((row) => row.revenue),
+        profit: sum((row) => row.profit),
+        wageFactor: levels > 0 ? sum((row) => row.level * row.wageFactor) / levels : 0,
+        layingOff: rows.filter((row) => row.open < LAID_OFF_BELOW).length,
         makes: addAmounts(
           rows.flatMap(
             (row) => recipeAmounts(row.methodDefinition, goods, row.level * row.output).makes,
@@ -260,6 +296,39 @@ export function countryStockpile(
   return rows;
 }
 
+/** A building counts as laying workers off once it keeps less than this share of its jobs open. */
+export const LAID_OFF_BELOW = 0.999;
+
+/**
+ * F65: a country's buildings that are laying workers off (they lose money
+ * at their lowest wage): how many, the jobs they have closed, and the one
+ * that closed the most.
+ */
+export function layingOffBuildings(
+  buildings: BuildingsSnapshot,
+  config: BuildingsConfig,
+  provinceOwner: ArrayLike<number>,
+  country: number,
+): { readonly count: number; readonly jobsClosed: number; readonly worst: BuildingRow | null } {
+  let count = 0;
+  let jobsClosed = 0;
+  let worst: BuildingRow | null = null;
+  let worstClosed = 0;
+  for (let i = 0; i < buildings.cells.length; i++) {
+    if (buildings.open[i] >= LAID_OFF_BELOW) continue;
+    if (provinceOwner[Math.floor(buildings.cells[i] / buildings.typeCount)] !== country) continue;
+    const row = rowAt(buildings, config, i);
+    const closed = row.level * (1 - row.open) * jobsPerLevel(row.methodDefinition);
+    count += 1;
+    jobsClosed += closed;
+    if (closed > worstClosed) {
+      worstClosed = closed;
+      worst = row;
+    }
+  }
+  return { count, jobsClosed, worst };
+}
+
 /** A building counts as stopped for the alert at or below this share of full output [DEFAULT]. */
 export const ALERT_OUTPUT_AT_MOST = 0.5;
 
@@ -292,9 +361,9 @@ export function stoppedBuildings(
 }
 
 /**
- * The electricity the rest of the economy and homes of a country use (a
- * stand-in until markets, F65, and the power grid, F74): asked for and got
- * today, in MWh.
+ * The electricity the rest of the economy uses (a stand-in until the power
+ * grid, F74; since F65 the pops' homes buy theirs on the market): asked for
+ * and got today, in MWh.
  */
 export function otherElectricity(
   buildings: BuildingsSnapshot,

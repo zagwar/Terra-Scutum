@@ -7,6 +7,7 @@ import {
   BUILDING_LIMIT,
   createPlaceholderLoad,
   ensureBuildingsReport,
+  ensurePopulationReport,
   hashGameState,
   worldPopulation,
 } from '@terra-scutum/sim';
@@ -72,11 +73,69 @@ export interface CampaignSummary {
     readonly averageOutput: number;
     readonly heldBack: number;
   };
+  /**
+   * The markets on the last day (F65): the average price as a share of the
+   * base price (over every country's market and good), the most expensive
+   * and the cheapest market, the country whose pops were shortest of goods
+   * last week, the buildings' average wage level, how many have laid
+   * workers off, and the world's average standard of living (by people).
+   */
+  readonly markets: {
+    readonly averagePrice: number;
+    readonly highest: { readonly country: string; readonly good: string; readonly price: number };
+    readonly lowest: { readonly country: string; readonly good: string; readonly price: number };
+    readonly worstShortage: { readonly country: string; readonly share: number };
+    readonly averageWage: number;
+    readonly layingOff: number;
+    readonly standardOfLiving: number;
+  };
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
   /** The most memory seen during the run and at its end, in bytes (null without a `memory` option). */
   readonly peakMemoryBytes: number | null;
   readonly endMemoryBytes: number | null;
+}
+
+function marketSummary(state: GameState): CampaignSummary['markets'] {
+  const { market, buildings, world } = state;
+  const population = ensurePopulationReport(state);
+  const goods = market.goodCount;
+  let sum = 0;
+  let highest = { country: '', good: '', price: 0 };
+  let lowest = { country: '', good: '', price: Infinity };
+  for (let m = 0; m < market.price.length; m++) {
+    const factor = market.price[m] / market.basePrice[m % goods];
+    sum += factor;
+    const at = { country: world.countryIds[(m / goods) | 0], good: buildings.goodIds[m % goods] };
+    if (factor > highest.price) highest = { ...at, price: factor };
+    if (factor < lowest.price) lowest = { ...at, price: factor };
+  }
+  let worstShortage = { country: '', share: 0 };
+  market.shortage.forEach((share, c) => {
+    if (share > worstShortage.share) worstShortage = { country: world.countryIds[c], share };
+  });
+  let wages = 0;
+  let layingOff = 0;
+  for (let i = 0; i < buildings.cellCount; i++) {
+    const cell = buildings.cells[i];
+    wages += buildings.wageFactor[cell];
+    if (buildings.open[cell] < 0.999) layingOff += 1;
+  }
+  let living = 0;
+  let people = 0;
+  for (let i = 0; i < population.size.length; i++) {
+    living += population.standardOfLiving[i] * population.size[i];
+    people += population.size[i];
+  }
+  return {
+    averagePrice: sum / market.price.length,
+    highest,
+    lowest,
+    worstShortage,
+    averageWage: buildings.cellCount > 0 ? wages / buildings.cellCount : 0,
+    layingOff,
+    standardOfLiving: people > 0 ? living / people : 0,
+  };
 }
 
 /** The value `share` (0…1) of the way through the sorted values. */
@@ -164,6 +223,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     if (!fine) buildings.heldBack += 1;
   }
   buildings.averageOutput = buildings.levels > 0 ? buildings.averageOutput / buildings.levels : 0;
+  const markets = marketSummary(state);
   return {
     seed: state.seed,
     days: options.days,
@@ -180,6 +240,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     startPopulation,
     endPopulation: worldPopulation(state.population),
     buildings,
+    markets,
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,

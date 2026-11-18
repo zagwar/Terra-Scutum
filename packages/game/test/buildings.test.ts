@@ -55,8 +55,10 @@ describe('the world’s starting buildings (F85)', () => {
       owners.add(state.provinceOwner[Math.floor(cell / report.typeCount)]);
       if (isHeldBack(report.limitKind[cell])) heldBack += 1;
     }
-    // Only a microstate's one factory level is too big for its few workers (Liechtenstein).
-    expect(heldBack).toBeLessThanOrEqual(3);
+    // Only a microstate's one factory level is too big for its few workers
+    // (Liechtenstein), and (F65) a few small countries' homes ask for more
+    // electricity than their power plants have to spare.
+    expect(heldBack).toBeLessThanOrEqual(20);
     expect(report.cellCount).toBeGreaterThan(10_000);
     expect(owners.size).toBeGreaterThan(165);
     expect(owners.has(country('USA'))).toBe(true);
@@ -140,10 +142,14 @@ describe('reading the buildings snapshot', () => {
     // The steel mills use more iron ore than the United States mines: the rest is imported.
     const ore = of('iron_ore');
     expect(ore).toMatchObject({ stored: true, daysLeft: null });
-    expect(ore.stock).toBeCloseTo(15 * ore.used, 0);
+    // F65: 15 days of what everyone buys (the rest of the economy buys the 5 % extra).
+    expect(ore.stock).toBeGreaterThanOrEqual(15 * ore.used);
+    expect(ore.stock).toBeLessThan(15 * ore.used * 1.1);
     expect(ore.made).toBeLessThan(ore.used);
     expect(ore.imported).toBeCloseTo((ore.used - ore.made) * 1.05 + ore.made * 0.05, 0);
-    expect(of('processed_food')).toMatchObject({ stock: 0, used: 0, imported: 0 });
+    // F65: no building uses processed food; the people buy it, so it is in stock.
+    expect(of('processed_food')).toMatchObject({ used: 0 });
+    expect(of('processed_food').stock).toBeGreaterThan(0);
     expect(of('electricity')).toMatchObject({ stored: false, stock: 0, imported: 0 });
     // Homes, shops and offices use most of the electricity.
     const other = otherElectricity(buildings, country('USA'));
@@ -225,17 +231,21 @@ describe('the idle factory alert', () => {
     store.update({ playerCountry: game.country('DEU') });
     expect(store.getState().alerts).toEqual([]);
     store.update({ playerCountry: game.country('USA') });
-    expect(store.getState().alerts).toHaveLength(1);
+    const idle = () =>
+      store.getState().alerts.filter((alert) => alert.id === IDLE_BUILDINGS_ALERT_ID);
+    expect(idle()).toHaveLength(1);
     // Dismissed, it stays away while the problem lasts…
-    store.update({ alerts: [] });
+    store.update({
+      alerts: store.getState().alerts.filter((a) => a.id !== IDLE_BUILDINGS_ALERT_ID),
+    });
     pass(3);
-    expect(store.getState().alerts).toEqual([]);
+    expect(idle()).toEqual([]);
     // …and comes back with the next problem.
     game.state.applyCommand({ type: 'debugFillStockpile', country: 'USA', days: 5 });
     pass(1);
-    expect(store.getState().alerts).toEqual([]);
+    expect(idle()).toEqual([]);
     pass(10);
-    expect(store.getState().alerts).toHaveLength(1);
+    expect(idle()).toHaveLength(1);
   });
 });
 

@@ -31,6 +31,13 @@ credits below are also shown in the game under **Settings → About this build**
   copper, bauxite, aluminum and silicon production typed in approximately from worldsteel (*World
   Steel in Figures 2025*) and the U.S. Geological Survey (*Mineral Commodity Summaries 2025*). See
   `packages/tools/starting-data/README.md`.
+- **Base prices of goods (F65):** approximate 2024 world prices (crude oil, natural gas, coal, iron
+  ore, copper, aluminum and others, as published in the World Bank's commodity price data), typed in
+  by hand in `data/goods.json`.
+- **Market and pop rules (F65):** modelled on Paradox Interactive's *Victoria 3* (its price
+  formula, pop wealth and needs, building wages and cash reserves), as described on the community
+  Victoria 3 wiki and in Paradox's developer diaries. Only the rules are followed; no text, art or
+  data of the game is used.
 
 ## Pictures
 

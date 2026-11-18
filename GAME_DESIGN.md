@@ -14,7 +14,7 @@
 > - **Section numbers are the same in every file**, so "section 8.3" always means the same thing. Use the table below to find which file holds a section.
 
 **Title:** *Terra Scutum: The Last Line of Earth* (short form: *Terra Scutum*)
-**Last updated:** 2026-11-17
+**Last updated:** 2026-11-18
 **Platform:** runs in the **web browser** (desktop app wrapper for Steam later) · **Language:** TypeScript · **3D:** Babylon.js · **UI:** React · **Simulation:** a separate pure TypeScript package (see `docs/13_technical.md`)
 **Development:** Claude Code cloud sessions (browser) on the GitHub repo `terra-scutum`; previews on Cloudflare Pages
 **Target platform:** Windows / Mac / Linux **[DEFAULT]**
@@ -85,12 +85,19 @@ In January 2025 an unknown object is detected heading for Earth. The player lead
 | **Pollution** / **fallout** | Long-lasting land contamination from heavy metals / nukes |
 | **Pop** | A population group in a province (laborers, skilled workers, professionals, owners, officials, soldiers) |
 | **Workforce** / **dependents** | The people of a province who work or look for work (split into pops) / everyone else: children, the elderly and others who don't work |
-| **Needs** / **standard of living** | What pops buy, in three tiers (basic, everyday, luxury) / how many of its needs a pop can afford, 0–100 |
+| **Needs** / **standard of living** | What pops buy (basic food, heating, consumer goods, better food, transport, communication, housing, services, luxuries) / a pop's wealth less what shortages take, 1–99 |
+| **Wealth** / **buy package** | How well off a pop is, 1–99 (Victoria 3); it moves weekly with its income / what a worker of a wealth level buys a day, by need |
+| **Market** / **base price** | Each country's one market for every good (F65): prices move weekly with buy and sell orders (Victoria 3) / a good's starting price, its real 2024 price |
+| **Substitution** | A need met by several goods, split by what is on sale (more coal on sale: more heating with coal) |
+| **Wage level** / **cash reserves** / **dividends** | What a building pays as a multiple of the going local wage / the money a building keeps from its profits / the rest of its profit, paid to its province's owners |
+| **Layoffs** | A building that loses money even at its lowest wage closes part of its jobs |
+| **Subsistence building** | A building whose workers share what it makes, with no wage or profit (subsistence farming, pastoral herding) |
+| **Rest of the economy** | A stand-in for everything the building catalog doesn't cover yet: it offers jobs (F06), uses electricity (F85) and buys goods, and exports until trade (F65) |
 | **Building** / **level** / **recipe** | A production site in a province, one per building type / how big it is (more levels: more workers, inputs and output) / what one level uses and makes in a day: workers by pop group, electricity, inputs → outputs |
 | **Production method** | One of a building type's recipes (mechanized, traditional or subsistence farming…); a building runs one. Poorer countries run more labor-intensive ones |
-| **Standing imports** | Goods a country gets every day for its starting buildings, free, until trade between countries exists (a stand-in) |
+| **Standing imports** | Goods a country gets every day for its starting buildings and (F65) its pops, sold on its market, until trade between countries exists (a stand-in) |
 | **Output** (of a building) / **held back** | How much of its full output a building makes today, 0–100 % / running below that for lack of workers, electricity or an input |
-| **National stockpile** | A country's store of goods: what its buildings make goes in, what they use comes out (a stand-in until markets) |
+| **National stockpile** | A country's store of goods (since F65 its market's reserve): what is made and not bought goes in; buyers draw on it when a day's goods run short |
 | **Off the grid** | The share of its output a building keeps without electricity from the grid (its own generators, hand work) |
 | **Ideology** | A political belief with stances on laws, government types and economic systems |
 | **Interest group** | A political group (Armed Forces, Corporate Lobby…) with clout, approval and a leader |

@@ -263,27 +263,21 @@ describe('jobs and job changes (F06)', () => {
   });
 });
 
-describe('needs and standard of living (F06)', () => {
-  it('buys needs tier by tier and scores what is met from 0 to 100', () => {
+describe('wealth and standard of living (F06, F65: Victoria 3)', () => {
+  it('starts every pop at the wealth its income buys, and that is its standard of living', () => {
     const { state, country } = newGame();
     const report = ensurePopulationReport(state);
-    for (const value of report.standardOfLiving) {
-      expect(value).toBeGreaterThanOrEqual(0);
-      expect(value).toBeLessThanOrEqual(100);
+    for (let i = 0; i < report.standardOfLiving.length; i++) {
+      if (state.population.size[i] <= 0) continue;
+      expect(report.standardOfLiving[i]).toBeGreaterThanOrEqual(1);
+      expect(report.standardOfLiving[i]).toBeLessThanOrEqual(99);
+      // No shortages yet: the standard of living is the wealth; the pop expects a little less.
+      expect(report.standardOfLiving[i]).toBeCloseTo(state.population.wealth[i], 4);
+      expect(state.population.expectedLiving[i]).toBeCloseTo(
+        Math.max(1, state.population.wealth[i] - 5),
+        4,
+      );
     }
-    const tiers = (countryId: string, group: number) => {
-      const at = (country(countryId) * 6 + group) * 3;
-      return [...report.countryGroupNeeds.subarray(at, at + 3)];
-    };
-    // A later tier is only bought once the tier before it is fully met.
-    for (const id of ['AAA', 'BBB'])
-      for (let g = 0; g < 6; g++) {
-        const [basic, everyday, luxury] = tiers(id, g);
-        if (everyday > 0) expect(basic).toBeCloseTo(1, 6);
-        if (luxury > 0) expect(everyday).toBeCloseTo(1, 6);
-        const score = report.countryGroupStandardOfLiving[country(id) * 6 + g];
-        expect(score).toBeCloseTo(40 * basic + 35 * everyday + 25 * luxury, 3);
-      }
     // The rich country lives better than the poor one, owners better than laborers.
     const living = (id: string, group: number) =>
       report.countryGroupStandardOfLiving[country(id) * 6 + group];
@@ -292,7 +286,7 @@ describe('needs and standard of living (F06)', () => {
     expect(living('AAA', PROFESSIONALS)).toBeGreaterThan(living('AAA', LABORERS));
   });
 
-  it('unemployment lowers a pop’s standard of living', () => {
+  it('unemployment lowers wealth, and with it the standard of living, week by week', () => {
     const { state, province } = newGame();
     const east = province('alpha_east');
     const before = ensurePopulationReport(state).provinceStandardOfLiving[east];
@@ -302,11 +296,19 @@ describe('needs and standard of living (F06)', () => {
       group: null,
       factor: 0.5,
     });
-    const after = ensurePopulationReport(state).provinceStandardOfLiving[east];
-    expect(after).toBeLessThan(before - 5);
+    // Wealth only moves on Mondays: nothing yet.
+    expect(ensurePopulationReport(state).provinceStandardOfLiving[east]).toBeCloseTo(before, 6);
+    for (let day = 0; day < 7 * 4; day++) state.advanceDay();
+    const month = ensurePopulationReport(state).provinceStandardOfLiving[east];
+    expect(month).toBeLessThan(before - 0.5);
+    // A tenth of the gap a week: it keeps falling.
+    for (let day = 0; day < 7 * 26; day++) state.advanceDay();
+    const halfYear = ensurePopulationReport(state).provinceStandardOfLiving[east];
+    expect(halfYear).toBeLessThan(month - 0.2);
+    expect(halfYear).toBeLessThan(before - 2);
   });
 
-  it('checks pops.json: groups, shares, needs and job changes', () => {
+  it('checks pops.json: groups, shares, needs, wealth packages and job changes', () => {
     const issues = (change: (pops: ReturnType<typeof testPops>) => void): string => {
       const raw = testRawData();
       change(raw.pops as ReturnType<typeof testPops>);
@@ -322,11 +324,20 @@ describe('needs and standard of living (F06)', () => {
     expect(issues((pops) => (pops.groups[1].id = 'laborers'))).toContain('duplicate pop group');
     expect(issues((pops) => (pops.startingShares[0].shares.laborers = 0.5))).toContain('add up to');
     expect(issues((pops) => pops.startingShares.reverse())).toContain('from poor to rich');
-    expect(issues((pops) => (pops.standardOfLiving.basic = 50))).toContain('not 100');
+    expect(issues((pops) => pops.wealth.packages.reverse())).toContain('from poor to rich');
+    expect(issues((pops) => (pops.wealth.packages[1].needs.services = 0.5))).toContain(
+      'cost more than the one before',
+    );
+    expect(issues((pops) => (pops.wealth.packages[2].level = 98))).toContain('level 99');
+    expect(
+      issues((pops) => ((pops.wealth.packages[0].needs as Record<string, number>).food = 1)),
+    ).toContain('unknown need "food"');
+    expect(issues((pops) => (pops.needs[0].goods![0].good = 'gold'))).toContain(
+      'unknown good "gold"',
+    );
     expect(issues((pops) => (pops.jobChanges[0].to = 'soldiers'))).toContain(
       'not a civilian pop group',
     );
-    expect(issues((pops) => pops.needs.pop())).toContain('no need in the "luxury" tier');
   });
 
   it('checks province_start.json against the map and the countries', () => {

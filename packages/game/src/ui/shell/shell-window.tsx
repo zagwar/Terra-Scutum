@@ -7,6 +7,7 @@ import { defaultMessageSettings } from './messages';
 import type { ShellActions } from './shell-actions';
 import { AboutBuild } from './about-build';
 import { BuildingsScreen } from '../buildings/buildings-screen';
+import { MarketsScreen } from '../markets/markets-screen';
 import { PopulationScreen } from '../population/population-screen';
 import { comesWithText } from './top-bar';
 
@@ -35,6 +36,9 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
   } else if (window === 'buildings') {
     title = tKey(screenNameKey(window));
     body = <BuildingsScreen state={state} actions={actions} />;
+  } else if (window === 'markets') {
+    title = tKey(screenNameKey(window));
+    body = <MarketsScreen state={state} actions={actions} />;
   } else {
     const screen = SCREENS[window];
     title = tKey(screenNameKey(window));
@@ -50,9 +54,11 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
     <div className="shell-window-layer">
       <section
         className={
-          window === 'population' || window === 'buildings'
-            ? 'panel shell-window is-wide'
-            : 'panel shell-window'
+          window === 'markets'
+            ? 'panel shell-window is-wide is-wider'
+            : window === 'population' || window === 'buildings'
+              ? 'panel shell-window is-wide'
+              : 'panel shell-window'
         }
         data-testid="shell-window"
         data-window={window}
