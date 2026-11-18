@@ -4,6 +4,7 @@ import buildings from '../../../../data/buildings.json';
 import countries from '../../../../data/countries.json';
 import countryFlags from '../../../../data/country_flags.json';
 import countryScreen from '../../../../data/country_screen.json';
+import food from '../../../../data/food.json';
 import countryStart from '../../../../data/country_start.json';
 import gameConfig from '../../../../data/game_config.json';
 import goods from '../../../../data/goods.json';
@@ -41,6 +42,7 @@ export const RAW_GAME_DATA: RawGameData = {
   buildingStart,
   market,
   trade,
+  food,
   mapView,
   terrainTiles,
   notifications,

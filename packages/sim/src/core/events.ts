@@ -17,6 +17,15 @@ export type SimEvent =
       readonly to: string;
     }
   /** The player chose the country they lead (its id), before the campaign's first day (F05). */
-  | { readonly type: 'playerCountryChosen'; readonly country: string };
+  | { readonly type: 'playerCountryChosen'; readonly country: string }
+  /** F08: a province (id) of a country (id, its owner) is in famine: enough of its people starve. */
+  | { readonly type: 'famineStarted'; readonly province: string; readonly country: string }
+  /** F08: a province's famine is over; `deaths` is how many people it killed. */
+  | {
+      readonly type: 'famineEnded';
+      readonly province: string;
+      readonly country: string;
+      readonly deaths: number;
+    };
 
 export type SimEventType = SimEvent['type'];

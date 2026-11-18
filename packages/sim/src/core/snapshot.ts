@@ -5,6 +5,7 @@ import { ensureBuildingsReport } from '../economy/economy';
 import { HISTORY_WEEKS, type MarketState, reserveCap } from '../economy/market';
 import { ensurePopulationReport } from '../economy/population';
 import type { TradeState } from '../economy/trade';
+import { foodReserveDays } from '../economy/food';
 
 /**
  * What the sim worker sends to the game after ticks and commands: a small,
@@ -47,6 +48,48 @@ export interface SimSnapshot {
   readonly market?: MarketSnapshot;
   /** Trade between the markets (F19), sent together with the buildings and the markets. */
   readonly trade?: TradeSnapshot;
+  /** Food (F08), sent together with the buildings, the markets and trade. */
+  readonly food?: FoodSnapshot;
+}
+
+/**
+ * Food as the game shows it (F08): per country (food reserves, rationing,
+ * food security, famines), per province, and the player's country by pop
+ * group. Shares are 0–1.
+ */
+export interface FoodSnapshot {
+  /** The rationing levels' ids, from none to the strictest. */
+  readonly levelIds: readonly string[];
+  /** The food goods' indexes. */
+  readonly foodGoods: Int32Array;
+  /** Below this many days of reserves the game warns; below `mildBelow` food security people starve, below `severeBelow` severely. */
+  readonly lowReserveDays: number;
+  readonly mildBelow: number;
+  readonly severeBelow: number;
+  /** Per country: food reserves in days of what it buys today (`Infinity` if it buys none). */
+  readonly reserveDays: Float32Array;
+  /** Per country: the rationing level in force (an index into `levelIds`). */
+  readonly rationing: Uint8Array;
+  /** The player's country's choice: a level, or -1 for automatic. */
+  readonly rationingChoice: number;
+  /** Per country: last week's basic food shortage; average food security; shares of people starving and severely starving; provinces in famine; deaths and lost births from starvation since the start. */
+  readonly basicShortage: Float32Array;
+  readonly security: Float32Array;
+  readonly starving: Float32Array;
+  readonly severe: Float32Array;
+  readonly famineCount: Int32Array;
+  readonly starvationDeaths: Float64Array;
+  readonly lostBirths: Float64Array;
+  /** Per province: the same, the day its famine began (-1: none), and its deaths and lost births since. */
+  readonly provinceSecurity: Float32Array;
+  readonly provinceStarving: Float32Array;
+  readonly provinceSevere: Float32Array;
+  readonly famineSince: Int32Array;
+  readonly famineDeaths: Float32Array;
+  readonly famineLostBirths: Float32Array;
+  /** The player's country by pop group: average food security and the share starving. */
+  readonly groupSecurity: Float32Array;
+  readonly groupStarving: Float32Array;
 }
 
 /**
@@ -266,8 +309,62 @@ export function createSnapshot(state: GameState, known?: SnapshotKnown): SimSnap
           buildings: buildingsSnapshot(state, buildings),
           market: marketSnapshot(state.market, buildings, state.playerCountry),
           trade: tradeSnapshot(state.trade, state.playerCountry),
+          food: foodSnapshot(state),
         }
       : {}),
+  };
+}
+
+function foodSnapshot(state: GameState): FoodSnapshot {
+  const { food, market, buildings, population } = state;
+  const countries = food.countryCount;
+  const reserveDays = new Float32Array(countries);
+  for (let c = 0; c < countries; c++)
+    reserveDays[c] = foodReserveDays(food, market, buildings.stock, market.buy, c);
+  // The player's country by pop group.
+  const groups = food.groupCount;
+  const groupSecurity = new Float32Array(groups);
+  const groupStarving = new Float32Array(groups);
+  const groupPeople = new Float64Array(groups);
+  const mild = food.rules.security.mild;
+  for (let p = 0; p < food.provinceCount; p++) {
+    if (state.provinceOwner[p] !== state.playerCountry) continue;
+    for (let g = 0; g < groups; g++) {
+      const i = p * groups + g;
+      const people = population.size[i];
+      groupPeople[g] += people;
+      groupSecurity[g] += people * food.security[i];
+      if (food.security[i] < mild) groupStarving[g] += people;
+    }
+  }
+  for (let g = 0; g < groups; g++) {
+    groupSecurity[g] = groupPeople[g] > 0 ? groupSecurity[g] / groupPeople[g] : 1;
+    groupStarving[g] = groupPeople[g] > 0 ? groupStarving[g] / groupPeople[g] : 0;
+  }
+  return {
+    levelIds: food.levelIds,
+    foodGoods: food.foodGoods.slice(),
+    lowReserveDays: food.rules.reserves.lowDays,
+    mildBelow: mild,
+    severeBelow: food.rules.security.severe,
+    reserveDays,
+    rationing: food.rationing.slice(),
+    rationingChoice: food.rationingChoice[state.playerCountry],
+    basicShortage: food.basicShortage.slice(),
+    security: food.countrySecurity.slice(),
+    starving: food.countryStarving.slice(),
+    severe: food.countrySevere.slice(),
+    famineCount: food.famineCount.slice(),
+    starvationDeaths: food.starvationDeaths.slice(),
+    lostBirths: food.lostBirths.slice(),
+    provinceSecurity: food.provinceSecurity.slice(),
+    provinceStarving: food.provinceStarving.slice(),
+    provinceSevere: food.provinceSevere.slice(),
+    famineSince: food.famineSince.slice(),
+    famineDeaths: Float32Array.from(food.famineDeaths),
+    famineLostBirths: Float32Array.from(food.famineLostBirths),
+    groupSecurity,
+    groupStarving,
   };
 }
 
@@ -428,7 +525,7 @@ function buildingsSnapshot(state: GameState, buildings: BuildingsState): Buildin
     used: buildings.used.slice(),
     stockLimit: Float64Array.from(
       capacityUse,
-      (use, m) => maxDays * Math.max(use, capacityMake[m]),
+      (use, m) => maxDays[m % buildings.goodCount] * Math.max(use, capacityMake[m]),
     ),
     imports: buildings.imports.slice(),
     otherPowerWanted: buildings.otherPowerWanted.slice(),

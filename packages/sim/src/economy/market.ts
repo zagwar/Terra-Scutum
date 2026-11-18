@@ -63,6 +63,16 @@ export interface MarketState {
   readonly dependentWeight: number;
   /** How much less the rest of the economy buys of a dearer good (`data/market.json` → `restOfEconomy.priceElasticity`). */
   readonly restElasticity: number;
+  /** F08: per good, 1 for the food goods (`data/food.json`); the need rationing cuts among the people's food (better food; -1 if none). */
+  readonly foodGood: Uint8Array;
+  readonly betterFoodNeed: number;
+  /**
+   * F08: per country, what rationing leaves (1 = no rationing): of the rest
+   * of the economy's food purchases, and of the people's better food.
+   * Written by `food.ts`.
+   */
+  readonly rationRest: Float64Array;
+  readonly rationBetter: Float64Array;
 
   // ── Fixed for the campaign (from the start, `calibrateMarkets`) ──────────
   /** Per country and good: what the rest of the economy buys a day per person (never electricity: that is `BuildingsState.otherPowerPerPerson`). */
@@ -166,6 +176,10 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
     ),
     dependentWeight: wealth.dependentWeight,
     restElasticity: data.market.restOfEconomy.priceElasticity,
+    foodGood: Uint8Array.from(goods, (good) => (data.food.goods.includes(good.id) ? 1 : 0)),
+    betterFoodNeed: needs.findIndex((need) => need.id === data.food.betterNeed),
+    rationRest: new Float64Array(countries).fill(1),
+    rationBetter: new Float64Array(countries).fill(1),
     restPerPerson: new Float64Array(countries * goodCount),
     restReference: price.slice(),
     price,
@@ -298,6 +312,7 @@ export function computeOrders(
   const { popOrder, restOrder, countryPeople, packageLevel, packageValue, needCount } = market;
   const { needOffsets, entryGood, shares, basePrice, goodCount, dependentWeight } = market;
   const { size, dependents, wealth } = population;
+  const { rationBetter, betterFoodNeed } = market;
   const groups = population.groupCount;
   popOrder.fill(0);
   countryPeople.fill(0);
@@ -323,8 +338,10 @@ export function computeOrders(
         const first = needOffsets[n];
         const last = needOffsets[n + 1];
         if (first === last) continue;
-        const value =
+        let value =
           (1 - t) * packageValue[r * needCount + n] + t * packageValue[(r + 1) * needCount + n];
+        // F08: rationing cuts the people's better food first.
+        if (n === betterFoodNeed) value *= rationBetter[c];
         if (value <= 0) continue;
         for (let e = first; e < last; e++) {
           const good = entryGood[e];
@@ -338,11 +355,14 @@ export function computeOrders(
   // F19: a good that fetches more abroad than at home costs it what it
   // fetches abroad (so a high world price frees goods for export).
   const { restPerPerson, restReference, price, exportPrice, restElasticity } = market;
+  const { foodGood, rationRest } = market;
   for (let c = 0; c < market.countryCount; c++) {
     const at = c * goodCount;
     market.popPower[c] = popOrder[at + market.electricityGood];
     for (let g = 0; g < goodCount; g++) {
-      const wanted = restPerPerson[at + g] * countryPeople[c];
+      // F08: rationing cuts the rest of the economy's food first of all.
+      const wanted =
+        restPerPerson[at + g] * countryPeople[c] * (foodGood[g] === 1 ? rationRest[c] : 1);
       if (wanted <= 0) {
         restOrder[at + g] = 0;
         continue;
@@ -411,7 +431,7 @@ export function marketDay(
         let daily = buy[m] > sell[m] ? buy[m] : sell[m];
         if (capacityUse[m] > daily) daily = capacityUse[m];
         if (capacityMake[m] > daily) daily = capacityMake[m];
-        const most = maxDays * daily;
+        const most = maxDays[g] * daily;
         lost[m] = there > most ? there - most : 0;
         stock[m] = there - lost[m];
       }
@@ -574,6 +594,17 @@ function fillRowCosts(market: MarketState, country: number, priceLevel: number):
       cost += packageValue[r * market.needCount + n] * needIndex[n];
     rowCost[r] = cost;
   }
+}
+
+/** What a worker of wealth `w` spends a day on need `n` (US$ at base prices, without dependents). */
+export function packageValueAt(market: MarketState, w: number, n: number): number {
+  const r = packageRow(market, w);
+  const levels = market.packageLevel;
+  let t = (w - levels[r]) / (levels[r + 1] - levels[r]);
+  if (t < 0) t = 0;
+  else if (t > 1) t = 1;
+  const at = r * market.needCount + n;
+  return (1 - t) * market.packageValue[at] + t * market.packageValue[at + market.needCount];
 }
 
 /** The package cost at wealth `w` from `rowCost` (per worker, without dependents). */

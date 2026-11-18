@@ -1,0 +1,79 @@
+{
+  "goods": ["grain", "livestock_fish", "processed_food"],
+  "basicNeed": "basic_food",
+  "betterNeed": "luxury_food",
+  "security": {
+    "shortageWeight": 1.5,
+    "weeklyChange": 0.5,
+    "mild": 0.4,
+    "severe": 0.2
+  },
+  "starvation": {
+    "mild": {
+      "births": 0.35,
+      "deaths": 0.3,
+      "living": 5
+    },
+    "severe": {
+      "births": 0.9,
+      "deaths": 1,
+      "extraDeathsPerYear": 0.05,
+      "living": 15
+    }
+  },
+  "famine": {
+    "starvingShare": 0.35,
+    "severeShare": 0.15
+  },
+  "reserves": {
+    "startingDays": 30,
+    "targetDays": 30,
+    "maxDays": 90,
+    "lowDays": 7
+  },
+  "rationing": [
+    {
+      "id": "none",
+      "restCut": 0,
+      "betterCut": 0,
+      "stopExports": false,
+      "living": 0
+    },
+    {
+      "id": "light",
+      "restCut": 0.25,
+      "betterCut": 0.2,
+      "stopExports": false,
+      "living": 1,
+      "auto": {
+        "belowDays": 15,
+        "shortage": 0.02,
+        "liftAboveDays": 20
+      }
+    },
+    {
+      "id": "strict",
+      "restCut": 0.5,
+      "betterCut": 0.5,
+      "stopExports": true,
+      "living": 3,
+      "auto": {
+        "belowDays": 7,
+        "shortage": 0.1,
+        "liftAboveDays": 12
+      }
+    },
+    {
+      "id": "emergency",
+      "restCut": 0.9,
+      "betterCut": 1,
+      "stopExports": true,
+      "living": 6,
+      "auto": {
+        "belowDays": 3,
+        "shortage": 0.25,
+        "liftAboveDays": 6
+      }
+    }
+  ]
+}

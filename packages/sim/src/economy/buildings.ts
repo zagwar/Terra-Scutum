@@ -85,8 +85,13 @@ export interface BuildingsState {
   readonly outputOffsets: Int32Array;
   readonly outputGood: Int32Array;
   readonly outputAmount: Float64Array;
-  readonly startingDays: number;
-  readonly maxDays: number;
+  /**
+   * Per good: the stockpile starts with this many days of what is bought
+   * of it, and keeps at most this many days (F08: the food goods have their
+   * own, `data/food.json` → `reserves`).
+   */
+  readonly startingDays: Float64Array;
+  readonly maxDays: Float64Array;
 
   /** Per country and good: the imports that arrive tomorrow morning (F19: written by trade every day; never electricity). */
   readonly imports: Float64Array;
@@ -338,8 +343,16 @@ export function createBuildings(data: GameData, world: WorldMap): BuildingsState
     outputOffsets: outputs.offsets,
     outputGood: outputs.keys,
     outputAmount: outputs.amounts,
-    startingDays: data.buildings.stockpile.startingDays,
-    maxDays: data.buildings.stockpile.maxDays,
+    startingDays: Float64Array.from(data.goods.goods, (good) =>
+      data.food.goods.includes(good.id)
+        ? data.food.reserves.startingDays
+        : data.buildings.stockpile.startingDays,
+    ),
+    maxDays: Float64Array.from(data.goods.goods, (good) =>
+      data.food.goods.includes(good.id)
+        ? data.food.reserves.maxDays
+        : data.buildings.stockpile.maxDays,
+    ),
     imports: new Float64Array(countries * goodCount),
     otherPowerPerPerson: new Float64Array(provinces),
     level: new Uint16Array(cellsMax),
@@ -432,7 +445,7 @@ export function createBuildings(data: GameData, world: WorldMap): BuildingsState
     for (let g = 0; g < goodCount; g++) {
       if (g === electricityGood) continue;
       // The starting stockpile: so many days of what the buildings use at full output.
-      stock[market + g] = buildings.startingDays * capacityUse[market + g];
+      stock[market + g] = buildings.startingDays[g] * capacityUse[market + g];
     }
   }
   // The rest of the economy and homes use most of what the starting power

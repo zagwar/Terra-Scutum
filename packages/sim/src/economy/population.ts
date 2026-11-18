@@ -88,6 +88,18 @@ export interface PopulationState {
    * live far below it raise wages; far above it, they may cut them.
    */
   readonly expectedLiving: Float32Array;
+  /**
+   * F08: what starvation does to births and deaths, per pop (`food.ts` sets
+   * them from food security; 1, 1 and 0 when nobody starves): its workers
+   * have births × `birthKeep` and die at their rate × `deathFactor` +
+   * `extraDeaths` (a share a day). A province's dependents share the
+   * average of its pops (by their size that day).
+   */
+  readonly birthKeep: Float32Array;
+  readonly deathFactor: Float32Array;
+  readonly extraDeaths: Float32Array;
+  /** F08: standard of living each pop loses to starvation and rationing (`food.ts`). */
+  readonly livingPenalty: Float32Array;
   /** The share of each pop in work at the start: its country's real employment (1 for groups that are always employed). */
   readonly employmentTarget: Float64Array;
   /**
@@ -304,6 +316,10 @@ export function createPopulation(
     wage,
     priceLevel,
     expectedLiving: new Float32Array(provinces * groups),
+    birthKeep: new Float32Array(provinces * groups).fill(1),
+    deathFactor: new Float32Array(provinces * groups).fill(1),
+    extraDeaths: new Float32Array(provinces * groups),
+    livingPenalty: new Float32Array(provinces * groups),
     employmentTarget,
     standInTarget: employmentTarget.slice(),
     employed: new Float64Array(provinces * groups),
@@ -364,28 +380,50 @@ export function restorePopulation(population: PopulationState, saved: Population
 export function growPopulation(population: PopulationState): void {
   const { dependents, size, birthRate, workerDeathRate, dependentDeathRate, enteringRate } =
     population;
+  const { birthKeep, deathFactor, extraDeaths } = population;
   const groups = population.groupCount;
   const leaving = population.leavingRate;
   const provinces = dependents.length;
   for (let p = 0; p < provinces; p++) {
     const row = p * groups;
     let workforce = 0;
-    for (let g = 0; g < groups; g++) workforce += size[row + g];
+    // F08: starvation means fewer births and more deaths; dependents share their province's lot.
+    let keep = 0;
+    let factor = 0;
+    let extra = 0;
+    for (let g = 0; g < groups; g++) {
+      const people = size[row + g];
+      workforce += people;
+      keep += people * birthKeep[row + g];
+      factor += people * deathFactor[row + g];
+      extra += people * extraDeaths[row + g];
+    }
+    const share = workforce > 0 ? 1 / workforce : 0;
+    const birthFactor = workforce > 0 ? keep * share : 1;
+    const dependentDeaths =
+      workforce > 0
+        ? dependentDeathRate[p] * factor * share + extra * share
+        : dependentDeathRate[p];
     const dependent = dependents[p];
     if (workforce <= 0) {
       // Nobody of working age: the dependents who are left only die.
-      dependents[p] = dependent * (1 - dependentDeathRate[p]);
+      dependents[p] = dependent * Math.max(0, 1 - dependentDeaths);
       continue;
     }
     const entering = enteringRate[p] * dependent;
-    dependents[p] =
+    const next =
       dependent +
-      birthRate[p] * workforce -
-      dependentDeathRate[p] * dependent -
+      birthRate[p] * birthFactor * workforce -
+      dependentDeaths * dependent -
       entering +
       leaving * workforce;
-    const factor = 1 - workerDeathRate[p] - leaving + entering / workforce;
-    for (let g = 0; g < groups; g++) size[row + g] *= factor;
+    dependents[p] = next > 0 ? next : 0;
+    const growth = 1 - leaving + entering / workforce;
+    const deaths = workerDeathRate[p];
+    for (let g = 0; g < groups; g++) {
+      const left = growth - deaths * deathFactor[row + g] - extraDeaths[row + g];
+      size[row + g] *= left > 0 ? left : 0;
+    }
   }
   population.reportOwnershipVersion = -1;
 }
@@ -434,7 +472,8 @@ export function updateJobs(population: PopulationState): void {
 /**
  * Redoes the report from the state: who has a job, the standard of living
  * (F65: each pop's wealth, less `shortagePenalty` × the share of its
- * country's pops' goods that went undelivered last week, `shortage`), and
+ * country's pops' goods that went undelivered last week, `shortage`; F08:
+ * less what starvation and rationing take, `livingPenalty`), and
  * the totals per province and per country.
  */
 export function refreshPopulationReport(
@@ -445,6 +484,7 @@ export function refreshPopulationReport(
   shortagePenalty: number,
 ): void {
   const { dependents, size, jobs, wage, employed, standardOfLiving, wealth, income } = population;
+  const livingPenalty = population.livingPenalty;
   const groups = population.groupCount;
   const provinces = dependents.length;
   const countryPopulation = population.countryPopulation.fill(0);
@@ -468,7 +508,7 @@ export function refreshPopulationReport(
       const withJob = people < jobs[row + g] ? people : jobs[row + g];
       employed[row + g] = withJob;
       working += withJob;
-      let score = wealth[row + g] - penalty;
+      let score = wealth[row + g] - penalty - livingPenalty[row + g];
       if (score < 1) score = 1;
       else if (score > 99) score = 99;
       standardOfLiving[row + g] = score;

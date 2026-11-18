@@ -2,6 +2,7 @@ import type { GameState } from './game-state';
 import type { TextParams } from './sim-error';
 import { fillStockpile, setBuildingLevel } from '../economy/buildings';
 import { resplitTrade, setEmbargo, setTradeAgreement } from '../economy/trade';
+import { setRationing } from '../economy/food';
 
 /**
  * Sim commands: the ONLY way anything outside the sim changes sim state.
@@ -84,6 +85,24 @@ export type SimCommand =
       readonly country: string;
       readonly target: string;
       readonly on: boolean;
+    }
+  /**
+   * F08: a country (by id) sets its rationing: a level of `data/food.json`
+   * → `rationing` (by id), or `null` for automatic (it rations as its food
+   * reserves fall). Ahead of the Rationing law (F16), which will make it
+   * cost time and political capital.
+   */
+  | { readonly type: 'setRationing'; readonly country: string; readonly level: string | null }
+  /**
+   * Diagnostic (F08): sets how much of a good (by id) a country's national
+   * stockpile holds, as a disaster or a seizure might. Used by tests to
+   * bring on food shortages quickly.
+   */
+  | {
+      readonly type: 'debugSetStockpile';
+      readonly country: string;
+      readonly good: string;
+      readonly amount: number;
     };
 
 export type SimCommandType = SimCommand['type'];
@@ -235,6 +254,38 @@ const HANDLERS: CommandHandlers = {
   },
   debugSetTradeAgreement(state, command): CommandResult {
     return pairCommand(state, command, setTradeAgreement);
+  },
+  setRationing(state, command): CommandResult {
+    const country = state.world.countryIndex.get(command.country);
+    if (country === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+        params: { country: String(command.country) },
+      };
+    }
+    const level = command.level === null ? -1 : state.food.levelIds.indexOf(command.level);
+    if (command.level !== null && level < 0) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    setRationing(state, country, level);
+    return OK;
+  },
+  debugSetStockpile(state, command): CommandResult {
+    const country = state.world.countryIndex.get(command.country);
+    if (country === undefined) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_COUNTRY',
+        params: { country: String(command.country) },
+      };
+    }
+    const good = state.buildings.goodIds.indexOf(command.good);
+    if (good < 0 || good === state.buildings.electricityGood)
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    if (!Number.isFinite(command.amount) || command.amount < 0)
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    state.buildings.stock[country * state.buildings.goodCount + good] = command.amount;
+    state.buildings.changes += 1;
+    return OK;
   },
 };
 

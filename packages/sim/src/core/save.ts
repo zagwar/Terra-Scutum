@@ -13,6 +13,7 @@ import {
 import { MARKET_SAVED_ARRAYS, type MarketState } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
 import { type TradeState, pairList } from '../economy/trade';
+import { type FoodState, createFood } from '../economy/food';
 
 /**
  * Save format versioning.
@@ -27,7 +28,7 @@ import { type TradeState, pairList } from '../economy/trade';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 8;
+export const SAVE_FORMAT_VERSION = 9;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -127,6 +128,30 @@ const saveFileSchema = z.strictObject({
     weekDays: z.number().int().min(0).max(7),
     embargoes: z.array(z.number().int().min(0)),
     agreements: z.array(z.number().int().min(0)),
+  }),
+  /**
+   * Food (F08): `levels` are the rationing levels' ids in the order the
+   * numbers use. Per country: the rationing level in force and the one
+   * chosen (-1: automatic), the share of basic food its pops got summed over
+   * this week's days, last week's basic food shortage, and the deaths and
+   * births lost to starvation since the campaign began; per pop (province
+   * by province, the groups in order) its food security (0–1); per province
+   * the day its famine began (-1: none) and its deaths and lost births
+   * since; the days counted this week.
+   */
+  food: z.strictObject({
+    levels: z.array(z.string()),
+    rationing: z.array(z.number().int().min(0)),
+    rationingChoice: z.array(z.number().int().min(-1)),
+    weekBasicGot: z.array(z.number().min(0)),
+    weekDays: z.number().int().min(0).max(7),
+    basicShortage: z.array(z.number().min(0).max(1)),
+    security: z.array(z.number().min(0).max(1)),
+    famineSince: z.array(z.number().int().min(-1)),
+    famineDeaths: z.array(z.number().min(0)),
+    famineLostBirths: z.array(z.number().min(0)),
+    starvationDeaths: z.array(z.number().min(0)),
+    lostBirths: z.array(z.number().min(0)),
   }),
 });
 
@@ -276,7 +301,34 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
     const { market, trade, buildings } = createStartingEconomy(data, world, countryStart);
     return { ...save, trade: tradeSave(trade, market, buildings.imports) };
   },
+  // Version 9 (F08) adds food: food security, starvation, famines and
+  // rationing. Older saves start where a new campaign does: nobody starves,
+  // no rationing, no famine. Their stockpiles keep what they hold; trade
+  // tops the food up to the reserves' target.
+  8: (save, data) => {
+    const world = buildWorldMap(data);
+    const groups = data.pops.groups.length;
+    return { ...save, food: foodSave(createFood(data, world, groups)) };
+  },
 };
+
+/** Food as a save stores it. */
+function foodSave(food: FoodState): SaveFile['food'] {
+  return {
+    levels: [...food.levelIds],
+    rationing: Array.from(food.rationing),
+    rationingChoice: Array.from(food.rationingChoice),
+    weekBasicGot: Array.from(food.weekBasicGot),
+    weekDays: food.weekDays,
+    basicShortage: Array.from(food.basicShortage),
+    security: Array.from(food.security),
+    famineSince: Array.from(food.famineSince),
+    famineDeaths: Array.from(food.famineDeaths),
+    famineLostBirths: Array.from(food.famineLostBirths),
+    starvationDeaths: Array.from(food.starvationDeaths),
+    lostBirths: Array.from(food.lostBirths),
+  };
+}
 
 /** Trade as a save stores it. */
 function tradeSave(
@@ -337,6 +389,7 @@ export function serializeGameState(state: GameState): SaveFile {
     },
     market: marketSave(state.market),
     trade: tradeSave(state.trade, state.market, state.buildings.imports),
+    food: foodSave(state.food),
   };
 }
 
@@ -502,6 +555,25 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'trade does not match the map and the goods');
   }
+  const f = save.food;
+  const rationingLevels = options.data.food.rationing.map((level) => level.id);
+  if (
+    !sameIds(f.levels, rationingLevels) ||
+    f.rationing.length !== map.countries.length ||
+    f.rationing.some((level) => level >= rationingLevels.length) ||
+    f.rationingChoice.length !== map.countries.length ||
+    f.rationingChoice.some((level) => level >= rationingLevels.length) ||
+    f.weekBasicGot.length !== map.countries.length ||
+    f.basicShortage.length !== map.countries.length ||
+    f.starvationDeaths.length !== map.countries.length ||
+    f.lostBirths.length !== map.countries.length ||
+    f.security.length !== pops ||
+    f.famineSince.length !== map.provinces.length ||
+    f.famineDeaths.length !== map.provinces.length ||
+    f.famineLostBirths.length !== map.provinces.length
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'food does not match the map');
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
@@ -548,6 +620,19 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         weekDays: t.weekDays,
         embargoes: t.embargoes,
         agreements: t.agreements,
+      },
+      food: {
+        rationing: Uint8Array.from(f.rationing),
+        rationingChoice: Int8Array.from(f.rationingChoice),
+        weekBasicGot: Float64Array.from(f.weekBasicGot),
+        weekDays: f.weekDays,
+        basicShortage: Float32Array.from(f.basicShortage),
+        security: Float32Array.from(f.security),
+        famineSince: Int32Array.from(f.famineSince),
+        famineDeaths: Float64Array.from(f.famineDeaths),
+        famineLostBirths: Float64Array.from(f.famineLostBirths),
+        starvationDeaths: Float64Array.from(f.starvationDeaths),
+        lostBirths: Float64Array.from(f.lostBirths),
       },
     },
   });

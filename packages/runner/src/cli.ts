@@ -122,6 +122,14 @@ function runOne(data: GameData, days: number, seed: number): boolean {
       `to ×${summary.trade.highestWorld.price.toFixed(2)} (${summary.trade.highestWorld.good}); ` +
       `least delivered ${(summary.trade.leastDelivered * 100).toFixed(0)} %`,
   );
+  const { food } = summary;
+  console.log(
+    `Food           reserves ${food.reserveDays.toFixed(1)} days; ` +
+      `${(food.starving * 100).toFixed(2)} % of people starving, ${(food.severe * 100).toFixed(2)} % severely ` +
+      `(most: ${food.worst.country || 'none'} ${(food.worst.starving * 100).toFixed(0)} %); ` +
+      `${food.famines} provinces in famine; starvation deaths ${Math.round(food.deaths).toLocaleString('en-US')}, ` +
+      `lost births ${Math.round(food.lostBirths).toLocaleString('en-US')}; rationing (none/light/strict/emergency) ${food.rationing.join('/')}`,
+  );
   console.log(`State hash      ${summary.stateHash}`);
   return summary.dailyTicks.withinBudget && summary.weeklyTicks.withinBudget;
 }
@@ -150,7 +158,7 @@ function runStress(
   const provinces = data.provinces.provinces.length;
   const countries = data.countries.countries.length;
   console.log(
-    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07, the real markets since F65 and the real trade since F19)',
+    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07, the real markets since F65, the real trade since F19 and the real food since F08)',
   );
   console.log('────────────────────────────────────────────────────────────────────────────');
   console.log(
