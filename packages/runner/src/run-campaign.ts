@@ -168,8 +168,10 @@ function tradeSummary(state: GameState): CampaignSummary['trade'] {
       imported += trade.importValue[c * goods + g];
     }
     value += imported;
-    if (exported > topExporter.value) topExporter = { country: world.countryIds[c], value: exported };
-    if (imported > topImporter.value) topImporter = { country: world.countryIds[c], value: imported };
+    if (exported > topExporter.value)
+      topExporter = { country: world.countryIds[c], value: exported };
+    if (imported > topImporter.value)
+      topImporter = { country: world.countryIds[c], value: imported };
   }
   let lowestWorld = { good: '', price: Infinity };
   let highestWorld = { good: '', price: 0 };

@@ -456,7 +456,13 @@ function splitGood(trade: TradeState, g: number, base: number, world: number): v
  * exporter, of what it sells at home at the base price and what its exports
  * fetch on the World Market.
  */
-function referencePrice(trade: TradeState, c: number, g: number, base: number, home: number): number {
+function referencePrice(
+  trade: TradeState,
+  c: number,
+  g: number,
+  base: number,
+  home: number,
+): number {
   const m = c * trade.goodCount + g;
   const imported = trade.imports[m];
   const exported = trade.exports[m];

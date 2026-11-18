@@ -314,7 +314,8 @@ function tradeSnapshot(trade: TradeState, country: number): TradeSnapshot {
   const first = weeks < HISTORY_WEEKS ? 0 : trade.historyNext;
   for (let g = 0; g < goods; g++)
     for (let w = 0; w < weeks; w++)
-      worldHistory[g * weeks + w] = trade.history[g * HISTORY_WEEKS + ((first + w) % HISTORY_WEEKS)];
+      worldHistory[g * weeks + w] =
+        trade.history[g * HISTORY_WEEKS + ((first + w) % HISTORY_WEEKS)];
   const fromPartner = new Float32Array(goods * (n + 1));
   const toPartner = new Float32Array(goods * n);
   for (let g = 0; g < goods; g++) {

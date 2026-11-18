@@ -9,8 +9,8 @@ import { type MarketRow, countryMarket, priceMood, sparklinePoints } from './mar
  * The Markets screen (Economy lens; F65, section 8.6): the player's
  * country's national market. Every good with its price (and how it compares
  * with its base price), its price over the past weeks, what is sold and
- * bought in a day and by whom, the standing imports and the stock. The
- * prices follow Victoria 3's rule, weekly.
+ * bought in a day and by whom (F19: exporters too), the imports, the world
+ * price and the stock. The prices follow Victoria 3's rule, weekly.
  */
 export function MarketsScreen({
   state,
@@ -18,10 +18,10 @@ export function MarketsScreen({
   readonly state: AppState;
   readonly actions: ShellActions;
 }) {
-  const { world, market, buildings, goods, playerCountry, countryScreen } = state;
+  const { world, market, buildings, goods, playerCountry, countryScreen, trade } = state;
   if (!world || !market || !buildings || !goods || playerCountry === null) return null;
   const country = playerCountry;
-  const rows = countryMarket(market, buildings, goods, country, true);
+  const rows = countryMarket(market, buildings, goods, country, true, trade);
   const shortage = market.shortage[country] ?? 0;
   const flagCode = countryScreen?.flagCodes[country];
 
@@ -50,11 +50,13 @@ export function MarketsScreen({
               <th title={t('MARKETS_PRICE_HINT')}>{t('MARKETS_PRICE')}</th>
               <th title={t('MARKETS_VS_BASE_HINT')}>{t('MARKETS_VS_BASE')}</th>
               <th title={t('MARKETS_HISTORY_HINT')}>{t('MARKETS_HISTORY')}</th>
+              <th title={t('TRADE_WORLD_PRICE_HINT')}>{t('TRADE_WORLD_PRICE')}</th>
               <th title={t('MARKETS_SELL_HINT')}>{t('MARKETS_SELL')}</th>
               <th title={t('MARKETS_BUY_HINT')}>{t('MARKETS_BUY')}</th>
               <th>{t('MARKETS_BUILDINGS')}</th>
               <th>{t('MARKETS_POPS')}</th>
               <th title={t('MARKETS_REST_HINT')}>{t('MARKETS_REST')}</th>
+              <th title={t('MARKETS_EXPORTS_HINT')}>{t('MARKETS_EXPORTS')}</th>
               <th>{t('MARKETS_STOCK')}</th>
             </tr>
           </thead>
@@ -89,6 +91,9 @@ function MarketLine({ row }: { readonly row: MarketRow }) {
       <td>
         <PriceLine history={row.history} />
       </td>
+      <td data-testid={`markets-world-${row.good}`}>
+        {row.worldPrice === null ? '—' : formatPrice(row.worldPrice, row.unit)}
+      </td>
       <td
         title={
           row.imported > 0
@@ -108,6 +113,9 @@ function MarketLine({ row }: { readonly row: MarketRow }) {
         {amount(row.popsBuy)}
       </td>
       <td>{amount(row.restBuy)}</td>
+      <td data-testid={`markets-exports-${row.good}`}>
+        {row.exportsBuy > 0 ? amount(row.exportsBuy) : '—'}
+      </td>
       <td>
         {!row.stored
           ? t('STOCKPILE_NOT_STORED')
@@ -123,7 +131,7 @@ function MarketLine({ row }: { readonly row: MarketRow }) {
 }
 
 /** The price of the past weeks as a small line: the base price is the dashed middle. */
-function PriceLine({ history }: { readonly history: readonly number[] }) {
+export function PriceLine({ history }: { readonly history: readonly number[] }) {
   const width = 72;
   const height = 22;
   const points = sparklinePoints(history, width, height);

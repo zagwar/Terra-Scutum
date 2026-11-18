@@ -194,7 +194,12 @@ describe('embargoes and trade agreements (F19, test commands until diplomacy)', 
     run(10);
     const before = state.trade.landed[at('AAA', 'coal')];
     expect(
-      state.applyCommand({ type: 'debugSetTradeAgreement', country: 'BBB', target: 'AAA', on: true }),
+      state.applyCommand({
+        type: 'debugSetTradeAgreement',
+        country: 'BBB',
+        target: 'AAA',
+        on: true,
+      }),
     ).toEqual({ ok: true });
     const base = state.market.basePrice[GOODS.indexOf('coal')];
     expect(state.trade.landed[at('AAA', 'coal')]).toBeCloseTo(before - 0.05 * base, 3);

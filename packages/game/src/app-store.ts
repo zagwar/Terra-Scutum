@@ -9,6 +9,7 @@ import type {
   PopsConfig,
   PopulationSnapshot,
   SimSnapshot,
+  TradeSnapshot,
   WorldMap,
 } from '@terra-scutum/sim';
 import type { RendererType } from './render/create-engine';
@@ -57,6 +58,12 @@ export interface AppState extends PanelState {
    * buildings and kept apart from the snapshot like them.
    */
   readonly market: MarketSnapshot | null;
+  /**
+   * Trade between the markets (F19): the World Market, every country's
+   * imports and exports, the player's country's partners; null until the
+   * sim is ready. Sent with the buildings and kept apart like them.
+   */
+  readonly trade: TradeSnapshot | null;
   /** Building types with their recipes (`data/buildings.json`) and the goods (`data/goods.json`); null until the sim is ready. */
   readonly buildingTypes: BuildingsConfig | null;
   readonly goods: GoodsConfig | null;
@@ -126,6 +133,7 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     populationDensityColors: [],
     buildings: null,
     market: null,
+    trade: null,
     buildingTypes: null,
     goods: null,
     industryColors: [],

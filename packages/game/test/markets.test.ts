@@ -48,10 +48,10 @@ describe('reading the market snapshot', () => {
     expect(of('grain').priceFactor).toBeLessThan(1.1);
   });
 
-  it('splits the buy orders between buildings, people and the rest of the economy', () => {
+  it('splits the buy orders between buildings, people, the rest of the economy and exporters', () => {
     for (const row of rows) {
       if (!row.stored) continue;
-      expect(row.buildingsBuy + row.popsBuy + row.restBuy).toBeCloseTo(row.buy, 3);
+      expect(row.buildingsBuy + row.popsBuy + row.restBuy + row.exportsBuy).toBeCloseTo(row.buy, 3);
     }
     // People buy grain and processed food; no building uses processed food.
     expect(of('grain').popsBuy).toBeGreaterThan(0);

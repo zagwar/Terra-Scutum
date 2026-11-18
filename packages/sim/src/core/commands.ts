@@ -223,7 +223,8 @@ function pairCommand(
   }
   const a = state.world.countryIndex.get(command.country) ?? 0;
   const b = state.world.countryIndex.get(command.target) ?? 0;
-  if (a === b || typeof command.on !== 'boolean') return { ok: false, reasonKey: 'COMMAND_INVALID' };
+  if (a === b || typeof command.on !== 'boolean')
+    return { ok: false, reasonKey: 'COMMAND_INVALID' };
   if (change(state.trade, a, b, command.on)) {
     resplitTrade(state.trade, state.market);
     state.buildings.changes += 1;

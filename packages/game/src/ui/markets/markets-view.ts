@@ -1,4 +1,9 @@
-import type { BuildingsSnapshot, GoodsConfig, MarketSnapshot } from '@terra-scutum/sim';
+import type {
+  BuildingsSnapshot,
+  GoodsConfig,
+  MarketSnapshot,
+  TradeSnapshot,
+} from '@terra-scutum/sim';
 
 /**
  * Reads the market snapshot (F65) for the Markets screen: a country's goods
@@ -16,14 +21,17 @@ export interface MarketRow {
   readonly price: number;
   readonly basePrice: number;
   readonly priceFactor: number;
-  /** A day's sell orders: what the country makes plus its standing imports (electricity: what the plants could make). */
+  /** A day's sell orders: what the country makes plus what arrived from abroad (F19; electricity: what the plants could make). */
   readonly sell: number;
   readonly imported: number;
-  /** A day's buy orders: everyone's, then by buyer. */
+  /** A day's buy orders: everyone's, then by buyer (F19: exporters too). */
   readonly buy: number;
   readonly buildingsBuy: number;
   readonly popsBuy: number;
   readonly restBuy: number;
+  readonly exportsBuy: number;
+  /** F19: the World Market's price (null for goods that can't be traded, or without trade). */
+  readonly worldPrice: number | null;
   /** What the pops got of what they wanted today (0–1). */
   readonly popsGot: number;
   /** In stock, and how many days of today's buying it holds (null for electricity or when nobody buys). */
@@ -41,6 +49,8 @@ export function countryMarket(
   country: number,
   /** True for the player's country: the snapshot's price history is the player's. */
   withHistory: boolean,
+  /** F19: trade, for the world prices. */
+  trade: TradeSnapshot | null = null,
 ): MarketRow[] {
   const rows: MarketRow[] = [];
   goods.goods.forEach((good, g) => {
@@ -74,6 +84,8 @@ export function countryMarket(
         : Math.max(0, market.buildingOrder[at] - popsBuy - restBuy),
       popsBuy,
       restBuy,
+      exportsBuy: market.exportOrder[at],
+      worldPrice: trade && trade.tradable[g] ? trade.worldPrice[g] : null,
       popsGot: popsBuy > 0 ? market.popGot[at] / popsBuy : 1,
       stock,
       stockDays: stored && buy > 0 ? stock / buy : null,
