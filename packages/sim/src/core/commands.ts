@@ -54,6 +54,16 @@ export type SimCommand =
    */
   | { readonly type: 'debugFillStockpile'; readonly country: string; readonly days: number }
   /**
+   * Diagnostic (F19): sets the level of every building of one type (by id)
+   * in the world, as a world-wide disaster might. Used by tests, so that no
+   * country can export what those buildings make.
+   */
+  | {
+      readonly type: 'debugSetBuildingLevelEverywhere';
+      readonly building: string;
+      readonly level: number;
+    }
+  /**
    * Diagnostic (F19): two countries (by id) stop trading with each other
    * (`on`) or start again, as embargoes and sanctions will with diplomacy
    * and the UN (M6). Importers turn to other suppliers at once. Used by
@@ -201,6 +211,23 @@ const HANDLERS: CommandHandlers = {
       return { ok: false, reasonKey: 'COMMAND_INVALID' };
     }
     fillStockpile(state, country, command.days);
+    return OK;
+  },
+  debugSetBuildingLevelEverywhere(state, command): CommandResult {
+    const type = state.buildings.typeIds.indexOf(command.building);
+    if (type < 0) {
+      return {
+        ok: false,
+        reasonKey: 'COMMAND_UNKNOWN_BUILDING',
+        params: { building: String(command.building) },
+      };
+    }
+    if (!Number.isInteger(command.level) || command.level < 0 || command.level > 65535) {
+      return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    }
+    const { level, typeCount } = state.buildings;
+    for (let p = 0; p < state.world.provinceIds.length; p++)
+      if (level[p * typeCount + type] > 0) setBuildingLevel(state, p, type, command.level);
     return OK;
   },
   debugSetEmbargo(state, command): CommandResult {

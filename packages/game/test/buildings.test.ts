@@ -40,13 +40,10 @@ const newGame = () => {
     });
   };
   /** Sets the level of one building type in every province of the world that has it (F19: so nobody can export its goods). */
-  const setWorldLevels = (building: string, level: number) => {
-    const type = state.buildings.typeIds.indexOf(building);
-    state.world.provinceIds.forEach((provinceId, index) => {
-      if (state.buildings.level[index * state.buildings.typeCount + type] === 0) return;
-      state.applyCommand({ type: 'debugSetBuildingLevel', province: provinceId, building, level });
-    });
-  };
+  const setWorldLevels = (building: string, level: number) =>
+    expect(
+      state.applyCommand({ type: 'debugSetBuildingLevelEverywhere', building, level }),
+    ).toEqual({ ok: true });
   return { state, province, country, snapshot, setCountryLevels, setWorldLevels };
 };
 const { state, province, country, snapshot } = newGame();

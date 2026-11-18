@@ -206,6 +206,24 @@ describe('embargoes and trade agreements (F19, test commands until diplomacy)', 
     expect(state.trade.tariffIncome[state.world.countryIndex.get('AAA')!]).toBe(0);
   });
 
+  it('closing a building type everywhere leaves nothing to import (test command)', () => {
+    const { state, at, output, run } = game();
+    expect(
+      state.applyCommand({
+        type: 'debugSetBuildingLevelEverywhere',
+        building: 'coal_mine',
+        level: 0,
+      }),
+    ).toEqual({ ok: true });
+    run(60);
+    expect(state.trade.exports[at('BBB', 'coal')]).toBe(0);
+    expect(output('alpha_west', 'mill')).toBe(0);
+    expect(
+      state.applyCommand({ type: 'debugSetBuildingLevelEverywhere', building: 'castle', level: 0 })
+        .ok,
+    ).toBe(false);
+  });
+
   it('refuses bad commands', () => {
     const { state } = game();
     for (const bad of [

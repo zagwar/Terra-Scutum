@@ -309,13 +309,15 @@ function PartnersTab({
   const [target, setTarget] = useState<number | null>(null);
   if (!trade || !market || !goods || !world) return null;
   const rows = tradePartners(trade, market, goods);
-  const goodList = (ids: readonly string[]) =>
-    ids.length === 0
-      ? '—'
-      : ids
-          .slice(0, 3)
-          .map((id) => tKey(goodNameKey(id)))
-          .join(', ') + (ids.length > 3 ? '…' : '');
+  const goodList = (ids: readonly string[]) => {
+    if (ids.length === 0) return '—';
+    const text =
+      ids
+        .slice(0, 3)
+        .map((id) => tKey(goodNameKey(id)))
+        .join(', ') + (ids.length > 3 ? '…' : '');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
   const others = world.countryIds
     .map((_, index) => index)
     .filter((index) => index !== trade.country)

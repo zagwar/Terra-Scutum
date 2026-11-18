@@ -46,6 +46,18 @@ const screenPosition = (page: Page, longitude: number, latitude: number) =>
   ] as const);
 
 /** Sets the level of one building type in every province of a country that has it (0 closes them). */
+/** Sets the level of one building type in every province of the world that has it (F19: so nobody can export its goods). */
+const setWorldLevels = (page: Page, building: string, level: number) =>
+  page.evaluate(
+    ([buildingId, to]) =>
+      window.__terraScutum!.sendCommand({
+        type: 'debugSetBuildingLevelEverywhere',
+        building: buildingId,
+        level: to,
+      }),
+    [building, level] as const,
+  );
+
 const setCountryLevels = (page: Page, country: string, building: string, level: number) =>
   page.evaluate(
     async ([countryId, buildingId, to]) => {
@@ -180,8 +192,8 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await expect(page.getByTestId('stockpile-stock-iron_ore')).toHaveText(/^5\.\d\d Mt$/);
   await expect(page.getByTestId('stockpile-made-iron_ore')).toHaveText('128 kt');
   await expect(page.getByTestId('stockpile-used-iron_ore')).toHaveText('352 kt');
-  // The United States mines less iron ore than its mills use: standing imports bring the rest.
-  await expect(page.getByTestId('stockpile-imported-iron_ore')).toHaveText('242 kt');
+  // The United States mines less iron ore than its mills use: trade brings the rest (F19).
+  await expect(page.getByTestId('stockpile-imported-iron_ore')).toHaveText('224 kt');
   await expect(page.getByTestId('stockpile-stock-electricity')).toHaveText("can't be stored");
   // No building uses processed food, but people buy it (F65): it is in stock.
   await expect(page.getByTestId('stockpile-stock-processed_food')).toContainText('Mt');
@@ -201,12 +213,13 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   // Profit and wage level for each building type (F65).
   await expect(page.getByTestId('buildings-profit-steel_mill')).toContainText('$');
 
-  // The United States' oil fields close: when the crude oil in stock runs out, the
-  // refineries run only on the standing imports, and the alerts row says so.
-  await setCountryLevels(page, 'USA', 'oil_field', 0);
+  // Every oil field in the world closes (F19: otherwise the United States
+  // imports its crude oil): when the crude oil in stock runs out, the
+  // refineries stop, and the alerts row says so.
+  await setWorldLevels(page, 'oil_field', 0);
   await expect(page.getByTestId('stockpile-lasts-crude_oil')).toHaveText(/^\d+ days$/);
   await page.evaluate(() => window.__terraScutum!.step(20));
-  await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('5 %');
+  await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('0 %');
   await expect(page.getByTestId('buildings-held-back')).not.toHaveText('0');
   await page.getByTestId('stockpile').scrollIntoViewIfNeeded();
   await shot('screen-held-back');
@@ -215,7 +228,7 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await expect(alert).toHaveCount(1);
   await expect(alert).toHaveAttribute('data-alert-type', 'idle_factory');
 
-  // The test button refills the stockpile (as trade will): the refineries run again.
+  // The test button refills the stockpile: the refineries run again.
   await page.getByTestId('stockpile-test-fill').click();
   await expect(page.getByTestId('buildings-output-oil_refinery')).toHaveText('100 %');
   await expect(alert).toHaveCount(0);
@@ -226,7 +239,7 @@ test('the Buildings screen shows the country’s buildings and its national stoc
   await expect(alert).toHaveCount(1);
   await alert.hover();
   await expect(alert).toContainText('Oil refinery in');
-  await expect(alert).toContainText('runs at 5 %');
+  await expect(alert).toContainText('runs at 0 %');
   await shot('alert');
   await alert.click();
   await expect(page.getByTestId('building-limit-oil_refinery')).toHaveText(
