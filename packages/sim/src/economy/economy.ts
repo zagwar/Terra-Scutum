@@ -178,72 +178,79 @@ export function calibrateMarkets(
     reserves[cell] = rules.startingReserves * reserveCap(buildings, population, cell, rules.reserveDays);
   }
 
-  // 2. A trial of the first day: production, pay and profits.
+  // 2. Production, pay, profits, wealth, the substitution shares, the
+  // standing imports for the pops and the rest of the economy settle
+  // together over a few rounds (each depends on the others): each round a
+  // trial of the first day, then the pops' incomes and wealth, their orders,
+  // the imports they need and what the rest of the economy buys.
   const trial = buildings.trialStock;
-  trial.set(buildings.stock);
-  wholeDay(population, buildings, market, owner, data, trial);
   const ownersGroup = data.pops.groups.findIndex((group) => group.id === 'owners');
   const keep =
     rules.depositWhenEmpty - (rules.depositWhenEmpty - rules.depositAtFull) * rules.startingReserves;
-  market.dividend.fill(0);
-  for (let i = 0; i < cellCount; i++) {
-    const cell = cells[i];
-    if (recipeSubsistence[recipeOf(buildings, cell)] === 1 || ownersGroup < 0) continue;
-    const profit = buildings.revenue[cell] - buildings.inputCost[cell] - buildings.wages[cell];
-    if (profit > 0)
-      market.dividend[((cell / typeCount) | 0) * groups + ownersGroup] += profit * (1 - keep);
-  }
   const { size, standInJobs, wage, income } = population;
-  for (let i = 0; i < size.length; i++)
-    income[i] =
-      size[i] > 0
-        ? (buildings.popPay[i] +
-            standInJobs[i] * buildings.standInFill[i] * wage[i] +
-            market.dividend[i]) /
-          size[i]
-        : 0;
-
-  // 3. Wealth, shares and the standing imports for the pops, settled together.
-  const { goodCount, electricityGood, popOrder, sell, buy } = market;
-  const { made, imports, ordered } = buildings;
+  const { goodCount, electricityGood, popOrder, restOrder, sell, buy } = market;
+  const { made, imports, ordered, otherPowerPerPerson } = buildings;
+  const { restPerPerson, countryPeople, popPower } = market;
   const importShare = data.buildings.standIns.standingImportsShare;
-  for (let round = 0; round < 4; round++) {
+  const restShare = data.buildings.standIns.restOfEconomyShare;
+  // F85's electricity for the rest of the economy and homes: the pops' part comes out of it.
+  const otherPower = otherPowerPerPerson.slice();
+  for (let round = 0; round < 6; round++) {
+    trial.set(buildings.stock);
+    wholeDay(population, buildings, market, owner, data, trial);
+    market.dividend.fill(0);
+    for (let i = 0; i < cellCount; i++) {
+      const cell = cells[i];
+      if (recipeSubsistence[recipeOf(buildings, cell)] === 1 || ownersGroup < 0) continue;
+      const profit = buildings.revenue[cell] - buildings.inputCost[cell] - buildings.wages[cell];
+      if (profit > 0)
+        market.dividend[((cell / typeCount) | 0) * groups + ownersGroup] += profit * (1 - keep);
+    }
+    for (let i = 0; i < size.length; i++)
+      income[i] =
+        size[i] > 0
+          ? (buildings.popPay[i] +
+              standInJobs[i] * buildings.standInFill[i] * wage[i] +
+              market.dividend[i]) /
+            size[i]
+          : 0;
     for (let m = 0; m < sell.length; m++) {
-      sell[m] = made[m] + imports[m];
-      buy[m] = ordered[m] + popOrder[m];
+      // As `marketDay` counts them: electricity is on sale as far as the
+      // plants could make it, and its orders (everyone's) are what was asked.
+      if (m % goodCount === electricityGood) {
+        sell[m] = buildings.powerPotential[(m / goodCount) | 0];
+        buy[m] = ordered[m];
+      } else {
+        sell[m] = made[m] + imports[m];
+        buy[m] = ordered[m] + popOrder[m] + restOrder[m];
+      }
     }
     updateShares(market, sell, buy, popOrder, data.pops.wealth.substitution.otherBuyersWeight);
     updateWealth(market, population, owner, data, true);
     computeOrders(market, population, owner);
-    for (let m = 0; m < sell.length; m++) {
-      if (m % goodCount === electricityGood) continue;
-      const missing = ordered[m] + popOrder[m] - made[m] - imports[m];
-      if (missing > 0) imports[m] += importShare * missing;
+    for (let c = 0; c < market.countryCount; c++) {
+      const people = countryPeople[c];
+      for (let g = 0; g < goodCount; g++) {
+        const m = c * goodCount + g;
+        if (g === electricityGood) continue;
+        // What the pops want but the country doesn't get comes in (until trade, F19)…
+        const missing = ordered[m] + popOrder[m] - made[m] - imports[m];
+        if (missing > 0) imports[m] += importShare * missing;
+        // …and the rest of the economy buys what is left over.
+        const left = made[m] + imports[m] - ordered[m] - popOrder[m];
+        restPerPerson[m] = left > 0 && people > 0 ? (restShare * left) / people : 0;
+      }
     }
+    for (let p = 0; p < otherPowerPerPerson.length; p++) {
+      const c = owner[p];
+      const pops = countryPeople[c] > 0 ? popPower[c] / countryPeople[c] : 0;
+      otherPowerPerPerson[p] = Math.max(0, otherPower[p] - pops);
+    }
+    computeOrders(market, population, owner);
   }
   const below = data.pops.wealth.expectedBelowStart;
   for (let i = 0; i < size.length; i++)
     population.expectedLiving[i] = Math.max(1, population.wealth[i] - below);
-
-  // The rest of the economy buys what is left over; the pops' electricity
-  // comes out of what F85 gave the rest of the economy and homes.
-  const { restPerPerson, countryPeople, popPower } = market;
-  for (let c = 0; c < market.countryCount; c++) {
-    const people = countryPeople[c];
-    for (let g = 0; g < goodCount; g++) {
-      const m = c * goodCount + g;
-      if (g === electricityGood || people <= 0) continue;
-      const left = made[m] + imports[m] - ordered[m] - popOrder[m];
-      restPerPerson[m] = left > 0 ? (data.buildings.standIns.restOfEconomyShare * left) / people : 0;
-    }
-  }
-  const { otherPowerPerPerson } = buildings;
-  for (let p = 0; p < otherPowerPerPerson.length; p++) {
-    const c = owner[p];
-    const pops = countryPeople[c] > 0 ? popPower[c] / countryPeople[c] : 0;
-    otherPowerPerPerson[p] = Math.max(0, otherPowerPerPerson[p] - pops);
-  }
-  computeOrders(market, population, owner);
 
   // The stockpiles start with so many days of everyone's buying.
   const { stock, capacityUse, startingDays } = buildings;
