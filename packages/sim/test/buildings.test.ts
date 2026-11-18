@@ -691,36 +691,6 @@ describe('electricity: the rest of the economy, fuel-free plants first, off the 
   });
 });
 
-describe('standing imports (F85)', () => {
-  it('bring every day what the starting buildings use but the country doesn’t make', () => {
-    const { state, stock, building } = newGame(
-      {
-        alpha_west: [
-          ['power_plant', 'turbines', 1],
-          ['mill', 'modern', 2],
-        ],
-      },
-      (b) => {
-        b.standIns.standingImportsShare = 1;
-        b.standIns.standingImportsBuffer = 0.1;
-      },
-    );
-    const aaa = state.world.countryIndex.get('AAA')!;
-    const imports = (good: string) =>
-      state.buildings.imports[aaa * GOODS.length + GOODS.indexOf(good)];
-    // The mills use 200 ore and 100 coal, the plant 100 coal; nothing is mined at home.
-    expect(imports('ore')).toBeCloseTo(200 * 1.1, 6);
-    expect(imports('coal')).toBeCloseTo(200 * 1.1, 6);
-    expect(imports('steel')).toBe(0);
-    expect(imports('electricity')).toBe(0);
-    run(state, 200);
-    expect(building('alpha_west', 'mill').output).toBe(1);
-    expect(stock('AAA', 'steel')).toBeCloseTo(30 * 120, 6);
-    // The surplus is lost at the stockpile's limit.
-    expect(stock('AAA', 'ore')).toBeLessThanOrEqual(30 * 220 + 1e-6);
-  });
-});
-
 describe('each province starts with the workers its buildings need (F85)', () => {
   it('keeps every province’s workforce and the country’s pop groups, and moves workers to the jobs', () => {
     const plain = newGame().state.population;
@@ -784,7 +754,7 @@ describe('older saves (F85)', () => {
 });
 
 describe('the game starts with the building and market systems', () => {
-  it('runs production in the energy, resource production and industry slots, then the market', () => {
+  it('runs production in the energy, resource production and industry slots, then the market and trade', () => {
     const { state } = newGame();
     state.enableProfiling(() => 0);
     state.advanceDay();
@@ -794,6 +764,7 @@ describe('the game starts with the building and market systems', () => {
       'resourceProduction',
       'industry',
       'market',
+      'trade',
     ]);
   });
 });

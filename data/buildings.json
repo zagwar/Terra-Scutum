@@ -751,8 +751,6 @@
   },
   "standIns": {
     "otherElectricityShare": 0.9,
-    "standingImportsShare": 1,
-    "standingImportsBuffer": 0.05,
     "restOfEconomyShare": 1
   }
 }

@@ -27,9 +27,8 @@ import type { PopulationState } from './population';
  * - **Goods:** each country has a **national stockpile**, since F65 its
  *   market's reserve. Buildings take their inputs from it and put their
  *   outputs in. When a good is short, every building that needs it gets the
- *   same share and runs at partial output. **Standing imports** (a stand-in
- *   until trade, F19) bring every day what the country's starting buildings
- *   and pops need but don't get at home.
+ *   same share and runs at partial output. **Imports** (trade, F19) arrive
+ *   in the stockpile every morning (`imports`, written by `tradeDay`).
  * - **Electricity** can't be stored: power plants make what the country's
  *   buildings and the rest of its economy ask for that day, as far as their
  *   fuel goes. Plants that burn nothing (nuclear, hydro, wind, solar) run
@@ -89,9 +88,10 @@ export interface BuildingsState {
   readonly startingDays: number;
   readonly maxDays: number;
 
-  // ── Fixed for the campaign (worked out from the starting buildings) ──────
-  /** Per country and good: the standing imports that arrive every day (never electricity). */
+  /** Per country and good: the imports that arrive tomorrow morning (F19: written by trade every day; never electricity). */
   readonly imports: Float64Array;
+
+  // ── Fixed for the campaign (worked out from the starting buildings) ──────
   /**
    * Per province: the electricity the rest of the economy and homes use, in
    * MWh per person a day (from its starting country; it follows the people).
@@ -240,7 +240,7 @@ export interface BuildingsRestore {
 /**
  * The buildings at the start of a campaign: the recipes from the data, every
  * province's starting buildings (`data/building_start.json`), each country's
- * starting stockpile, its standing imports and the electricity the rest of
+ * starting stockpile and the electricity the rest of
  * its economy uses. Call `linkStartingBuildings` next.
  */
 export function createBuildings(data: GameData, world: WorldMap): BuildingsState {
@@ -425,7 +425,7 @@ export function createBuildings(data: GameData, world: WorldMap): BuildingsState
 
   refreshLayout(buildings, world.provinceCountry, -1);
   // Its reserves come with the market (`createMarket`), which knows the wages.
-  const { stock, capacityUse, capacityMake, imports } = buildings;
+  const { stock, capacityUse, capacityMake } = buildings;
   const standIns = data.buildings.standIns;
   for (let c = 0; c < countries; c++) {
     const market = c * goodCount;
@@ -433,12 +433,6 @@ export function createBuildings(data: GameData, world: WorldMap): BuildingsState
       if (g === electricityGood) continue;
       // The starting stockpile: so many days of what the buildings use at full output.
       stock[market + g] = buildings.startingDays * capacityUse[market + g];
-      // Standing imports: what the buildings need but the country doesn't
-      // make, plus a small share of everything they use.
-      const missing = capacityUse[market + g] - capacityMake[market + g];
-      imports[market + g] =
-        (missing > 0 ? standIns.standingImportsShare * missing : 0) +
-        standIns.standingImportsBuffer * capacityUse[market + g];
     }
   }
   // The rest of the economy and homes use most of what the starting power
@@ -923,7 +917,7 @@ export function prepareDay(
  * given stockpiles, at the given prices (per country and good, F65): its
  * buildings ask for their inputs, get the same share of whatever is short,
  * and produce. What they make is in the stockpile when the step ends. The
- * first step also brings the standing imports. Each building's sales and
+ * first step also brings the day's imports (F19). Each building's sales and
  * input costs are counted (`revenue`, `inputCost`); a subsistence
  * building's workers are paid what it makes less its inputs.
  */
@@ -950,7 +944,7 @@ export function runStage(
   const to = buildings.stageOffsets[stage + 1];
 
   if (stage === 0) {
-    // The standing imports of the day arrive (a stand-in until trade, F19).
+    // The imports shipped yesterday arrive (F19).
     const imports = buildings.imports;
     for (let m = 0; m < stock.length; m++) stock[m] += imports[m];
   }

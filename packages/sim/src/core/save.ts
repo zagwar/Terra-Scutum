@@ -12,6 +12,7 @@ import {
 } from '../economy/buildings';
 import { MARKET_SAVED_ARRAYS, type MarketState } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
+import { type TradeState, pairList } from '../economy/trade';
 
 /**
  * Save format versioning.
@@ -26,7 +27,7 @@ import { createStartingEconomy } from '../economy/starting-economy';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 7;
+export const SAVE_FORMAT_VERSION = 8;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -103,6 +104,29 @@ const saveFileSchema = z.strictObject({
     weekIncome: z.array(z.number().min(0)),
     dividend: z.array(z.number().min(0)),
     weekDays: z.number().int().min(0).max(7),
+  }),
+  /**
+   * Trade (F19): per country and good (country by country, the goods in the
+   * order of `buildings.goods`) what it imports and exports a day (this
+   * week's plan), what arrives tomorrow morning (`arriving`), its market's
+   * reference price, and this week's arrivals and shipments so far; per good
+   * the world price and what the rest of the world sells a day; the days
+   * counted this week; the countries that don't
+   * trade (`embargoes`) and those without tariffs between them
+   * (`agreements`), as pairs of indexes into `map.countries`, two numbers each.
+   */
+  trade: z.strictObject({
+    imports: z.array(z.number().min(0)),
+    exports: z.array(z.number().min(0)),
+    arriving: z.array(z.number().min(0)),
+    referencePrice: z.array(z.number().positive()),
+    weekArrived: z.array(z.number().min(0)),
+    weekShipped: z.array(z.number().min(0)),
+    worldPrice: z.array(z.number().positive()),
+    restOfWorld: z.array(z.number().min(0)),
+    weekDays: z.number().int().min(0).max(7),
+    embargoes: z.array(z.number().int().min(0)),
+    agreements: z.array(z.number().int().min(0)),
   }),
 });
 
@@ -243,7 +267,37 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
       market: marketSave(market),
     };
   },
+  // Version 8 (F19) adds trade between the markets, replacing the standing
+  // imports. Older saves get the trade of a new campaign (its plans, arrivals
+  // and reference prices); their markets keep their prices until Monday.
+  7: (save, data) => {
+    const world = buildWorldMap(data);
+    const countryStart = buildCountryStartTable(data.countryStart, world);
+    const { market, trade, buildings } = createStartingEconomy(data, world, countryStart);
+    return { ...save, trade: tradeSave(trade, market, buildings.imports) };
+  },
 };
+
+/** Trade as a save stores it. */
+function tradeSave(
+  trade: TradeState,
+  market: MarketState,
+  arriving: Float64Array,
+): SaveFile['trade'] {
+  return {
+    imports: Array.from(trade.imports),
+    exports: Array.from(trade.exports),
+    arriving: Array.from(arriving),
+    referencePrice: Array.from(market.referencePrice),
+    weekArrived: Array.from(trade.weekArrived),
+    weekShipped: Array.from(trade.weekShipped),
+    worldPrice: Array.from(trade.worldPrice),
+    restOfWorld: Array.from(trade.restOfWorld),
+    weekDays: trade.weekDays,
+    embargoes: pairList(trade.embargo, trade.countryCount),
+    agreements: pairList(trade.agreement, trade.countryCount),
+  };
+}
 
 /** The markets as a save stores them. */
 function marketSave(market: MarketState): SaveFile['market'] {
@@ -282,6 +336,7 @@ export function serializeGameState(state: GameState): SaveFile {
       economy: buildingEconomyList(state.buildings),
     },
     market: marketSave(state.market),
+    trade: tradeSave(state.trade, state.market, state.buildings.imports),
   };
 }
 
@@ -430,6 +485,23 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'markets do not match the map and the goods');
   }
+  const t = save.trade;
+  const pairsFit = (pairs: readonly number[]) =>
+    pairs.length % 2 === 0 && pairs.every((c) => c < map.countries.length);
+  if (
+    t.imports.length !== markets ||
+    t.exports.length !== markets ||
+    t.arriving.length !== markets ||
+    t.referencePrice.length !== markets ||
+    t.weekArrived.length !== markets ||
+    t.weekShipped.length !== markets ||
+    t.worldPrice.length !== goods.length ||
+    t.restOfWorld.length !== goods.length ||
+    !pairsFit(t.embargoes) ||
+    !pairsFit(t.agreements)
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'trade does not match the map and the goods');
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
@@ -463,6 +535,19 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         weekIncome: Float64Array.from(m.weekIncome),
         dividend: Float64Array.from(m.dividend),
         weekDays: m.weekDays,
+      },
+      trade: {
+        imports: Float64Array.from(t.imports),
+        exports: Float64Array.from(t.exports),
+        arriving: Float64Array.from(t.arriving),
+        referencePrice: Float64Array.from(t.referencePrice),
+        weekArrived: Float64Array.from(t.weekArrived),
+        weekShipped: Float64Array.from(t.weekShipped),
+        worldPrice: Float64Array.from(t.worldPrice),
+        restOfWorld: Float64Array.from(t.restOfWorld),
+        weekDays: t.weekDays,
+        embargoes: t.embargoes,
+        agreements: t.agreements,
       },
     },
   });

@@ -4,6 +4,7 @@ import { type BuildingsState, recipeOf } from '../economy/buildings';
 import { ensureBuildingsReport } from '../economy/economy';
 import { HISTORY_WEEKS, type MarketState, reserveCap } from '../economy/market';
 import { ensurePopulationReport } from '../economy/population';
+import type { TradeState } from '../economy/trade';
 
 /**
  * What the sim worker sends to the game after ticks and commands: a small,
@@ -44,6 +45,53 @@ export interface SimSnapshot {
    * day's report and `buildingsVersion`).
    */
   readonly market?: MarketSnapshot;
+  /** Trade between the markets (F19), sent together with the buildings and the markets. */
+  readonly trade?: TradeSnapshot;
+}
+
+/**
+ * Trade as the game shows it (F19): the World Market, every country's
+ * imports and exports (per country and good at `c * goodCount + g`), and the
+ * player's country's partners.
+ */
+export interface TradeSnapshot {
+  readonly goodCount: number;
+  readonly countryCount: number;
+  /** Per good: 1 if it can be traded. */
+  readonly tradable: Uint8Array;
+  /** Per good: the world price, what the rest of the world sells a day, the share of the planned imports that arrived today. */
+  readonly worldPrice: Float64Array;
+  readonly restOfWorld: Float64Array;
+  readonly delivered: Float64Array;
+  /** The world prices of the last weeks, oldest first: `historyWeeks` per good (`g * historyWeeks + week`). */
+  readonly worldHistory: Float32Array;
+  readonly historyWeeks: number;
+  /** Per country and good: imports and exports a day (this week's plan), their values a day (US$), and what a unit of imports costs delivered. */
+  readonly imports: Float64Array;
+  readonly exports: Float64Array;
+  readonly importValue: Float64Array;
+  readonly exportValue: Float64Array;
+  readonly landed: Float64Array;
+  /** Per country: its tariff income a day (US$). */
+  readonly tariffIncome: Float64Array;
+  /** The country the partner numbers below are for (the player's). */
+  readonly country: number;
+  /** Per good and exporter (`g * (countryCount + 1) + e`; the rest of the world last): what the country buys from it a day. */
+  readonly fromPartner: Float32Array;
+  /** Per good and importer (`g * countryCount + i`): what the country sells to it a day. */
+  readonly toPartner: Float32Array;
+  /** Per partner: shipping from its capital to the country's (US$ per tonne), and the route's km on land and at sea. */
+  readonly shipping: Float32Array;
+  readonly landKm: Float32Array;
+  readonly seaKm: Float32Array;
+  /** Per partner: 1 if it has an embargo with the country, 1 if a trade agreement. */
+  readonly embargo: Uint8Array;
+  readonly agreement: Uint8Array;
+  /** The country's tariffs, as a share of the base price. */
+  readonly importTariff: number;
+  readonly exportTariff: number;
+  /** The rest of the world's shipping, as a share of the base price. */
+  readonly restOfWorldShipping: number;
 }
 
 /**
@@ -59,11 +107,13 @@ export interface MarketSnapshot {
   /** Today: sell orders (made + imported; electricity: what the plants could make) and buy orders (everyone). */
   readonly sell: Float64Array;
   readonly buy: Float64Array;
-  /** Today: what the pops and the rest of the economy wanted, and what they got. */
+  /** Today: what the pops, the rest of the economy and (F19) the exporters wanted, and what they got. */
   readonly popOrder: Float64Array;
   readonly popGot: Float64Array;
   readonly restOrder: Float64Array;
   readonly restGot: Float64Array;
+  readonly exportOrder: Float64Array;
+  readonly exportGot: Float64Array;
   /** Today: what the buildings asked for (their buy orders), and what was lost over the stockpile's limit. */
   readonly buildingOrder: Float64Array;
   readonly lost: Float64Array;
@@ -114,7 +164,7 @@ export interface BuildingsSnapshot {
   readonly made: Float64Array;
   readonly used: Float64Array;
   readonly stockLimit: Float64Array;
-  /** Per country and good: the standing imports that arrive every day (a stand-in until trade, F19). */
+  /** Per country and good: the imports that arrived this morning (trade, F19). */
   readonly imports: Float64Array;
   /** Per country: the electricity the rest of the economy and homes asked for today, and what they got (MWh). */
   readonly otherPowerWanted: Float64Array;
@@ -215,6 +265,7 @@ export function createSnapshot(state: GameState, known?: SnapshotKnown): SimSnap
       ? {
           buildings: buildingsSnapshot(state, buildings),
           market: marketSnapshot(state.market, buildings, state.playerCountry),
+          trade: tradeSnapshot(state.trade, state.playerCountry),
         }
       : {}),
   };
@@ -245,11 +296,71 @@ function marketSnapshot(
     popGot: market.popGot.slice(),
     restOrder: market.restOrder.slice(),
     restGot: market.restGot.slice(),
+    exportOrder: market.exportOrder.slice(),
+    exportGot: market.exportGot.slice(),
     buildingOrder: buildings.ordered.slice(),
     lost: market.lost.slice(),
     shortage: market.shortage.slice(),
     history,
     historyWeeks: weeks,
+  };
+}
+
+function tradeSnapshot(trade: TradeState, country: number): TradeSnapshot {
+  const goods = trade.goodCount;
+  const n = trade.countryCount;
+  const weeks = trade.historyCount;
+  const worldHistory = new Float32Array(goods * weeks);
+  const first = weeks < HISTORY_WEEKS ? 0 : trade.historyNext;
+  for (let g = 0; g < goods; g++)
+    for (let w = 0; w < weeks; w++)
+      worldHistory[g * weeks + w] =
+        trade.history[g * HISTORY_WEEKS + ((first + w) % HISTORY_WEEKS)];
+  const fromPartner = new Float32Array(goods * (n + 1));
+  const toPartner = new Float32Array(goods * n);
+  for (let g = 0; g < goods; g++) {
+    const at = g * (n + 1) * n;
+    for (let e = 0; e <= n; e++) fromPartner[g * (n + 1) + e] = trade.flows[at + e * n + country];
+    for (let i = 0; i < n; i++) toPartner[g * n + i] = trade.flows[at + country * n + i];
+  }
+  const shipping = new Float32Array(n);
+  const landKm = new Float32Array(n);
+  const seaKm = new Float32Array(n);
+  const embargo = new Uint8Array(n);
+  const agreement = new Uint8Array(n);
+  for (let p = 0; p < n; p++) {
+    shipping[p] = trade.shipping[p * n + country];
+    landKm[p] = trade.landKm[p * n + country];
+    seaKm[p] = trade.seaKm[p * n + country];
+    embargo[p] = trade.embargo[p * n + country];
+    agreement[p] = trade.agreement[p * n + country];
+  }
+  return {
+    goodCount: goods,
+    countryCount: n,
+    tradable: trade.tradable.slice(),
+    worldPrice: trade.worldPrice.slice(),
+    restOfWorld: trade.restOfWorld.slice(),
+    delivered: trade.delivered.slice(),
+    worldHistory,
+    historyWeeks: weeks,
+    imports: trade.imports.slice(),
+    exports: trade.exports.slice(),
+    importValue: trade.importValue.slice(),
+    exportValue: trade.exportValue.slice(),
+    landed: trade.landed.slice(),
+    tariffIncome: trade.tariffIncome.slice(),
+    country,
+    fromPartner,
+    toPartner,
+    shipping,
+    landKm,
+    seaKm,
+    embargo,
+    agreement,
+    importTariff: trade.importTariff[country],
+    exportTariff: trade.exportTariff[country],
+    restOfWorldShipping: trade.restOfWorldShipping,
   };
 }
 

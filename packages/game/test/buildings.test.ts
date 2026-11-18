@@ -39,7 +39,12 @@ const newGame = () => {
       state.applyCommand({ type: 'debugSetBuildingLevel', province: provinceId, building, level });
     });
   };
-  return { state, province, country, snapshot, setCountryLevels };
+  /** Sets the level of one building type in every province of the world that has it (F19: so nobody can export its goods). */
+  const setWorldLevels = (building: string, level: number) =>
+    expect(
+      state.applyCommand({ type: 'debugSetBuildingLevelEverywhere', building, level }),
+    ).toEqual({ ok: true });
+  return { state, province, country, snapshot, setCountryLevels, setWorldLevels };
 };
 const { state, province, country, snapshot } = newGame();
 const buildings = snapshot();
@@ -56,9 +61,11 @@ describe('the world’s starting buildings (F85)', () => {
       if (isHeldBack(report.limitKind[cell])) heldBack += 1;
     }
     // Only a microstate's one factory level is too big for its few workers
-    // (Liechtenstein), and (F65) a few small countries' homes ask for more
-    // electricity than their power plants have to spare.
-    expect(heldBack).toBeLessThanOrEqual(20);
+    // (Liechtenstein), and (F65) some small countries' homes ask for more
+    // electricity than their power plants have to spare (F19: a few more,
+    // since the standing imports' extra 5 % of fuels is gone and homes heat a
+    // little more with electricity; until construction, F12, and the grid, F74).
+    expect(heldBack).toBeLessThanOrEqual(40);
     expect(report.cellCount).toBeGreaterThan(10_000);
     expect(owners.size).toBeGreaterThan(165);
     expect(owners.has(country('USA'))).toBe(true);
@@ -135,18 +142,18 @@ describe('reading the buildings snapshot', () => {
     expect(steel.rows[0].level).toBeGreaterThanOrEqual(steel.rows[steel.rows.length - 1].level);
   });
 
-  it('shows a country’s national stockpile with its standing imports', () => {
+  it('shows a country’s national stockpile with its imports (F19)', () => {
     const rows = countryStockpile(buildings, goods, country('USA'));
     const of = (good: string) => rows.find((row) => row.good === good)!;
     expect(rows.map((row) => row.good)).toEqual(goods.goods.map((good) => good.id));
     // The steel mills use more iron ore than the United States mines: the rest is imported.
     const ore = of('iron_ore');
     expect(ore).toMatchObject({ stored: true, daysLeft: null });
-    // F65: 15 days of what everyone buys (the rest of the economy buys the 5 % extra).
+    // F65: 15 days of what everyone buys.
     expect(ore.stock).toBeGreaterThanOrEqual(15 * ore.used);
     expect(ore.stock).toBeLessThan(15 * ore.used * 1.1);
     expect(ore.made).toBeLessThan(ore.used);
-    expect(ore.imported).toBeCloseTo((ore.used - ore.made) * 1.05 + ore.made * 0.05, 0);
+    expect(ore.imported).toBeCloseTo(ore.used - ore.made, 0);
     // F65: no building uses processed food; the people buy it, so it is in stock.
     expect(of('processed_food')).toMatchObject({ used: 0 });
     expect(of('processed_food').stock).toBeGreaterThan(0);
@@ -171,8 +178,9 @@ describe('reading the buildings snapshot', () => {
     const stopped = () =>
       stoppedBuildings(game.snapshot(), data.buildings, game.state.provinceOwner, usa);
     expect(stopped()).toEqual({ count: 0, worst: null });
-    game.setCountryLevels('USA', 'oil_field', 0);
-    // The crude oil in stock lasts about 16 days; then only the imports come in.
+    // Every oil field in the world closes (F19: otherwise the United States imports its crude oil).
+    game.setWorldLevels('oil_field', 0);
+    // The crude oil in stock lasts about 16 days.
     for (let day = 0; day < 10; day++) game.state.advanceDay();
     expect(stopped().count).toBe(0);
     const crude = countryStockpile(game.snapshot(), goods, usa).find(
@@ -222,11 +230,11 @@ describe('the idle factory alert', () => {
     };
     pass(1);
     expect(store.getState().alerts).toEqual([]);
-    game.setCountryLevels('USA', 'oil_field', 0);
+    game.setWorldLevels('oil_field', 0);
     pass(20);
     const [alert] = store.getState().alerts;
     expect(alert).toMatchObject({ id: IDLE_BUILDINGS_ALERT_ID, typeId: 'idle_factory' });
-    expect(alert.params).toMatchObject({ building: 'Oil refinery', output: '5 %' });
+    expect(alert.params).toMatchObject({ building: 'Oil refinery', output: '0 %' });
     // Another country's trouble is not the player's alert.
     store.update({ playerCountry: game.country('DEU') });
     expect(store.getState().alerts).toEqual([]);

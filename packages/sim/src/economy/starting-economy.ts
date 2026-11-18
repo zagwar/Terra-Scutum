@@ -9,6 +9,7 @@ import {
 } from './buildings';
 import { calibrateMarkets } from './economy';
 import { type MarketState, createMarket } from './market';
+import { type TradeState, createTrade } from './trade';
 import { type PopulationState, createPopulation } from './population';
 
 /**
@@ -16,21 +17,27 @@ import { type PopulationState, createPopulation } from './population';
  * starting buildings (F07, F85), each province's pop mix fitted to its
  * buildings' jobs (`fitPopsToBuildings`), the buildings taking over
  * their jobs from the stand-in economy (`linkStartingBuildings`), and the
- * markets in balance at their base prices (F65, `calibrateMarkets`).
+ * markets and trade between them in balance (F65, F19, `calibrateMarkets`).
  */
 export function createStartingEconomy(
   data: GameData,
   world: WorldMap,
   countryStart: CountryStartTable,
-): { population: PopulationState; buildings: BuildingsState; market: MarketState } {
+): {
+  population: PopulationState;
+  buildings: BuildingsState;
+  market: MarketState;
+  trade: TradeState;
+} {
   const population = createPopulation(data, world, countryStart);
   const buildings = createBuildings(data, world);
   refreshBuildingJobs(buildings, population, -1);
   fitPopsToBuildings(population, world);
   linkStartingBuildings(buildings, population);
   const market = createMarket(data, world, population.groupCount);
-  calibrateMarkets(data, world, population, buildings, market);
-  return { population, buildings, market };
+  const trade = createTrade(data, world);
+  calibrateMarkets(data, world, population, buildings, market, trade);
+  return { population, buildings, market, trade };
 }
 
 /**

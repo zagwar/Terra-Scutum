@@ -75,7 +75,10 @@ test('the Markets screen shows prices that follow supply and demand', async ({
   await expect(page.getByTestId('markets-factor-grain')).toHaveText('×1.00');
   await expect(page.getByTestId('markets-price-electricity')).toHaveText('$100 per MWh');
   await expect(page.getByTestId('markets-shortage')).toContainText('got all the goods');
-  await expect(page.getByTestId('markets-note')).toContainText('F19');
+  await expect(page.getByTestId('markets-note')).toContainText('Trade screen');
+  // F19: the world price of goods that can be shipped; electricity can't.
+  await expect(page.getByTestId('markets-world-grain')).toHaveText('$600 per t');
+  await expect(page.getByTestId('markets-world-electricity')).toHaveText('—');
   await shot('screen');
 
   // Three weeks later the prices have moved a little, and the price lines have begun.
@@ -89,6 +92,11 @@ test('the Markets screen shows prices that follow supply and demand', async ({
   await expect(page.getByTestId('markets-factor-grain')).toHaveText('×1.75');
   await expect(page.getByTestId('markets-factor-grain')).toHaveClass(/price-dear/);
   await shot('screen-grain-short');
+
+  // F19: week by week the United States imports more grain, and its price comes down.
+  await page.evaluate(() => window.__terraScutum!.step(21));
+  await expect(page.getByTestId('markets-factor-grain')).not.toHaveText('×1.75');
+  await shot('screen-grain-imported');
 
   expect(problems).toEqual([]);
 });

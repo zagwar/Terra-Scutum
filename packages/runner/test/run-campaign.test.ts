@@ -21,7 +21,9 @@ describe('campaign runner', () => {
     expect(summary.buildings.count).toBeGreaterThan(10_000);
     expect(summary.buildings.averageOutput).toBeGreaterThan(0.99);
     expect(summary.buildings.heldBack).toBeLessThan(summary.buildings.count * 0.005);
-  });
+    // Two years of the real world (F19: with trade's weekly split) take a few
+    // seconds, more on CI's two-processor machines than Vitest's default 5 s.
+  }, 30_000);
 
   it('gives the same state hash for the same seed and a different one for another seed', () => {
     const systems: SystemRegistry = { population: { daily: (s) => void s.rng.nextUint32() } };

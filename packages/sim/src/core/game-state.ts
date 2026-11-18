@@ -21,6 +21,7 @@ import {
 } from '../economy/population';
 import { type MarketRestore, type MarketState, restoreMarket } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
+import { type TradeRestore, type TradeState, restoreTrade } from '../economy/trade';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -43,6 +44,8 @@ export interface GameStateOptions {
     readonly buildings: BuildingsRestore;
     /** The markets (F65): prices, this week's sums, shortages; missing in older saves. */
     readonly market?: MarketRestore;
+    /** Trade (F19): plans, arrivals, world and reference prices, embargoes, agreements; missing in older saves. */
+    readonly trade?: TradeRestore;
   };
 }
 
@@ -103,6 +106,12 @@ export class GameState {
    * trial run).
    */
   readonly market: MarketState;
+  /**
+   * Trade between the markets (F19, section 8.6): the World Market, what
+   * each country imports and exports, from and to whom, embargoes and trade
+   * agreements. Changed by the trade system; its report shares the markets'.
+   */
+  readonly trade: TradeState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -125,6 +134,7 @@ export class GameState {
     this.population = economy.population;
     this.buildings = economy.buildings;
     this.market = economy.market;
+    this.trade = economy.trade;
 
     if (options.restore) {
       this.day = options.restore.day;
@@ -138,6 +148,8 @@ export class GameState {
       restorePopulation(this.population, options.restore.population);
       restoreBuildings(this.buildings, this.population, options.restore.buildings);
       if (options.restore.market) restoreMarket(this.market, options.restore.market);
+      if (options.restore.trade)
+        restoreTrade(this.trade, this.market, this.buildings, options.restore.trade);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);

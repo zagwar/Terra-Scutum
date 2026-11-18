@@ -113,6 +113,15 @@ function runOne(data: GameData, days: number, seed: number): boolean {
       `${(markets.worstShortage.share * 100).toFixed(1)} %; wages ×${markets.averageWage.toFixed(2)} on average, ` +
       `${markets.layingOff} buildings laying off; standard of living ${markets.standardOfLiving.toFixed(1)}`,
   );
+  console.log(
+    `Trade          US$${(summary.trade.value / 1e9).toFixed(1)} bn a day imported, ` +
+      `${(summary.trade.restOfWorldShare * 100).toFixed(1)} % from the rest of the world; ` +
+      `top exporter ${summary.trade.topExporter.country} US$${(summary.trade.topExporter.value / 1e9).toFixed(2)} bn, ` +
+      `top importer ${summary.trade.topImporter.country} US$${(summary.trade.topImporter.value / 1e9).toFixed(2)} bn a day; ` +
+      `world prices ×${summary.trade.lowestWorld.price.toFixed(2)} (${summary.trade.lowestWorld.good}) ` +
+      `to ×${summary.trade.highestWorld.price.toFixed(2)} (${summary.trade.highestWorld.good}); ` +
+      `least delivered ${(summary.trade.leastDelivered * 100).toFixed(0)} %`,
+  );
   console.log(`State hash      ${summary.stateHash}`);
   return summary.dailyTicks.withinBudget && summary.weeklyTicks.withinBudget;
 }
@@ -141,7 +150,7 @@ function runStress(
   const provinces = data.provinces.provinces.length;
   const countries = data.countries.countries.length;
   console.log(
-    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07 and the real markets since F65)',
+    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07, the real markets since F65 and the real trade since F19)',
   );
   console.log('────────────────────────────────────────────────────────────────────────────');
   console.log(
@@ -153,7 +162,6 @@ function runStress(
       `${provinces * Math.max(Math.round(load.buildingsPerProvince * usedScale), data.buildings.buildings.length)} buildings ` +
       `(${provinces * data.buildings.buildings.length} of them the real ones, F07), ` +
       `${countries} markets × ${load.goods} goods, ` +
-      `${Math.round(load.tradeRoutes * usedScale)} trade routes, ` +
       `${Math.round(load.units * usedScale)} units, ` +
       `${Math.round(load.battles * usedScale)} battles`,
   );

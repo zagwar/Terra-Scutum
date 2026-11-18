@@ -213,6 +213,23 @@ export function testMarket() {
   };
 }
 
+/**
+ * A valid `trade.json` (F19), with trade **off**: every good is local, so
+ * countries trade nothing unless a test makes goods tradable
+ * (`localGoods: ['electricity']`, as in the game's data).
+ */
+export function testTrade() {
+  return {
+    localGoods: ['ore', 'coal', 'steel', 'electricity'],
+    shipping: { seaPerThousandKm: 1.5, landPerThousandKm: 20 },
+    tariffs: { import: 0.05, export: 0 },
+    volumes: { gapShare: 0.25, stockTargetDays: 15, stockRestoreWeeks: 4 },
+    partners: { halvingShare: 0.1, rounds: 8 },
+    worldPrice: { speed: 0.2 },
+    restOfWorld: { shippingShare: 0.1 },
+  };
+}
+
 /** A valid `goods.json` (F07, F65): the goods of the test buildings, with base prices. */
 export function testGoods() {
   return {
@@ -229,8 +246,8 @@ export function testGoods() {
 /**
  * A valid `buildings.json` (F07, F85) with round numbers: a mine, a coal
  * mine, a power plant that burns coal, one that burns nothing (a dam) and a
- * mill with two production methods. The stand-ins (standing imports, the
- * rest of the economy's electricity) are off unless a test turns them on.
+ * mill with two production methods. The stand-ins (the rest of the
+ * economy's buying and electricity) are off unless a test turns them on.
  */
 export function testBuildings() {
   return {
@@ -302,8 +319,6 @@ export function testBuildings() {
     stockpile: { startingDays: 10, maxDays: 30 },
     standIns: {
       otherElectricityShare: 0,
-      standingImportsShare: 0,
-      standingImportsBuffer: 0,
       restOfEconomyShare: 0,
     },
   };
@@ -538,7 +553,6 @@ export function testStressTest() {
       buildingsPerProvince: 2,
       inputsPerBuilding: 2,
       outputsPerBuilding: 1,
-      tradeRoutes: 4,
       units: 10,
       battles: 2,
       unitsPerBattleSide: 3,
@@ -595,6 +609,7 @@ export function testRawData(
     buildings: testBuildings(),
     buildingStart: testBuildingStart(),
     market: testMarket(),
+    trade: testTrade(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

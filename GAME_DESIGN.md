@@ -92,10 +92,15 @@ In January 2025 an unknown object is detected heading for Earth. The player lead
 | **Wage level** / **cash reserves** / **dividends** | What a building pays as a multiple of the going local wage / the money a building keeps from its profits / the rest of its profit, paid to its province's owners |
 | **Layoffs** | A building that loses money even at its lowest wage closes part of its jobs |
 | **Subsistence building** | A building whose workers share what it makes, with no wage or profit (subsistence farming, pastoral herding) |
-| **Rest of the economy** | A stand-in for everything the building catalog doesn't cover yet: it offers jobs (F06), uses electricity (F85) and buys goods, and exports until trade (F65) |
+| **Rest of the economy** | A stand-in for everything the building catalog doesn't cover yet: it offers jobs (F06), uses electricity (F85) and buys goods (F65; since F19 what is left after exports) |
 | **Building** / **level** / **recipe** | A production site in a province, one per building type / how big it is (more levels: more workers, inputs and output) / what one level uses and makes in a day: workers by pop group, electricity, inputs → outputs |
 | **Production method** | One of a building type's recipes (mechanized, traditional or subsistence farming…); a building runs one. Poorer countries run more labor-intensive ones |
-| **Standing imports** | Goods a country gets every day for its starting buildings and (F65) its pops, sold on its market, until trade between countries exists (a stand-in) |
+| **World Market** / **world price** | The one market every country trades on (F19, Victoria 3 1.9): goods flow through it from exporters to importers / its weekly price of a good, from the world's buy and sell orders |
+| **Imports** / **exports** / **delivered cost** | What a country buys abroad (sold on its market like its own goods) / sells abroad (bought on its market after its own buyers) / what a unit of imports costs when it arrives: world price + shipping + tariff |
+| **Reference price** | Where a market's price formula starts from (F19): the base price, or for a traded good the average of the country's own goods and its imports at their delivered cost |
+| **Shipping** / **tariff** | The cost of moving a tonne over the cheapest route between two capitals (land dearer than sea) / a share of a good's base price paid on imports or exports (none under a trade agreement) |
+| **Embargo** / **trade agreement** / **sanctions** | Two countries stop trading / trade without tariffs / embargoes from many countries at once (F19 built the effects; diplomacy and the UN make them, M6) |
+| **Rest of the world** | A stand-in seller on the World Market for what the world's buildings can't make enough of at the start (electronics, fuel, iron ore, copper ore), per person of the world (F19) |
 | **Output** (of a building) / **held back** | How much of its full output a building makes today, 0–100 % / running below that for lack of workers, electricity or an input |
 | **National stockpile** | A country's store of goods (since F65 its market's reserve): what is made and not bought goes in; buyers draw on it when a day's goods run short |
 | **Off the grid** | The share of its output a building keeps without electricity from the grid (its own generators, hand work) |

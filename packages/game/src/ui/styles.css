@@ -2675,3 +2675,41 @@ body {
   color: var(--color-text-dim);
   margin-left: 2px;
 }
+
+/* ── Trade (F19) ───────────────────────────────────────────────────────── */
+.trade-totals {
+  margin-bottom: 8px;
+}
+.trade-factor {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.trade-screen tr.is-selected > * {
+  background: rgba(200, 168, 90, 0.12);
+}
+.trade-good-partners {
+  margin-top: 12px;
+}
+.trade-good-partners h4 {
+  margin: 12px 0 6px;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.trade-who {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trade-who .flag,
+.trade-screen .link-button .flag {
+  width: 16px;
+  height: 12px;
+  vertical-align: -1px;
+}
+.trade-rest {
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+.trade-screen [data-status='bad'] {
+  color: var(--color-bad);
+}

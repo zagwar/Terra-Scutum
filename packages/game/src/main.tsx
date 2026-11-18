@@ -133,6 +133,7 @@ const sim = createSimClient({
       populationDensityColors: message.mapView.colors.populationDensity,
       buildings: message.snapshot.buildings ?? null,
       market: message.snapshot.market ?? null,
+      trade: message.snapshot.trade ?? null,
       buildingTypes: message.buildings,
       goods: message.goods,
       industryColors: message.mapView.colors.industry,
@@ -157,6 +158,7 @@ const sim = createSimClient({
       ...(snapshot.population ? { population: snapshot.population } : {}),
       ...(snapshot.buildings ? { buildings: snapshot.buildings } : {}),
       ...(snapshot.market ? { market: snapshot.market } : {}),
+      ...(snapshot.trade ? { trade: snapshot.trade } : {}),
     });
     debugHooks?.recordEvents(events);
     // Sim events that have a message type become messages (toasts, pop-ups, the log).

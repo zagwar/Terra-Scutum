@@ -13,7 +13,7 @@ import type { SimStressConfig } from './stress-config';
  * memory before the real systems exist. They are NOT the game's rules: the
  * numbers they compute mean nothing and nothing reads them. They only have
  * the right size and shape: typed arrays, loops over provinces, pop groups,
- * buildings, markets, trade routes, units and the province graph, random
+ * buildings, markets, units and the province graph, random
  * choices from the sim's RNG, no allocation in the daily tick.
  *
  * **Since F06 the pops are the real ones** (`GameState.population`, six pop
@@ -28,14 +28,18 @@ import type { SimStressConfig } from './stress-config';
  * since the building catalog (F85, 26 types) there are none left.
  *
  * **Since F65 the real markets run too** (the `market` slot): pops buy their
- * needs there, prices, wages and wealth move weekly. The placeholder's own
- * markets only feed the placeholder trade routes (until trade, F19).
+ * needs there, prices, wages and wealth move weekly.
  *
- * Daily: buildings produce from recipes (industry), trade routes move goods (trade), taxes are collected (budget),
+ * **Since F19 the real trade runs too** (the `trade` slot): the World
+ * Market, every country's imports and exports, who sells to whom. The
+ * placeholder trade routes are gone; the placeholder's own markets (which
+ * only its placeholder buildings used) are smoothed there still.
+ *
+ * Daily: buildings produce from recipes (industry), the real trade (trade), taxes are collected (budget),
  * supply flows over the province graph and units draw it (supply), the
  * Swarm grows and spreads (swarmGrowth, swarmSpread), laser coverage
  * (laserCoverage), battles (combat).
- * Weekly: market prices (trade), corporations weigh investments (industry),
+ * Weekly: the real trade's week and the placeholder market prices (trade), corporations weigh investments (industry),
  * every country's AI scores its options (diplomacyAi).
  *
  * Each placeholder sits in the slot of the system it stands in for, so the
@@ -78,9 +82,16 @@ export function createPlaceholderLoad(
     },
     // The real markets (F65): the pops' shopping, prices, wages and wealth.
     market: economySystems.market,
+    // The real trade (F19), then the placeholder markets' smoothing and prices.
     trade: {
-      daily: (state) => loadOf(state).trade(),
-      weekly: (state) => loadOf(state).updatePrices(),
+      daily: (state) => {
+        economySystems.trade?.daily?.(state);
+        loadOf(state).trade();
+      },
+      weekly: (state) => {
+        economySystems.trade?.weekly?.(state);
+        loadOf(state).updatePrices();
+      },
     },
     budget: { daily: (state) => loadOf(state).collectTaxes(state) },
     supply: { daily: (state) => loadOf(state).supply(state) },
@@ -133,7 +144,6 @@ function createLoad(
   const perProvince = Math.max(0, scaled(config.buildingsPerProvince) - real.typeCount);
   const inputs = config.inputsPerBuilding;
   const outputs = config.outputsPerBuilding;
-  const routes = scaled(config.tradeRoutes);
   const units = scaled(config.units);
   const battles = scaled(config.battles);
   const side = scaled(config.unitsPerBattleSide);
@@ -182,14 +192,6 @@ function createLoad(
     wage[b] = 1 + rng.nextFloat();
     for (let i = 0; i < inputs; i++) recipeIn[b * inputs + i] = rng.nextInt(0, goods);
     for (let o = 0; o < outputs; o++) recipeOut[b * outputs + o] = rng.nextInt(0, goods);
-  }
-
-  // ── Trade routes ──────────────────────────────────────────────────────
-  const routeFrom = keep(new Uint16Array(routes));
-  const routeTo = keep(new Uint16Array(routes));
-  for (let r = 0; r < routes; r++) {
-    routeFrom[r] = rng.nextInt(0, countries);
-    routeTo[r] = rng.nextInt(0, countries);
   }
 
   // ── Province values: supply, infestation, laser coverage ──────────────
@@ -265,17 +267,6 @@ function createLoad(
     },
 
     trade() {
-      for (let r = 0; r < routes; r++) {
-        const from = routeFrom[r] * goods;
-        const to = routeTo[r] * goods;
-        for (let g = 0; g < goods; g++) {
-          const gap = price[to + g] - price[from + g];
-          if (gap <= 0) continue;
-          const moved = Math.min(supplyToday[from + g] * 0.05, gap * 10);
-          supplyToday[from + g] -= moved;
-          supplyToday[to + g] += moved;
-        }
-      }
       // Today's market becomes the one the next days see (smoothed), then starts again.
       for (let m = 0; m < marketSize; m++) {
         supplyWeek[m] = 0.8 * supplyWeek[m] + 0.2 * supplyToday[m];

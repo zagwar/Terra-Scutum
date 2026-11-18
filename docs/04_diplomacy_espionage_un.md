@@ -11,7 +11,7 @@
   - Research sharing agreement (pooled research progress)
   - Send aid: Industry, equipment or divisions
   - Refugee agreements: "we take X refugees in exchange for Y"
-  - Sanctions / trade embargo
+  - Sanctions / trade embargo *(F19 built their effect on trade: an embargo stops all trade between two countries, a trade agreement takes the tariffs off, sanctions are embargoes from many countries; making them through diplomacy and the UN comes in M6. See section 8.6, "How trade works in the game".)*
   - Demand / ultimatum
   - Joint operation: shared command of an offensive
   - **Declare war** (section 6.2)

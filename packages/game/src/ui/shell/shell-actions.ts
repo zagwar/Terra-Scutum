@@ -70,6 +70,8 @@ export interface ShellActions {
     level: number,
   ) => Promise<CommandResult>;
   readonly testFillStockpile: (country: number, days: number) => Promise<CommandResult>;
+  /** Test tool (F19, until diplomacy, M6): starts or lifts an embargo between two countries. */
+  readonly testSetEmbargo: (country: number, target: number, on: boolean) => Promise<CommandResult>;
 }
 
 export function createShellActions({
@@ -217,6 +219,16 @@ export function createShellActions({
       const world = state().world;
       if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
       return sendCommand({ type: 'debugFillStockpile', country: world.countryIds[country], days });
+    },
+    async testSetEmbargo(country, target, on) {
+      const world = state().world;
+      if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({
+        type: 'debugSetEmbargo',
+        country: world.countryIds[country],
+        target: world.countryIds[target],
+        on,
+      });
     },
     async playAs(country) {
       const { world } = state();

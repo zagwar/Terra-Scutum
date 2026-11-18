@@ -122,7 +122,7 @@ export const buildingsSchema = z.strictObject({
     /** A country keeps at most this many days of what its market buys or sells in a day (its buildings at full output at least); the rest is lost. */
     maxDays: z.number().min(1).max(3650),
   }),
-  /** Stand-ins until markets (F65), trade (F19) and the power grid (F74) [DEFAULT]. */
+  /** Stand-ins until the building catalog covers the whole economy and the power grid (F74) [DEFAULT]. */
   standIns: z.strictObject({
     /**
      * Electricity the rest of the economy and homes use: this share of what
@@ -132,21 +132,9 @@ export const buildingsSchema = z.strictObject({
      */
     otherElectricityShare: z.number().min(0).max(1),
     /**
-     * Standing imports: every day a country gets this share of what its
-     * starting buildings and (F65) its pops want but it doesn't make at
-     * home. They are sold on its market like its own goods (until trade, F19).
-     */
-    standingImportsShare: z.number().min(0).max(10),
-    /**
-     * Plus this share of everything the starting buildings use (whether the
-     * country makes it or not), so that a few workers or a little
-     * electricity short doesn't start a spiral (a stand-in for everyday trade).
-     */
-    standingImportsBuffer: z.number().min(0).max(1),
-    /**
-     * F65: the rest of the economy (and exports, until trade, F19) buys this
-     * share of what each country's market has left over at the start, after
-     * its buildings and pops, per person from then on.
+     * F65: the rest of the economy buys this share of what each country's
+     * market has left over at the start, after its buildings, pops and
+     * (F19) exports, per person from then on.
      */
     restOfEconomyShare: z.number().min(0).max(1),
   }),

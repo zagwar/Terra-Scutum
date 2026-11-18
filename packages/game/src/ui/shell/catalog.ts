@@ -41,7 +41,7 @@ export const SCREENS = {
   productionChains: { lens: 'economy', comesWith: at('F87', 'M3') },
   // Built in F65 (a first pass; F11 fills it out).
   markets: { lens: 'economy', comesWith: null },
-  trade: { lens: 'economy', comesWith: at('F19', 'M2') },
+  trade: { lens: 'economy', comesWith: null },
   corporations: { lens: 'economy', comesWith: at('F89', 'M4') },
   government: { lens: 'politics', comesWith: at('F119', 'M3') },
   laws: { lens: 'politics', comesWith: at('F16', 'M3') },
