@@ -647,7 +647,7 @@
   "MARKETS_HISTORY_WEEKS": "The price over the last {weeks} weeks",
   "MARKETS_HISTORY_SOON": "from next week",
   "MARKETS_SELL": "Sold a day",
-  "MARKETS_SELL_HINT": "Sell orders: what your country's buildings make in a day, plus the standing imports. For electricity: what the power plants could make.",
+  "MARKETS_SELL_HINT": "Sell orders: what your country's buildings make in a day, plus the standing imports (marked *). For electricity: what the power plants could make.",
   "MARKETS_BUY": "Bought a day",
   "MARKETS_BUY_HINT": "Buy orders: what everyone wants to buy in a day. More buy orders than sell orders raise the price next week.",
   "MARKETS_BUILDINGS": "By buildings",
@@ -674,5 +674,6 @@
   "BUILDINGS_PROFIT_PARTS": "Sales {sales} − inputs and electricity {costs} − wages {wages}",
   "BUILDINGS_RESERVES": "Cash reserves",
   "BUILDINGS_RESERVES_VALUE": "{amount} ({share} full)",
-  "BUILDINGS_JOBS_OPEN": "Jobs kept open"
+  "BUILDINGS_JOBS_OPEN": "Jobs kept open",
+  "MARKETS_SELL_IMPORTED": "Of this, {amount} a day are standing imports."
 }

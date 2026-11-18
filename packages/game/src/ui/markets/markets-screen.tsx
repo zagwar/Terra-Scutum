@@ -55,7 +55,6 @@ export function MarketsScreen({
               <th>{t('MARKETS_BUILDINGS')}</th>
               <th>{t('MARKETS_POPS')}</th>
               <th title={t('MARKETS_REST_HINT')}>{t('MARKETS_REST')}</th>
-              <th title={t('STOCKPILE_IMPORTED_HINT')}>{t('STOCKPILE_IMPORTED')}</th>
               <th>{t('MARKETS_STOCK')}</th>
             </tr>
           </thead>
@@ -90,7 +89,16 @@ function MarketLine({ row }: { readonly row: MarketRow }) {
       <td>
         <PriceLine history={row.history} />
       </td>
-      <td>{amount(row.sell)}</td>
+      <td
+        title={
+          row.imported > 0
+            ? t('MARKETS_SELL_IMPORTED', { amount: amount(row.imported) })
+            : undefined
+        }
+      >
+        {amount(row.sell)}
+        {row.imported > 0 && <span className="markets-imported">*</span>}
+      </td>
       <td data-testid={`markets-buy-${row.good}`}>{amount(row.buy)}</td>
       <td>{amount(row.buildingsBuy)}</td>
       <td
@@ -100,7 +108,6 @@ function MarketLine({ row }: { readonly row: MarketRow }) {
         {amount(row.popsBuy)}
       </td>
       <td>{amount(row.restBuy)}</td>
-      <td>{amount(row.imported)}</td>
       <td>
         {!row.stored
           ? t('STOCKPILE_NOT_STORED')

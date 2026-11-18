@@ -54,9 +54,11 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
     <div className="shell-window-layer">
       <section
         className={
-          window === 'population' || window === 'buildings' || window === 'markets'
-            ? 'panel shell-window is-wide'
-            : 'panel shell-window'
+          window === 'markets'
+            ? 'panel shell-window is-wide is-wider'
+            : window === 'population' || window === 'buildings'
+              ? 'panel shell-window is-wide'
+              : 'panel shell-window'
         }
         data-testid="shell-window"
         data-window={window}

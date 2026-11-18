@@ -753,6 +753,15 @@ body {
   width: min(880px, calc(100vw - 24px));
 }
 
+.shell-window.is-wider {
+  width: min(1120px, calc(100vw - 24px));
+}
+
+.markets-table td,
+.markets-table th {
+  white-space: nowrap;
+}
+
 .population-head {
   display: flex;
   align-items: center;
@@ -2660,4 +2669,9 @@ body {
 .price-line-empty {
   color: var(--color-text-dim);
   font-size: 0.85em;
+}
+
+.markets-imported {
+  color: var(--color-text-dim);
+  margin-left: 2px;
 }
