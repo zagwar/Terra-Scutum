@@ -19,6 +19,7 @@ import type { ShellActions } from './shell/shell-actions';
 import { ShellWindowView } from './shell/shell-window';
 import { TopBar, type TopBarValue } from './shell/top-bar';
 import { foodTopBarValue } from './food/food-top-bar';
+import { budgetTopBarValue } from './budget/budget-top-bar';
 import type { TopBarItemId } from './shell/catalog';
 import { TimeControl } from './time-control';
 
@@ -289,8 +290,12 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
   }
 }
 
-/** The top bar's key numbers the sim has so far (F08: food). */
+/** The top bar's key numbers the sim has so far (F08: food; F09: the treasury). */
 function topBarValues(state: AppState): Partial<Record<TopBarItemId, TopBarValue>> {
+  const values: Partial<Record<TopBarItemId, TopBarValue>> = {};
   const food = foodTopBarValue(state);
-  return food ? { food } : {};
+  if (food) values.food = food;
+  const treasury = budgetTopBarValue(state);
+  if (treasury) values.treasury = treasury;
+  return values;
 }

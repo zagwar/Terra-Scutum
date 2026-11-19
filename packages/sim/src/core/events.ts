@@ -26,6 +26,8 @@ export type SimEvent =
       readonly province: string;
       readonly country: string;
       readonly deaths: number;
-    };
+    }
+  /** F09: a country (id) defaulted on its debt: its debt was above its credit limit. */
+  | { readonly type: 'countryDefaulted'; readonly country: string };
 
 export type SimEventType = SimEvent['type'];

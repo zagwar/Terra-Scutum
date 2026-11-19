@@ -1,6 +1,7 @@
 import type {
   BuildingsConfig,
   BuildingsSnapshot,
+  BudgetSnapshot,
   FoodSnapshot,
   MarketSnapshot,
   CountryStartTable,
@@ -71,6 +72,12 @@ export interface AppState extends PanelState {
    * buildings and kept apart like them.
    */
   readonly food: FoodSnapshot | null;
+  /**
+   * The budget (F09): every country's treasury, debt, credit, inflation,
+   * levels and budget lines; the player's balance week by week. Null until
+   * the sim is ready. Sent with the buildings and kept apart like them.
+   */
+  readonly budget: BudgetSnapshot | null;
   /** The food map mode's colors (`data/map_view.json`), for its legend. */
   readonly foodColors: MapViewConfig['colors']['food'] | null;
   /** Building types with their recipes (`data/buildings.json`) and the goods (`data/goods.json`); null until the sim is ready. */
@@ -144,6 +151,7 @@ export function createAppStore(initial: Partial<AppState> = {}): AppStore {
     market: null,
     trade: null,
     food: null,
+    budget: null,
     foodColors: null,
     buildingTypes: null,
     goods: null,

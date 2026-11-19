@@ -71,11 +71,24 @@ curl -sS -o .cache/starting-data/wb-gdp.json "https://api.worldbank.org/v2/count
 for i in SP.DYN.CBRT.IN SP.DYN.CDRT.IN SL.TLF.TOTL.IN SL.UEM.TOTL.ZS MS.MIL.TOTL.P1; do
   curl -sS -o ".cache/starting-data/wb-$i.json" "https://api.worldbank.org/v2/country/all/indicator/$i?format=json&mrnev=1&per_page=500"
 done
+for i in GGR_G01_GDP_PT G_X_G01_GDP_PT GGXWDG_NGDP PCPIPCH ie; do
+  curl -sS -o ".cache/starting-data/imf-$i.json" "https://www.imf.org/external/datamapper/api/v1/$i"
+done
 npm run import:starting-data -- --snapshot
 ```
 
-`--snapshot` remakes the two files in `sources/` from the downloads (only the codes and years the
+`--snapshot` remakes the files in `sources/` from the downloads (only the codes and years the
 game needs), then runs the import. Compare `report.md` before and after.
+
+**Government finances (F09):** the last loop downloads the IMF's general government revenue
+(`GGR_G01_GDP_PT`) and expenditure (`G_X_G01_GDP_PT`) from the Fiscal Monitor, gross debt
+(`GGXWDG_NGDP`) and inflation (`PCPIPCH`) from the World Economic Outlook, and interest paid on
+public debt (`ie`, Public Finances in Modern History); `npm run import:starting-data -- --snapshot-fiscal`
+remakes only `sources/imf-fiscal.json` from them (it needs `imf-indicators.json` too). Each
+country gets `revenueShare`, `spendingShare`, `debtShare` (shares of GDP), `inflationRate` and,
+where interest and debt are known, `interestRate` (interest paid ÷ debt). Countries the IMF
+doesn't cover take their figures from a hand-written `fiscal` entry in `countries.json` (with a
+`note`); the import says which figure is missing.
 
 ## Where people live: the province populations (F06)
 

@@ -1,4 +1,9 @@
-import type { CommandResult, MessageDelivery, SimCommand } from '@terra-scutum/sim';
+import type {
+  BudgetSettingId,
+  CommandResult,
+  MessageDelivery,
+  SimCommand,
+} from '@terra-scutum/sim';
 import { type AppStore, MESSAGE_LOG_LIMIT } from '../../app-store';
 import type { MapTarget } from '../../render/map/shape-lookup';
 import type { TimeChange } from '../../worker/protocol';
@@ -80,6 +85,14 @@ export interface ShellActions {
    * reserves are emptied and every other country stops trading with it.
    */
   readonly testFoodCrisis: () => Promise<CommandResult>;
+  /** F09: the player sets one of their budget levels (the tax level or a spending line's funding). */
+  readonly setBudgetLevel: (setting: string, level: string) => Promise<CommandResult>;
+  /** F09: the player prints money (a level of `data/budget.json` → `inflation.printing`). */
+  readonly setMoneyPrinting: (level: string) => Promise<CommandResult>;
+  /** F09: the player lets their budget run itself, or sets it themselves. */
+  readonly setAutomaticBudget: (on: boolean) => Promise<CommandResult>;
+  /** Test tool (F09): the player's country at the edge of a default (debt at the credit limit, an empty treasury). */
+  readonly testBudgetCrisis: () => Promise<CommandResult>;
 }
 
 export function createShellActions({
@@ -227,6 +240,39 @@ export function createShellActions({
       const world = state().world;
       if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
       return sendCommand({ type: 'debugFillStockpile', country: world.countryIds[country], days });
+    },
+    async setBudgetLevel(setting, level) {
+      const { world, playerCountry } = state();
+      if (!world || playerCountry === null) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({
+        type: 'setBudgetLevel',
+        country: world.countryIds[playerCountry],
+        setting: setting as BudgetSettingId,
+        level,
+      });
+    },
+    async setMoneyPrinting(level) {
+      const { world, playerCountry } = state();
+      if (!world || playerCountry === null) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({
+        type: 'setMoneyPrinting',
+        country: world.countryIds[playerCountry],
+        level,
+      });
+    },
+    async setAutomaticBudget(on) {
+      const { world, playerCountry } = state();
+      if (!world || playerCountry === null) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({
+        type: 'setAutomaticBudget',
+        country: world.countryIds[playerCountry],
+        on,
+      });
+    },
+    async testBudgetCrisis() {
+      const { world, playerCountry } = state();
+      if (!world || playerCountry === null) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({ type: 'debugBudgetCrisis', country: world.countryIds[playerCountry] });
     },
     async setRationing(level) {
       const { world, playerCountry } = state();

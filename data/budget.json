@@ -1,0 +1,114 @@
+{
+  "levels": ["very_low", "low", "medium", "high", "very_high"],
+  "taxes": {
+    "strata": {
+      "laborers": "lower",
+      "soldiers": "lower",
+      "skilled_workers": "middle",
+      "officials": "middle",
+      "professionals": "middle",
+      "owners": "upper"
+    },
+    "incomeTax": { "lower": 0.1, "middle": 0.2, "upper": 0.3 },
+    "dividendsTax": 0.25,
+    "consumptionTax": 0.1,
+    "levelFactor": [0.5, 0.75, 1, 1.25, 1.5],
+    "startLevelRevenueAbove": [0.15, 0.25, 0.35, 0.45],
+    "maxPopShareOfRevenue": 0.85
+  },
+  "administration": {
+    "payFactor": [0.6, 0.8, 1, 1.2, 1.4],
+    "collection": [0.85, 0.95, 1, 1.02, 1.03]
+  },
+  "military": {
+    "payFactor": [0.6, 0.8, 1, 1.2, 1.4]
+  },
+  "welfare": {
+    "benefitShare": [0, 0.1, 0.25, 0.4, 0.6]
+  },
+  "education": {
+    "shareOfSpending": 0.12,
+    "costFactor": [0.5, 0.75, 1, 1.25, 1.5],
+    "trainingFactor": [0.5, 0.75, 1, 1.25, 1.5]
+  },
+  "placeholderLines": [
+    { "id": "research", "comesWith": "F83" },
+    { "id": "infrastructure", "comesWith": "F128" },
+    { "id": "refugee_services", "comesWith": "F33" },
+    { "id": "environment", "comesWith": "F53" },
+    { "id": "influence", "comesWith": "F22" },
+    { "id": "intelligence", "comesWith": "F66" },
+    { "id": "subsidies", "comesWith": "F20" }
+  ],
+  "treasury": {
+    "startingWeeks": 4,
+    "keepWeeks": 4,
+    "maxStartingDeficitShareOfGdp": 0.1
+  },
+  "credit": {
+    "headroomShareOfGdp": 0.5,
+    "minShareOfGdp": 0.6,
+    "premiumFrom": 0.7,
+    "premiumAtLimit": 0.06,
+    "ratings": [
+      { "id": "AAA", "below": 0.6 },
+      { "id": "AA", "below": 0.7 },
+      { "id": "A", "below": 0.8 },
+      { "id": "BBB", "below": 0.87 },
+      { "id": "BB", "below": 0.93 },
+      { "id": "B", "below": 0.97 },
+      { "id": "CCC", "below": 100 }
+    ]
+  },
+  "interest": {
+    "min": 0.005,
+    "max": 0.15,
+    "fallback": [
+      { "gdpPerPerson": 1500, "rate": 0.07 },
+      { "gdpPerPerson": 5000, "rate": 0.06 },
+      { "gdpPerPerson": 15000, "rate": 0.045 },
+      { "gdpPerPerson": 40000, "rate": 0.03 }
+    ],
+    "inflationShare": 0.5,
+    "inflationPremiumMax": 0.1
+  },
+  "default": {
+    "writeOff": 0.5,
+    "noBorrowingYears": 2,
+    "premium": 0.05,
+    "premiumYears": 5,
+    "living": 5,
+    "livingYears": 1
+  },
+  "inflation": {
+    "normal": 0.025,
+    "halfLifeWeeks": 26,
+    "printing": [
+      { "id": "none", "shareOfGdpPerYear": 0 },
+      { "id": "some", "shareOfGdpPerYear": 0.01 },
+      { "id": "lots", "shareOfGdpPerYear": 0.05 },
+      { "id": "massive", "shareOfGdpPerYear": 0.15 }
+    ],
+    "pointsPerPrintedShare": 4,
+    "livingFrom": 0.1,
+    "livingAt": 1,
+    "livingMax": 10,
+    "high": 0.1
+  },
+  "fallback": {
+    "revenueShare": 0.25,
+    "spendingShare": 0.28,
+    "debtShare": 0.5,
+    "inflationRate": 0.03
+  },
+  "auto": {
+    "cooldownWeeks": 26,
+    "tightenAbove": 0.85,
+    "tightenDeficitShareOfGdp": 0.03,
+    "loosenBelow": 0.4,
+    "loosenSurplusShareOfGdp": 0.01
+  },
+  "alerts": {
+    "nearLimit": 0.9
+  }
+}

@@ -151,6 +151,8 @@ export interface BuildingsState {
   readonly inputCost: Float64Array;
   /** By pop (F65): what buildings pay its workers today (US$). */
   readonly popPay: Float64Array;
+  /** F09: per pop, the part of `popPay` that is a subsistence building's share (no income tax on it). */
+  readonly popSubsistence: Float64Array;
   /** By cell: output as a share of full output (0–1). */
   readonly output: Float32Array;
   /** By cell: what holds the building back most (`BUILDING_LIMIT`), and which pop group or good. */
@@ -380,6 +382,7 @@ export function createBuildings(data: GameData, world: WorldMap): BuildingsState
     revenue: new Float64Array(cellsMax),
     inputCost: new Float64Array(cellsMax),
     popPay: new Float64Array(provinces * groups),
+    popSubsistence: new Float64Array(provinces * groups),
     output: new Float32Array(cellsMax),
     limitKind: new Uint8Array(cellsMax),
     limitWhat: new Uint8Array(cellsMax),
@@ -857,6 +860,7 @@ export function prepareDay(
   powerCapacityFuel.fill(0);
   otherPowerWanted.fill(0);
   popPay.fill(0);
+  buildings.popSubsistence.fill(0);
   buildings.powerMade.fill(0);
   buildings.powerPotential.fill(0);
   buildings.made.fill(0);
@@ -1077,7 +1081,9 @@ export function runStage(
           const g = workerGroup[k];
           const filled =
             buildings.fill[row + g] < 1 ? buildings.cellFill[cell * groupCount + g] : 1;
-          popPay[row + g] += (earned * levels * workerCount[k] * filled) / people;
+          const share = (earned * levels * workerCount[k] * filled) / people;
+          popPay[row + g] += share;
+          buildings.popSubsistence[row + g] += share;
         }
       }
     }

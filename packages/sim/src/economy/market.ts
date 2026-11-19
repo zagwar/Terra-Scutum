@@ -106,6 +106,10 @@ export interface MarketState {
   readonly dividend: Float64Array;
   /** Days counted in this week's sums. */
   weekDays: number;
+  /** F09: per pop, this week's income after taxes, plus benefits (US$, all its workers); saved. */
+  readonly weekNet: Float64Array;
+  /** F09: the taxes, benefits and government pay (`budget.ts` sets the rates and reads the sums). */
+  readonly taxes: PopTaxes;
 
   // ── The report (today; not saved) ────────────────────────────────────────
   /** Per country and good: what the pops and the rest of the economy want today, and what they got. */
@@ -135,6 +139,45 @@ export interface MarketState {
   readonly needIndex: Float64Array;
   readonly rowCost: Float64Array;
   readonly raw: Float64Array;
+}
+
+/**
+ * F09: what the government takes from and gives to the pops (Victoria 3's
+ * income, dividends and consumption taxes, unemployment benefits) and what
+ * it pays its officials and soldiers. The budget (`budget.ts`) writes the
+ * rates every Monday; the market counts the money every day.
+ */
+export interface PopTaxes {
+  // ── The rates (written by the budget) ────────────────────────────────────
+  /** Per country and pop group: the income tax on wages (subsistence shares are not taxed). */
+  readonly incomeTax: Float64Array;
+  /** Per country and pop group: what the stand-in jobs pay × the going wage (the government's pay for officials and soldiers; 1 for everyone else). */
+  readonly payFactor: Float64Array;
+  /** Per country: the dividends tax, the consumption tax (on top of what people's goods cost) and the unemployment benefit (a share of the going wage). */
+  readonly dividendTax: Float64Array;
+  readonly consumptionTax: Float64Array;
+  readonly benefitShare: Float64Array;
+  // ── Today (the report; a trial day writes it too) ────────────────────────
+  /** Per country, US$ today: income tax, dividends tax, consumption tax, benefits paid, the pops' income before taxes. */
+  readonly dayIncomeTax: Float64Array;
+  readonly dayDividendTax: Float64Array;
+  readonly dayConsumptionTax: Float64Array;
+  readonly dayBenefits: Float64Array;
+  readonly dayGross: Float64Array;
+  /** Per country and pop group, US$ today: what the government pays (the stand-in jobs of officials and soldiers). */
+  readonly dayGovPay: Float64Array;
+  /** Per pop, US$ today (all its workers): income before and after taxes (plus benefits). */
+  readonly popGross: Float64Array;
+  readonly popNet: Float64Array;
+  /** Per pop group: 1 if the government pays its stand-in jobs (officials, soldiers). */
+  readonly governmentPaid: Uint8Array;
+  // ── This week so far (the real days only; the budget reads and clears them; saved) ──
+  readonly weekIncomeTax: Float64Array;
+  readonly weekDividendTax: Float64Array;
+  readonly weekConsumptionTax: Float64Array;
+  readonly weekBenefits: Float64Array;
+  readonly weekGross: Float64Array;
+  readonly weekGovPay: Float64Array;
 }
 
 /** Weeks of price history kept for the screens. */
@@ -196,6 +239,31 @@ export function createMarket(data: GameData, world: WorldMap, groupCount: number
     weekIncome: new Float64Array(provinces * groupCount),
     dividend: new Float64Array(provinces * groupCount),
     weekDays: 0,
+    weekNet: new Float64Array(provinces * groupCount),
+    taxes: {
+      incomeTax: new Float64Array(countries * groupCount),
+      payFactor: new Float64Array(countries * groupCount).fill(1),
+      dividendTax: new Float64Array(countries),
+      consumptionTax: new Float64Array(countries),
+      benefitShare: new Float64Array(countries),
+      dayIncomeTax: new Float64Array(countries),
+      dayDividendTax: new Float64Array(countries),
+      dayConsumptionTax: new Float64Array(countries),
+      dayBenefits: new Float64Array(countries),
+      dayGross: new Float64Array(countries),
+      dayGovPay: new Float64Array(countries * groupCount),
+      popGross: new Float64Array(provinces * groupCount),
+      popNet: new Float64Array(provinces * groupCount),
+      governmentPaid: Uint8Array.from(data.pops.groups, (group) =>
+        group.id === 'officials' || group.military ? 1 : 0,
+      ),
+      weekIncomeTax: new Float64Array(countries),
+      weekDividendTax: new Float64Array(countries),
+      weekConsumptionTax: new Float64Array(countries),
+      weekBenefits: new Float64Array(countries),
+      weekGross: new Float64Array(countries),
+      weekGovPay: new Float64Array(countries * groupCount),
+    },
     popOrder: new Float64Array(countries * goodCount),
     restOrder: new Float64Array(countries * goodCount),
     popGot: new Float64Array(countries * goodCount),
@@ -389,6 +457,7 @@ export function marketDay(
   population: PopulationState,
   stock: Float64Array,
   real: boolean,
+  provinceOwner: Uint16Array,
 ): void {
   const { goodCount, electricityGood, popOrder, restOrder, popGot, restGot, sell, buy, lost } =
     market;
@@ -396,10 +465,13 @@ export function marketDay(
   const { made, imports, ordered, powerPotential, popPowerUsed, otherPowerUsed } = buildings;
   const { capacityUse, capacityMake, maxDays } = buildings;
   const basePrice = market.basePrice;
+  const price = market.price;
+  const { dayConsumptionTax, consumptionTax } = market.taxes;
   for (let c = 0; c < market.countryCount; c++) {
     const at = c * goodCount;
     let wanted = 0;
     let got = 0;
+    let spent = 0;
     for (let g = 0; g < goodCount; g++) {
       const m = at + g;
       if (g === electricityGood) {
@@ -437,12 +509,17 @@ export function marketDay(
       }
       wanted += popOrder[m] * basePrice[g];
       got += popGot[m] * basePrice[g];
+      spent += popGot[m] * price[m];
     }
+    // F09: the consumption tax on what people bought.
+    dayConsumptionTax[c] = spent * consumptionTax[c];
     if (real) {
       market.weekPopWanted[c] += wanted;
       market.weekPopGot[c] += got;
     }
   }
+  // F09: incomes before and after taxes, the benefits, the government's pay.
+  popMoneyDay(market, buildings, population, provinceOwner);
   if (!real) return;
 
   const { weekBuy, weekSell, weekPopBuy } = market;
@@ -452,12 +529,22 @@ export function marketDay(
     weekPopBuy[m] += popOrder[m];
   }
   // Incomes: building pay (or a subsistence building's share), the rest of
-  // the economy's going wage, dividends.
-  const { popPay, standInFill } = buildings;
-  const { standInJobs, wage } = population;
-  const { weekIncome, dividend } = market;
-  for (let i = 0; i < weekIncome.length; i++)
-    weekIncome[i] += popPay[i] + standInJobs[i] * standInFill[i] * wage[i] + dividend[i];
+  // the economy's going wage, dividends; F09: after taxes, plus benefits.
+  const { weekIncome, weekNet } = market;
+  const taxes = market.taxes;
+  const { popGross, popNet } = taxes;
+  for (let i = 0; i < weekIncome.length; i++) {
+    weekIncome[i] += popGross[i];
+    weekNet[i] += popNet[i];
+  }
+  for (let c = 0; c < market.countryCount; c++) {
+    taxes.weekIncomeTax[c] += taxes.dayIncomeTax[c];
+    taxes.weekDividendTax[c] += taxes.dayDividendTax[c];
+    taxes.weekConsumptionTax[c] += taxes.dayConsumptionTax[c];
+    taxes.weekBenefits[c] += taxes.dayBenefits[c];
+    taxes.weekGross[c] += taxes.dayGross[c];
+  }
+  for (let i = 0; i < taxes.weekGovPay.length; i++) taxes.weekGovPay[i] += taxes.dayGovPay[i];
   const { cells, cellCount, revenue, inputCost, wages, weekRevenue, weekCost, weekWages } =
     buildings;
   for (let i = 0; i < cellCount; i++) {
@@ -467,6 +554,84 @@ export function marketDay(
     weekWages[cell] += wages[cell];
   }
   market.weekDays += 1;
+}
+
+/**
+ * F09: every pop's money today (all its workers): its income before taxes
+ * (building pay or a subsistence building's share, the rest of the
+ * economy's going wage, × the government's pay for officials and soldiers,
+ * dividends) and after them (less the income tax on wages, not on
+ * subsistence shares, and the dividends tax; plus unemployment benefits:
+ * `benefitShare` of the going wage for everyone without a job). Also each
+ * country's taxes, benefits, government pay and pops' income today.
+ */
+export function popMoneyDay(
+  market: MarketState,
+  buildings: BuildingsState,
+  population: PopulationState,
+  provinceOwner: Uint16Array,
+): void {
+  const { popPay, popSubsistence, standInFill } = buildings;
+  const { standInJobs, wage, size, jobs } = population;
+  const { dividend } = market;
+  const taxes = market.taxes;
+  const { incomeTax, payFactor, dividendTax, benefitShare, popGross, popNet, governmentPaid } =
+    taxes;
+  const { dayIncomeTax, dayDividendTax, dayBenefits, dayGross, dayGovPay } = taxes;
+  dayIncomeTax.fill(0);
+  dayDividendTax.fill(0);
+  dayBenefits.fill(0);
+  dayGross.fill(0);
+  dayGovPay.fill(0);
+  const groups = population.groupCount;
+  const provinces = population.dependents.length;
+  for (let p = 0; p < provinces; p++) {
+    const c = provinceOwner[p];
+    const row = p * groups;
+    const countryRow = c * groups;
+    for (let g = 0; g < groups; g++) {
+      const i = row + g;
+      let standIn = standInJobs[i] * standInFill[i] * wage[i];
+      if (governmentPaid[g] === 1) {
+        standIn *= payFactor[countryRow + g];
+        dayGovPay[countryRow + g] += standIn;
+      }
+      const wages = popPay[i] - popSubsistence[i] + standIn;
+      const gross = popPay[i] + standIn + dividend[i];
+      const income = wages * incomeTax[countryRow + g];
+      const dividends = dividend[i] * dividendTax[c];
+      const jobless = size[i] > jobs[i] ? size[i] - jobs[i] : 0;
+      const benefit = jobless * wage[i] * benefitShare[c];
+      popGross[i] = gross;
+      popNet[i] = gross - income - dividends + benefit;
+      dayIncomeTax[c] += income;
+      dayDividendTax[c] += dividends;
+      dayBenefits[c] += benefit;
+      dayGross[c] += gross;
+    }
+  }
+}
+
+/**
+ * F09: each pop's income after taxes a day per worker, as it buys goods:
+ * this week's income after taxes and plus benefits (`weekNet`, or today's
+ * with `days` 0), ÷ (1 + the consumption tax).
+ */
+export function updateNetIncome(
+  market: MarketState,
+  population: PopulationState,
+  provinceOwner: Uint16Array,
+  days: number,
+): void {
+  const { size, netIncome } = population;
+  const groups = population.groupCount;
+  const consumptionTax = market.taxes.consumptionTax;
+  const source = days > 0 ? market.weekNet : market.taxes.popNet;
+  const per = days > 0 ? 1 / days : 1;
+  for (let i = 0; i < size.length; i++) {
+    const c = provinceOwner[(i / groups) | 0];
+    netIncome[i] = size[i] > 0 ? (source[i] * per) / size[i] / (1 + consumptionTax[c]) : 0;
+  }
 }
 
 /**
@@ -503,6 +668,7 @@ export function marketWeek(
     const { size, income } = population;
     for (let i = 0; i < size.length; i++)
       income[i] = size[i] > 0 ? market.weekIncome[i] / days / size[i] : 0;
+    updateNetIncome(market, population, provinceOwner, days);
     buildingsWeek(market, buildings, population, provinceOwner, data);
     updateWealth(market, population, provinceOwner, data);
     recordHistory(market);
@@ -513,6 +679,7 @@ export function marketWeek(
   market.weekPopWanted.fill(0);
   market.weekPopGot.fill(0);
   market.weekIncome.fill(0);
+  market.weekNet.fill(0);
   buildings.weekRevenue.fill(0);
   buildings.weekCost.fill(0);
   buildings.weekWages.fill(0);
@@ -652,7 +819,8 @@ export function updateWealth(
   data: GameData,
   settle = false,
 ): void {
-  const { size, dependents, wealth, income, priceLevel } = population;
+  // F09: what people have to spend: their income after taxes, plus benefits.
+  const { size, dependents, wealth, netIncome: income, priceLevel } = population;
   const groups = population.groupCount;
   const { rise, fall } = data.pops.wealth;
   for (let p = 0; p < dependents.length; p++) {
@@ -842,6 +1010,8 @@ export interface MarketRestore {
   readonly weekIncome: Float64Array;
   readonly dividend: Float64Array;
   readonly weekDays: number;
+  /** F09; missing in older saves (the week starts with the income before taxes). */
+  readonly weekNet?: Float64Array;
 }
 
 /** The parts of `MarketState` a save keeps, in the order a save lists them. */
@@ -866,6 +1036,11 @@ export function restoreMarket(market: MarketState, saved: MarketRestore): void {
     market[key].set(saved[key]);
   }
   market.weekDays = saved.weekDays;
+  if (saved.weekNet) {
+    if (saved.weekNet.length !== market.weekNet.length)
+      throw new Error('Market: the restored "weekNet" does not match the pops');
+    market.weekNet.set(saved.weekNet);
+  } else market.weekNet.set(market.weekIncome);
   market.historyCount = 0;
   market.historyNext = 0;
 }

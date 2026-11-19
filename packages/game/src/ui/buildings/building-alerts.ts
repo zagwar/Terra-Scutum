@@ -1,8 +1,15 @@
 import { buildingNameKey, goodNameKey, provinceNameKey } from '@terra-scutum/sim';
 import type { AppState, AppStore } from '../../app-store';
-import { formatPeopleShort, formatPercent, tKey } from '../i18n';
+import {
+  formatMoneyShort,
+  formatMoneySigned,
+  formatPeopleShort,
+  formatPercent,
+  tKey,
+} from '../i18n';
 import { countryMarket } from '../markets/markets-view';
 import { countryFood, hungryProvinces, reserveDaysText } from '../food/food-view';
+import { countryBudget } from '../budget/budget-view';
 import type { ShellAlert } from '../shell/shell-types';
 import { limitText } from './building-parts';
 import { layingOffBuildings, stoppedBuildings } from './buildings-view';
@@ -13,6 +20,10 @@ export const LAYOFFS_ALERT_ID = 1_000_008;
 export const SHORTAGE_ALERT_ID = 1_000_009;
 export const FAMINE_ALERT_ID = 1_000_010;
 export const FOOD_LOW_ALERT_ID = 1_000_011;
+export const BORROWING_ALERT_ID = 1_000_012;
+export const NEAR_LIMIT_ALERT_ID = 1_000_013;
+export const DEFAULT_ALERT_ID = 1_000_014;
+export const INFLATION_ALERT_ID = 1_000_015;
 
 /** The shortage alert shows once the pops went without at least this share of their goods last week [DEFAULT]. */
 export const SHORTAGE_ALERT_AT_LEAST = 0.02;
@@ -156,13 +167,86 @@ const ALERTS: readonly EconomyAlert[] = [
       };
     },
   },
+  {
+    // F09: the player's country is borrowing (an empty treasury and a deficit), not yet near its limit.
+    id: BORROWING_ALERT_ID,
+    compute(state) {
+      if (!state.budget) return null;
+      const summary = countryBudget(state.budget, state.playerCountry);
+      if (summary.mood !== 'deficit' || summary.treasury > 0) return null;
+      return {
+        typeId: 'borrowing',
+        titleKey: 'ALERT_BORROWING_TITLE',
+        textKey: 'ALERT_BORROWING_TEXT',
+        params: {
+          balance: formatMoneySigned(summary.balance),
+          used: formatPercent(summary.used, 0),
+        },
+        target: { kind: 'country', index: state.playerCountry },
+      };
+    },
+  },
+  {
+    // F09: the player's debt is near its credit limit (a default comes next).
+    id: NEAR_LIMIT_ALERT_ID,
+    compute(state) {
+      if (!state.budget) return null;
+      const summary = countryBudget(state.budget, state.playerCountry);
+      if (summary.mood !== 'near_limit') return null;
+      return {
+        typeId: 'near_credit_limit',
+        titleKey: 'ALERT_NEAR_LIMIT_TITLE',
+        textKey: 'ALERT_NEAR_LIMIT_TEXT',
+        params: {
+          used: formatPercent(summary.used, 0),
+          debt: formatMoneyShort(summary.debt),
+          interest: formatPercent(summary.interestRate),
+        },
+        target: { kind: 'country', index: state.playerCountry },
+      };
+    },
+  },
+  {
+    // F09: the player's country defaulted and can't borrow.
+    id: DEFAULT_ALERT_ID,
+    compute(state) {
+      if (!state.budget) return null;
+      const summary = countryBudget(state.budget, state.playerCountry);
+      if (summary.mood !== 'default') return null;
+      return {
+        typeId: 'default',
+        titleKey: 'ALERT_DEFAULT_TITLE',
+        textKey: 'ALERT_DEFAULT_TEXT',
+        params: { cut: formatPercent(summary.spendingCut, 0) },
+        target: { kind: 'country', index: state.playerCountry },
+      };
+    },
+  },
+  {
+    // F09: inflation in the player's country is high.
+    id: INFLATION_ALERT_ID,
+    compute(state) {
+      const { budget } = state;
+      if (!budget) return null;
+      const inflation = budget.inflation[state.playerCountry];
+      if (inflation <= budget.highInflation) return null;
+      return {
+        typeId: 'high_inflation',
+        titleKey: 'ALERT_INFLATION_TITLE',
+        textKey: 'ALERT_INFLATION_TEXT',
+        params: { inflation: formatPercent(inflation) },
+        target: { kind: 'country', index: state.playerCountry },
+      };
+    },
+  },
 ];
 
 /**
  * Keeps the economy's alerts (section 12.1) in step with the sim: the "idle
  * factory" alert (F07: buildings of the player's country held back at half
  * output or less), the layoffs alert and the shortage alert (F65), the
- * famine and low food reserves alerts (F08). Each
+ * famine and low food reserves alerts (F08), the borrowing, near the credit
+ * limit, default and high inflation alerts (F09). Each
  * names the worst case; a click shows its province or the country.
  * Dismissed (right-click), an alert stays away until its problem is over
  * and comes back with the next one.
@@ -186,6 +270,7 @@ export function createBuildingAlerts(store: AppStore): { readonly sync: () => vo
         buildings,
         state.market,
         state.food,
+        state.budget,
         provinceOwner,
         playerCountry,
         state.choosingCountry,

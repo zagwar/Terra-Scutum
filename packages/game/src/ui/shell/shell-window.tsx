@@ -11,6 +11,7 @@ import { MarketsScreen } from '../markets/markets-screen';
 import { PopulationScreen } from '../population/population-screen';
 import { TradeScreen } from '../trade/trade-screen';
 import { FoodScreen } from '../food/food-screen';
+import { BudgetScreen } from '../budget/budget-screen';
 import { comesWithText } from './top-bar';
 
 export interface ShellWindowViewProps {
@@ -47,6 +48,9 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
   } else if (window === 'food') {
     title = tKey(screenNameKey(window));
     body = <FoodScreen state={state} actions={actions} />;
+  } else if (window === 'budget') {
+    title = tKey(screenNameKey(window));
+    body = <BudgetScreen state={state} actions={actions} />;
   } else {
     const screen = SCREENS[window];
     title = tKey(screenNameKey(window));
@@ -62,7 +66,7 @@ export function ShellWindowView({ window, state, actions }: ShellWindowViewProps
     <div className="shell-window-layer">
       <section
         className={
-          window === 'markets' || window === 'trade' || window === 'food'
+          window === 'markets' || window === 'trade' || window === 'food' || window === 'budget'
             ? 'panel shell-window is-wide is-wider'
             : window === 'population' || window === 'buildings'
               ? 'panel shell-window is-wide'

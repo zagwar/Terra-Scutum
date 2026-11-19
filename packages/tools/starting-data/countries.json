@@ -99,7 +99,14 @@
       "government": "authoritarian",
       "note": "one-party state",
       "gdp": "worldBank",
-      "gdpNote": "the latest figure is from 2020 and uses the official exchange rate, so it is probably far too high"
+      "gdpNote": "the latest figure is from 2020 and uses the official exchange rate, so it is probably far too high",
+      "fiscal": {
+        "revenueShare": 0.4,
+        "spendingShare": 0.48,
+        "debtShare": 1.0,
+        "inflationRate": 0.3,
+        "note": "estimates [DEFAULT]: no IMF figures; Cuba's state budget is about 40-50 % of GDP with a deficit near 8 %, debt about the size of GDP, inflation about 30 % (official and press figures, approximate)"
+      }
     },
     "CYP": {
       "government": "presidential_democracy",
@@ -117,7 +124,14 @@
     "ERI": {
       "government": "authoritarian",
       "note": "one-party state with no elections",
-      "gdpNote": "the latest figure is from 2011"
+      "gdpNote": "the latest figure is from 2011",
+      "fiscal": {
+        "revenueShare": 0.28,
+        "spendingShare": 0.31,
+        "debtShare": 1.6,
+        "inflationRate": 0.06,
+        "note": "estimates [DEFAULT]: no recent IMF figures; the last IMF reviews put revenue near 30 % of GDP and debt above 150 %"
+      }
     },
     "ESP": { "government": "constitutional_monarchy" },
     "EST": { "government": "parliamentary_democracy" },
@@ -219,6 +233,11 @@
         "unemploymentRate": 0.02,
         "armedForcesShare": 0,
         "note": "estimates [DEFAULT]: about half the residents work, about 2 % unemployed, no army; the World Bank has no figures"
+      },
+      "fiscal": {
+        "revenueShare": 0.22,
+        "spendingShare": 0.2,
+        "note": "estimates [DEFAULT]: the IMF has no revenue or spending; Liechtenstein's state runs small surpluses at about a fifth of GDP"
       }
     },
     "LKA": { "government": "presidential_democracy" },
@@ -238,6 +257,13 @@
         "unemploymentRate": 0.02,
         "armedForcesShare": 0.015,
         "note": "estimates [DEFAULT]: about 17,000 residents in the labor force, about 2 % unemployed, about 250 in the prince's guard and the fire brigade; the World Bank has no figures"
+      },
+      "fiscal": {
+        "revenueShare": 0.25,
+        "spendingShare": 0.24,
+        "debtShare": 0,
+        "inflationRate": 0.02,
+        "note": "estimates [DEFAULT]: no IMF figures; Monaco's state has no debt and a balanced budget (inflation as France's)"
       }
     },
     "MDA": { "government": "parliamentary_democracy" },
@@ -290,13 +316,25 @@
       "government": "authoritarian",
       "note": "one-party state ruled by the Kim family",
       "gdpMillionUsd": 30000,
-      "gdpNote": "estimate: the Bank of Korea put North Korea's 2023 income at about 40 trillion won (about US$30 billion); no official figure exists"
+      "gdpNote": "estimate: the Bank of Korea put North Korea's 2023 income at about 40 trillion won (about US$30 billion); no official figure exists",
+      "fiscal": {
+        "revenueShare": 0.3,
+        "spendingShare": 0.3,
+        "debtShare": 0.3,
+        "inflationRate": 0.1,
+        "note": "estimates [DEFAULT]: no figures exist; a state economy that spends what it takes in, with old foreign debts"
+      }
     },
     "PRT": { "government": "parliamentary_democracy" },
     "PRY": { "government": "presidential_democracy" },
     "PSE": {
       "government": "authoritarian",
-      "note": "borderline: the Palestinian Authority has held no elections since 2006; war in Gaza"
+      "note": "borderline: the Palestinian Authority has held no elections since 2006; war in Gaza",
+      "fiscal": {
+        "revenueShare": 0.24,
+        "spendingShare": 0.3,
+        "note": "estimates [DEFAULT]: the IMF has debt and inflation but no revenue or spending; the Palestinian Authority's revenue is about a quarter of GDP with a deficit near 6 %"
+      }
     },
     "QAT": { "government": "absolute_monarchy" },
     "ROU": {
@@ -335,7 +373,12 @@
     },
     "SOM": {
       "government": "parliamentary_democracy",
-      "note": "borderline: indirect elections; a weak federal state at war with al-Shabaab; includes Somaliland"
+      "note": "borderline: indirect elections; a weak federal state at war with al-Shabaab; includes Somaliland",
+      "fiscal": {
+        "spendingShare": 0.08,
+        "debtShare": 0.06,
+        "note": "estimates [DEFAULT]: the IMF has revenue but no spending or debt; Somalia spends a little more than it collects, and debt relief (2023) left debt at about 6 % of GDP"
+      }
     },
     "SRB": {
       "government": "parliamentary_democracy",
@@ -350,7 +393,14 @@
     "SYR": {
       "government": "authoritarian",
       "note": "a transitional government (Ahmed al-Sharaa) took over after Assad fell in December 2024",
-      "gdpNote": "the latest figure is from 2022"
+      "gdpNote": "the latest figure is from 2022",
+      "fiscal": {
+        "revenueShare": 0.1,
+        "spendingShare": 0.15,
+        "debtShare": 1,
+        "inflationRate": 0.4,
+        "note": "estimates [DEFAULT]: no IMF figures since the war; a small state budget, debt about the size of GDP, high inflation"
+      }
     },
     "TCD": {
       "government": "authoritarian",
@@ -408,15 +458,32 @@
         "unemploymentRate": 0,
         "armedForcesShare": 0.19,
         "note": "estimates [DEFAULT]: nobody is born a citizen, nearly every resident works for the Holy See, the Swiss Guard has about 135 men; no World Bank figures"
+      },
+      "fiscal": {
+        "revenueShare": 0.3,
+        "spendingShare": 0.3,
+        "debtShare": 0,
+        "inflationRate": 0.01,
+        "note": "placeholder [DEFAULT]: the Holy See's budget is about balanced and it has no debt"
       }
     },
-    "VEN": { "government": "authoritarian" },
+    "VEN": {
+      "government": "authoritarian",
+      "fiscal": {
+        "debtShare": 1.5,
+        "note": "estimate [DEFAULT]: the IMF has no debt figure; outside estimates put Venezuela's public debt at about 150 % of GDP"
+      }
+    },
     "VNM": { "government": "authoritarian", "note": "one-party state" },
     "YEM": {
       "government": "authoritarian",
       "note": "civil war: the recognized government (Presidential Leadership Council) holds the south, the Houthis the north",
       "gdp": "worldBank",
-      "gdpNote": "the World Bank's 2018 figure; the IMF's covers only the government-held areas"
+      "gdpNote": "the World Bank's 2018 figure; the IMF's covers only the government-held areas",
+      "fiscal": {
+        "debtShare": 0.7,
+        "note": "estimate [DEFAULT]: the IMF has no debt figure since the war; about 70 % of GDP"
+      }
     },
     "ZAF": {
       "government": "parliamentary_democracy",

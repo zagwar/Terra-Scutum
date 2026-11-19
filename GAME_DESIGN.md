@@ -14,7 +14,7 @@
 > - **Section numbers are the same in every file**, so "section 8.3" always means the same thing. Use the table below to find which file holds a section.
 
 **Title:** *Terra Scutum: The Last Line of Earth* (short form: *Terra Scutum*)
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 **Platform:** runs in the **web browser** (desktop app wrapper for Steam later) · **Language:** TypeScript · **3D:** Babylon.js · **UI:** React · **Simulation:** a separate pure TypeScript package (see `docs/13_technical.md`)
 **Development:** Claude Code cloud sessions (browser) on the GitHub repo `terra-scutum`; previews on Cloudflare Pages
 **Target platform:** Windows / Mac / Linux **[DEFAULT]**
@@ -104,6 +104,11 @@ In January 2025 an unknown object is detected heading for Earth. The player lead
 | **Output** (of a building) / **held back** | How much of its full output a building makes today, 0–100 % / running below that for lack of workers, electricity or an input |
 | **Food security** / **starvation** / **famine** | How well a pop is fed, 0–100 % (F08, Victoria 3: income spent on basic food and basic food missing) / below 40 % (mild) or 20 % (severe): fewer births, more deaths / a province where at least 35 % of the people starve and 15 % severely |
 | **Food reserves** / **rationing** | The national stockpile's food goods (F08: 30 days at the start, at most 90) / cutting food use when reserves fall (none, light, strict, emergency): the rest of the economy's food first, then better food, then food exports |
+| **Treasury** / **budget line** / **funding level** | A country's money in real US$ (F09; Victoria 3's gold reserves): a weekly deficit empties it, then the country borrows / one kind of income or spending (income tax, administration, welfare…) / how much a spending line gets, very low … very high (Victoria 3's levels) |
+| **Tax level** / **stratum** | Very low … very high: multiplies every tax (F09) / a pop group's tax band: lower (laborers, soldiers), middle (skilled workers, officials, professionals), upper (owners) |
+| **Other revenue** / **other spending** | Stand-ins (F09) that make each country's budget its real 2025 one: what the pops don't pay (corporate taxes, oil money) / what the game doesn't have yet (health, pensions, roads) |
+| **Credit limit** / **credit rating** / **default** | How much a country can owe (its starting debt + 50 % of GDP) / AAA … CCC by how much of it is used, D after a default / debt above the limit: half written off, no borrowing for 2 years, spending cut to income (F09) |
+| **Inflation** / **printing money** | How fast prices rise, a share a year (F09: real 2025 rates, settling to 2.5 %) / an emergency option that fills the treasury and raises inflation |
 | **National stockpile** | A country's store of goods (since F65 its market's reserve): what is made and not bought goes in; buyers draw on it when a day's goods run short |
 | **Off the grid** | The share of its output a building keeps without electricity from the grid (its own generators, hand work) |
 | **Ideology** | A political belief with stances on laws, government types and economic systems |

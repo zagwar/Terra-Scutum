@@ -7,7 +7,8 @@
  * `packages/tools/starting-data/countries.json` and `production.json`. Works offline.
  *
  * `npm run import:starting-data -- --snapshot` first remakes the source
- * tables from fresh downloads in `.cache/starting-data/` (see the README).
+ * tables from fresh downloads in `.cache/starting-data/` (see the README);
+ * `--snapshot-fiscal` only the government finance table (F09).
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,13 +27,14 @@ import {
   type WorldBankSnapshot,
   buildProvinceStart,
   buildStartingData,
+  fiscalSnapshotSchema,
   imfSnapshotSchema,
   startingDataConfigSchema,
   worldBankSnapshotSchema,
 } from './starting-data/build-starting-data';
 import { provincePopulationSnapshotSchema } from './starting-data/province-population';
 import { writeStartingDataReport } from './starting-data/report';
-import { snapshotSources } from './starting-data/snapshot-sources';
+import { snapshotFiscal, snapshotSources } from './starting-data/snapshot-sources';
 import {
   buildStartingBuildings,
   productionConfigSchema,
@@ -47,6 +49,7 @@ const IMF_FILE = join(SOURCES_DIR, 'imf-weo.json');
 const WORLD_BANK_FILE = join(SOURCES_DIR, 'world-bank-wdi.json');
 const PROVINCE_POPULATION_FILE = join(SOURCES_DIR, 'province-population.json');
 const PRODUCTION_FILE = join(SOURCES_DIR, 'production.json');
+const FISCAL_FILE = join(SOURCES_DIR, 'imf-fiscal.json');
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as unknown;
 
@@ -76,9 +79,19 @@ function main(): void {
     console.log(`Production table remade from ${RAW_DIR}.`);
   }
 
+  if (process.argv.includes('--snapshot') || process.argv.includes('--snapshot-fiscal')) {
+    // F09: the government finance figures (IMF).
+    const codes = mapCountries.map((c) => c.id);
+    const today = new Date().toISOString().slice(0, 10);
+    const fiscal = snapshotFiscal(RAW_DIR, config, codes, today);
+    writeFileSync(FISCAL_FILE, `${JSON.stringify(fiscal, null, 1)}\n`);
+    console.log(`Government finance table remade from ${RAW_DIR}.`);
+  }
+
   const imf: ImfSnapshot = imfSnapshotSchema.parse(readJson(IMF_FILE));
   const worldBank: WorldBankSnapshot = worldBankSnapshotSchema.parse(readJson(WORLD_BANK_FILE));
-  const result = buildStartingData(config, imf, worldBank, mapCountries);
+  const fiscal = fiscalSnapshotSchema.parse(readJson(FISCAL_FILE));
+  const result = buildStartingData(config, imf, worldBank, mapCountries, fiscal);
   if (result.errors.length > 0) {
     throw new Error(result.errors.map((e) => `  - ${e}`).join('\n'));
   }

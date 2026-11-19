@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type FiscalSnapshot,
   type ImfSnapshot,
   type StartingDataConfig,
   type WorldBankSnapshot,
@@ -53,6 +54,72 @@ const config = (countries: StartingDataConfig['countries']): StartingDataConfig 
   countries,
 });
 const democracy = { government: 'parliamentary_democracy' };
+
+describe('government finances in the starting data (F09)', () => {
+  const fiscal: FiscalSnapshot = {
+    editions: { GGR_G01_GDP_PT: 'Revenue: Fiscal Monitor (test)' },
+    downloaded: '2026-01-01',
+    values: {
+      GGR_G01_GDP_PT: { AAA: { '2025': 30 } },
+      G_X_G01_GDP_PT: { AAA: { '2024': 35, '2025': 36 } },
+      GGXWDG_NGDP: { AAA: { '2025': 80 } },
+      PCPIPCH: { AAA: { '2025': 2.5 }, BBB: { '2025': 12 } },
+      ie: { AAA: { '2024': 2.4 }, BBB: { '2024': 1.5 } },
+    },
+  };
+
+  it('takes revenue, spending, debt, inflation and the interest rate from the IMF', () => {
+    const result = buildStartingData(
+      config({ AAA: democracy }),
+      imf,
+      worldBank,
+      [{ id: 'AAA' }],
+      fiscal,
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.file.countries[0]).toMatchObject({
+      revenueShare: 0.3,
+      spendingShare: 0.36,
+      debtShare: 0.8,
+      inflationRate: 0.025,
+      interestRate: 0.03,
+      fiscalSource: 'imfFiscal',
+    });
+    expect(result.file.sources.imfFiscal.title).toContain('IMF');
+  });
+
+  it('fills what the IMF lacks from the hand-written figures, and says what is missing', () => {
+    const missing = buildStartingData(
+      config({ BBB: democracy }),
+      imf,
+      worldBank,
+      [{ id: 'BBB' }],
+      fiscal,
+    );
+    expect(missing.errors.join('\n')).toContain('BBB: no revenueShare, spendingShare, debtShare');
+    const result = buildStartingData(
+      config({
+        BBB: {
+          ...democracy,
+          fiscal: { revenueShare: 0.2, spendingShare: 0.25, debtShare: 0.5, note: 'test estimate' },
+        },
+      }),
+      imf,
+      worldBank,
+      [{ id: 'BBB' }],
+      fiscal,
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.file.countries[0]).toMatchObject({
+      revenueShare: 0.2,
+      debtShare: 0.5,
+      inflationRate: 0.12,
+      interestRate: 0.03,
+      fiscalSource: 'estimate',
+    });
+    expect(result.file.countries[0].notes).toContain('Finances: test estimate');
+  });
+});
 
 describe('building the starting data (F71)', () => {
   it('takes population from the World Bank and GDP from the IMF', () => {

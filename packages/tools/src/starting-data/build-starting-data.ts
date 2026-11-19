@@ -83,6 +83,19 @@ export const startingDataConfigSchema = z.strictObject({
           note: z.string(),
         })
         .optional(),
+      /**
+       * F09: hand-written government finance figures (shares of GDP;
+       * inflation a share a year), each used when the IMF has none.
+       */
+      fiscal: z
+        .strictObject({
+          revenueShare: z.number().min(0).max(1).optional(),
+          spendingShare: z.number().min(0).max(1.5).optional(),
+          debtShare: z.number().min(0).max(5).optional(),
+          inflationRate: z.number().min(-0.5).max(10).optional(),
+          note: z.string(),
+        })
+        .optional(),
     }),
   ),
 });
@@ -123,6 +136,88 @@ export const worldBankSnapshotSchema = z.object({
 });
 export type WorldBankSnapshot = z.infer<typeof worldBankSnapshotSchema>;
 
+/**
+ * F09: `sources/imf-fiscal.json`: the IMF's general government revenue
+ * (GGR_G01_GDP_PT) and expenditure (G_X_G01_GDP_PT) from the Fiscal Monitor
+ * and gross debt (GGXWDG_NGDP) and inflation (PCPIPCH) from the World
+ * Economic Outlook, in percent of GDP (inflation in percent), by indicator,
+ * IMF country code and year; interest paid on public debt (ie, percent of
+ * GDP, Public Finances in Modern History) for its latest year.
+ */
+export const fiscalSnapshotSchema = z.strictObject({
+  editions: z.record(z.string(), z.string()),
+  downloaded: z.string(),
+  values: z.strictObject({
+    GGR_G01_GDP_PT: z.record(z.string(), z.record(z.string(), z.number())),
+    G_X_G01_GDP_PT: z.record(z.string(), z.record(z.string(), z.number())),
+    GGXWDG_NGDP: z.record(z.string(), z.record(z.string(), z.number())),
+    PCPIPCH: z.record(z.string(), z.record(z.string(), z.number())),
+    ie: z.record(z.string(), z.record(z.string(), z.number())),
+  }),
+});
+export type FiscalSnapshot = z.infer<typeof fiscalSnapshotSchema>;
+
+/**
+ * F09: a country's government finances from the IMF (the campaign's first
+ * year, else the year before), else the hand-written `fiscal` entry; the
+ * interest rate is the interest paid ÷ the debt, where both exist.
+ */
+function fiscalFigures(
+  fiscal: FiscalSnapshot,
+  code: string,
+  year: number,
+  hand: StartingDataConfig['countries'][string]['fiscal'],
+): {
+  figures?: {
+    revenueShare: number;
+    spendingShare: number;
+    debtShare: number;
+    inflationRate: number;
+    interestRate?: number;
+  };
+  usedHand: boolean;
+  missing: string[];
+} {
+  const pick = (indicator: keyof FiscalSnapshot['values']): number | undefined => {
+    const series = fiscal.values[indicator][code];
+    return series?.[String(year)] ?? series?.[String(year - 1)];
+  };
+  const imf = {
+    revenueShare: pick('GGR_G01_GDP_PT'),
+    spendingShare: pick('G_X_G01_GDP_PT'),
+    debtShare: pick('GGXWDG_NGDP'),
+    inflationRate: pick('PCPIPCH'),
+  };
+  const result = {
+    revenueShare: imf.revenueShare !== undefined ? imf.revenueShare / 100 : hand?.revenueShare,
+    spendingShare: imf.spendingShare !== undefined ? imf.spendingShare / 100 : hand?.spendingShare,
+    debtShare: imf.debtShare !== undefined ? imf.debtShare / 100 : hand?.debtShare,
+    inflationRate: imf.inflationRate !== undefined ? imf.inflationRate / 100 : hand?.inflationRate,
+  };
+  const missing = Object.entries(result)
+    .filter(([, value]) => value === undefined)
+    .map(([key]) => key);
+  const usedHand = Object.values(imf).some((v) => v === undefined);
+  if (missing.length > 0) return { usedHand, missing };
+  const interestSeries = fiscal.values.ie[code];
+  const interestShare = interestSeries ? Object.values(interestSeries)[0] : undefined;
+  // The interest paid ÷ the debt (the IMF's, else the hand-written one).
+  const debtPercent = result.debtShare! * 100;
+  const interestRate =
+    interestShare !== undefined && debtPercent >= 5 ? interestShare / debtPercent : undefined;
+  return {
+    figures: {
+      revenueShare: round(result.revenueShare!, 4),
+      spendingShare: round(result.spendingShare!, 4),
+      debtShare: round(result.debtShare!, 4),
+      inflationRate: round(result.inflationRate!, 4),
+      ...(interestRate !== undefined ? { interestRate: round(interestRate, 4) } : {}),
+    },
+    usedHand,
+    missing,
+  };
+}
+
 const round = (value: number, decimals: number) => Number(value.toFixed(decimals));
 
 /** A country of the curated list (map-config `countries.json`). */
@@ -147,6 +242,7 @@ export function buildStartingData(
   imf: ImfSnapshot,
   worldBank: WorldBankSnapshot,
   mapCountries: readonly MapCountry[],
+  fiscal?: FiscalSnapshot,
 ): StartingDataResult {
   const { year } = config;
   const errors: string[] = [];
@@ -258,6 +354,19 @@ export function buildStartingData(
         figures.armedForces[wb] === undefined);
     if (usedHand) notes.push(`Demographics: ${hand.note}`);
 
+    // Government finances (F09): the IMF's figures, else the hand-written ones.
+    let finances: ReturnType<typeof fiscalFigures> | undefined;
+    if (fiscal) {
+      finances = fiscalFigures(fiscal, imfCode(country.id), year, entry.fiscal);
+      if (finances.missing.length > 0) {
+        errors.push(
+          `${country.id}: no ${finances.missing.join(', ')} in the IMF's figures; add them under "fiscal" in starting-data/countries.json`,
+        );
+        continue;
+      }
+      if (finances.usedHand && entry.fiscal) notes.push(`Finances: ${entry.fiscal.note}`);
+    }
+
     // Merged territories, each counted once (Guernsey and Jersey are one "Channel Islands" entry).
     const added: string[] = [];
     const seenCodes = new Set<string>();
@@ -308,6 +417,12 @@ export function buildStartingData(
       unemploymentRate: round(demographics.unemploymentRate!, 4),
       armedForcesShare: round(demographics.armedForcesShare!, 4),
       demographicsSource: usedHand ? 'estimate' : 'worldBank',
+      ...(finances?.figures
+        ? {
+            ...finances.figures,
+            fiscalSource: finances.usedHand && entry.fiscal ? 'estimate' : 'imfFiscal',
+          }
+        : {}),
       ...(notes.length > 0 ? { notes } : {}),
     });
   }
@@ -328,6 +443,16 @@ export function buildStartingData(
           url: 'https://data.worldbank.org',
           edition: `updated ${worldBank.lastUpdated}, downloaded ${worldBank.downloaded}`,
         },
+        ...(fiscal
+          ? {
+              imfFiscal: {
+                title:
+                  'IMF DataMapper: general government revenue and expenditure (Fiscal Monitor), gross debt and inflation (World Economic Outlook), percent of GDP; interest paid on public debt (Public Finances in Modern History)',
+                url: 'https://www.imf.org/external/datamapper',
+                edition: `${Object.values(fiscal.editions).join('; ')}; downloaded ${fiscal.downloaded}`,
+              },
+            }
+          : {}),
         estimate: {
           title:
             "Estimates written by hand where no source has a figure; each is explained in the country's notes",

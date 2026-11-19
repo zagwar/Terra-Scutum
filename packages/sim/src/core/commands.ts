@@ -3,6 +3,14 @@ import type { TextParams } from './sim-error';
 import { fillStockpile, setBuildingLevel } from '../economy/buildings';
 import { resplitTrade, setEmbargo, setTradeAgreement } from '../economy/trade';
 import { setRationing } from '../economy/food';
+import {
+  BUDGET_SETTINGS,
+  type BudgetSettingId,
+  debugBudgetCrisis,
+  setAutomaticBudget,
+  setBudgetLevel,
+  setMoneyPrinting,
+} from '../economy/budget';
 
 /**
  * Sim commands: the ONLY way anything outside the sim changes sim state.
@@ -103,7 +111,28 @@ export type SimCommand =
       readonly country: string;
       readonly good: string;
       readonly amount: number;
-    };
+    }
+  /**
+   * F09: a country (by id) sets one of its budget levels: its tax level or
+   * a spending line's funding (`setting`), to a level of `data/budget.json`
+   * → `levels` (by id). Takes effect at once.
+   */
+  | {
+      readonly type: 'setBudgetLevel';
+      readonly country: string;
+      readonly setting: BudgetSettingId;
+      readonly level: string;
+    }
+  /** F09: a country (by id) prints money at a level of `data/budget.json` → `inflation.printing` (by id). */
+  | { readonly type: 'setMoneyPrinting'; readonly country: string; readonly level: string }
+  /** F09: a country (by id) runs its budget by itself (`on`) or the player sets it. */
+  | { readonly type: 'setAutomaticBudget'; readonly country: string; readonly on: boolean }
+  /**
+   * Diagnostic (F09): brings a country (by id) to the edge of a default: its
+   * debt just below its credit limit and its treasury empty, so its next
+   * deficit makes it default. For tests and the Budget screen's test tool.
+   */
+  | { readonly type: 'debugBudgetCrisis'; readonly country: string };
 
 export type SimCommandType = SimCommand['type'];
 
@@ -113,6 +142,14 @@ export type CommandResult =
   | { readonly ok: false; readonly reasonKey: string; readonly params?: TextParams };
 
 const OK: CommandResult = { ok: true };
+
+/** A country's index from its id, or the refusal for an unknown one. */
+function countryOf(state: GameState, id: string): number | CommandResult {
+  const country = state.world.countryIndex.get(id);
+  if (country === undefined)
+    return { ok: false, reasonKey: 'COMMAND_UNKNOWN_COUNTRY', params: { country: String(id) } };
+  return country;
+}
 
 type CommandHandlers = {
   readonly [K in SimCommandType]: (
@@ -160,6 +197,9 @@ const HANDLERS: CommandHandlers = {
     }
     if (state.day > 0) return { ok: false, reasonKey: 'COMMAND_PLAYER_COUNTRY_LOCKED' };
     if (state.playerCountry !== country) {
+      // F09: the player sets their own budget; the country they leave runs its own.
+      setAutomaticBudget(state, state.playerCountry, true);
+      setAutomaticBudget(state, country, false);
       state.playerCountry = country;
       // The markets' and trade's snapshots show the player's country.
       state.buildings.changes += 1;
@@ -285,6 +325,36 @@ const HANDLERS: CommandHandlers = {
       return { ok: false, reasonKey: 'COMMAND_INVALID' };
     state.buildings.stock[country * state.buildings.goodCount + good] = command.amount;
     state.buildings.changes += 1;
+    return OK;
+  },
+  setBudgetLevel(state, command): CommandResult {
+    const country = countryOf(state, command.country);
+    if (typeof country !== 'number') return country;
+    const setting = BUDGET_SETTINGS.indexOf(command.setting);
+    const level = state.data.budget.levels.indexOf(command.level);
+    if (setting < 0 || level < 0) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    setBudgetLevel(state, country, setting, level);
+    return OK;
+  },
+  setMoneyPrinting(state, command): CommandResult {
+    const country = countryOf(state, command.country);
+    if (typeof country !== 'number') return country;
+    const level = state.data.budget.inflation.printing.findIndex((p) => p.id === command.level);
+    if (level < 0) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    setMoneyPrinting(state, country, level);
+    return OK;
+  },
+  setAutomaticBudget(state, command): CommandResult {
+    const country = countryOf(state, command.country);
+    if (typeof country !== 'number') return country;
+    if (typeof command.on !== 'boolean') return { ok: false, reasonKey: 'COMMAND_INVALID' };
+    setAutomaticBudget(state, country, command.on);
+    return OK;
+  },
+  debugBudgetCrisis(state, command): CommandResult {
+    const country = countryOf(state, command.country);
+    if (typeof country !== 'number') return country;
+    debugBudgetCrisis(state, country);
     return OK;
   },
 };

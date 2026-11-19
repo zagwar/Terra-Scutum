@@ -61,6 +61,19 @@ export const countryStartFileSchema = z.strictObject({
       /** The armed forces as a share of the labor force (F06). */
       armedForcesShare: z.number().min(0).max(0.3),
       demographicsSource: sourceKey,
+      /**
+       * F09: the government's revenue, spending and gross debt as shares of
+       * GDP, inflation a year (0.027 = 2.7 %), and the interest it pays on
+       * its debt a year (interest paid ÷ debt; missing where no source has
+       * it). Missing altogether in test data: the budget then uses
+       * `data/budget.json` → `fallback`.
+       */
+      revenueShare: z.number().min(0).max(1).optional(),
+      spendingShare: z.number().min(0).max(1.5).optional(),
+      debtShare: z.number().min(0).max(5).optional(),
+      inflationRate: z.number().min(-0.5).max(10).optional(),
+      interestRate: z.number().min(0).max(1).optional(),
+      fiscalSource: sourceKey.optional(),
       /** Notes on how the numbers or the government type were chosen (for developers, not shown in the game). */
       notes: z.array(z.string().min(1)).optional(),
     }),
@@ -116,6 +129,8 @@ export const checkCountryStart: DataCrossCheck = (data, report) => {
       issue(`${at}.gdpSource`, `unknown source "${c.gdpSource}"`);
     if (!Object.hasOwn(start.sources, c.demographicsSource))
       issue(`${at}.demographicsSource`, `unknown source "${c.demographicsSource}"`);
+    if (c.fiscalSource !== undefined && !Object.hasOwn(start.sources, c.fiscalSource))
+      issue(`${at}.fiscalSource`, `unknown source "${c.fiscalSource}"`);
     const perPerson = (c.gdpMillionUsd * 1e6) / c.population;
     if (perPerson < GDP_PER_PERSON_RANGE_USD.min || perPerson > GDP_PER_PERSON_RANGE_USD.max) {
       issue(
@@ -150,6 +165,15 @@ export interface CountryStartTable {
   readonly unemploymentRate: Float64Array;
   /** The armed forces as a share of the labor force (F06). */
   readonly armedForcesShare: Float64Array;
+  /**
+   * F09: the government's revenue, spending and debt (shares of GDP),
+   * inflation and interest rate (a year); NaN where the data has none.
+   */
+  readonly revenueShare: Float64Array;
+  readonly spendingShare: Float64Array;
+  readonly debtShare: Float64Array;
+  readonly inflationRate: Float64Array;
+  readonly interestRate: Float64Array;
 }
 
 export function buildCountryStartTable(
@@ -165,6 +189,11 @@ export function buildCountryStartTable(
   const laborForceShare = new Float64Array(count);
   const unemploymentRate = new Float64Array(count);
   const armedForcesShare = new Float64Array(count);
+  const revenueShare = new Float64Array(count).fill(NaN);
+  const spendingShare = new Float64Array(count).fill(NaN);
+  const debtShare = new Float64Array(count).fill(NaN);
+  const inflationRate = new Float64Array(count).fill(NaN);
+  const interestRate = new Float64Array(count).fill(NaN);
   for (const c of start.countries) {
     const index = world.countryIndex.get(c.id);
     if (index === undefined) throw new Error(`Country start data: unknown country "${c.id}"`);
@@ -176,6 +205,11 @@ export function buildCountryStartTable(
     laborForceShare[index] = c.laborForceShare;
     unemploymentRate[index] = c.unemploymentRate;
     armedForcesShare[index] = c.armedForcesShare;
+    if (c.revenueShare !== undefined) revenueShare[index] = c.revenueShare;
+    if (c.spendingShare !== undefined) spendingShare[index] = c.spendingShare;
+    if (c.debtShare !== undefined) debtShare[index] = c.debtShare;
+    if (c.inflationRate !== undefined) inflationRate[index] = c.inflationRate;
+    if (c.interestRate !== undefined) interestRate[index] = c.interestRate;
   }
   return {
     year: start.year,
@@ -187,5 +221,10 @@ export function buildCountryStartTable(
     laborForceShare,
     unemploymentRate,
     armedForcesShare,
+    revenueShare,
+    spendingShare,
+    debtShare,
+    inflationRate,
+    interestRate,
   };
 }

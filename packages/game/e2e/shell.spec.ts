@@ -41,11 +41,12 @@ test('the top bar, lenses, screens, alerts and outliner (UI shell, F122)', async
     page.screenshot({ path: join(SCREENSHOT_DIR, `shell-${name}-${testInfo.project.name}.png`) });
 
   // The top bar: the player's country, then the key numbers: "—" where the sim has none yet;
-  // since F08 the food reserves in days.
+  // since F08 the food reserves in days, since F09 the treasury and its weekly balance.
   await expect(page.getByTestId('top-bar-flag')).toContainText('United States');
-  for (const id of ['treasury', 'stability', 'manpower', 'swarmControl', 'arrival'])
+  for (const id of ['stability', 'manpower', 'swarmControl', 'arrival'])
     await expect(page.getByTestId(`top-bar-${id}`)).toContainText('—');
   await expect(page.getByTestId('top-bar-food-value')).toHaveText(/^\d+ d$/);
+  await expect(page.getByTestId('top-bar-treasury-value')).toHaveText(/^\$.+ \(.+\/wk\)$/);
   await expect(page.getByTestId('time-date')).toHaveText('1 January 2025');
   // Hovering a number says which feature brings it; clicking it opens its screen.
   await page.getByTestId('top-bar-stability').hover();
@@ -69,10 +70,10 @@ test('the top bar, lenses, screens, alerts and outliner (UI shell, F122)', async
   await page.getByTestId('lens-economy').click();
   await expect(page.getByTestId('lens-menu')).toContainText('Production chains');
   await shot('lens-menu');
-  await page.getByTestId('lens-screen-budget').click();
+  await page.getByTestId('lens-screen-productionChains').click();
   await expect(page.getByTestId('lens-menu')).toHaveCount(0);
-  await expect(page.getByTestId('shell-window')).toContainText('Budget');
-  await expect(page.getByTestId('screen-empty')).toContainText('Comes with F09 (M2)');
+  await expect(page.getByTestId('shell-window')).toContainText('Production chains');
+  await expect(page.getByTestId('screen-empty')).toContainText('Comes with F87 (M3)');
   await shot('empty-screen');
   await page.getByTestId('shell-window-close').click();
   await page.getByTestId('lens-swarm').click();

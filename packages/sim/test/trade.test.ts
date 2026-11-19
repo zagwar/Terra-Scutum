@@ -258,7 +258,7 @@ describe('saves (F19)', () => {
     run(10);
     const { trade: _trade, ...old } = serializeGameState(state);
     void _trade;
-    expect(SAVE_FORMAT_VERSION).toBe(9);
+    expect(SAVE_FORMAT_VERSION).toBe(10);
     const loaded = deserializeGameState({ ...old, saveVersion: 7 }, { data });
     expect(loaded.day).toBe(10);
     expect([...loaded.trade.imports]).toEqual([...game().state.trade.imports]);

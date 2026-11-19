@@ -252,6 +252,88 @@ export function testFood() {
   };
 }
 
+/**
+ * A valid `budget.json` (F09) that changes nothing in older tests: no taxes,
+ * no benefits, the government pays the going wage. Budget tests build their
+ * own from the real file's rules (`packages/sim/test/budget.test.ts`).
+ */
+export function testBudget() {
+  const flat = [1, 1, 1, 1, 1];
+  return {
+    levels: ['very_low', 'low', 'medium', 'high', 'very_high'],
+    taxes: {
+      strata: {
+        laborers: 'lower',
+        skilled_workers: 'middle',
+        professionals: 'middle',
+        owners: 'upper',
+        officials: 'middle',
+        soldiers: 'lower',
+      },
+      incomeTax: { lower: 0, middle: 0, upper: 0 },
+      dividendsTax: 0,
+      consumptionTax: 0,
+      levelFactor: [0.5, 0.75, 1, 1.25, 1.5],
+      startLevelRevenueAbove: [0.15, 0.25, 0.35, 0.45],
+      maxPopShareOfRevenue: 0.85,
+    },
+    administration: { payFactor: flat, collection: flat },
+    military: { payFactor: flat },
+    welfare: { benefitShare: [0, 0, 0, 0, 0] },
+    education: { shareOfSpending: 0.12, costFactor: flat, trainingFactor: flat },
+    placeholderLines: [{ id: 'research', comesWith: 'F83' }],
+    treasury: { startingWeeks: 4, keepWeeks: 4, maxStartingDeficitShareOfGdp: 0.1 },
+    credit: {
+      headroomShareOfGdp: 0.5,
+      minShareOfGdp: 0.6,
+      premiumFrom: 0.7,
+      premiumAtLimit: 0.06,
+      ratings: [
+        { id: 'AAA', below: 0.6 },
+        { id: 'BBB', below: 0.9 },
+        { id: 'CCC', below: 100 },
+      ],
+    },
+    interest: {
+      min: 0.005,
+      max: 0.15,
+      fallback: [{ gdpPerPerson: 10000, rate: 0.04 }],
+      inflationShare: 0.5,
+      inflationPremiumMax: 0.1,
+    },
+    default: {
+      writeOff: 0.5,
+      noBorrowingYears: 2,
+      premium: 0.05,
+      premiumYears: 5,
+      living: 5,
+      livingYears: 1,
+    },
+    inflation: {
+      normal: 0.025,
+      halfLifeWeeks: 26,
+      printing: [
+        { id: 'none', shareOfGdpPerYear: 0 },
+        { id: 'some', shareOfGdpPerYear: 0.01 },
+      ],
+      pointsPerPrintedShare: 4,
+      livingFrom: 0.1,
+      livingAt: 1,
+      livingMax: 10,
+      high: 0.1,
+    },
+    fallback: { revenueShare: 0.25, spendingShare: 0.28, debtShare: 0.5, inflationRate: 0.025 },
+    auto: {
+      cooldownWeeks: 26,
+      tightenAbove: 0.85,
+      tightenDeficitShareOfGdp: 0.03,
+      loosenBelow: 0.4,
+      loosenSurplusShareOfGdp: 0.01,
+    },
+    alerts: { nearLimit: 0.9 },
+  };
+}
+
 /** A valid `goods.json` (F07, F65): the goods of the test buildings, with base prices. */
 export function testGoods() {
   return {
@@ -640,6 +722,7 @@ export function testRawData(
     market: testMarket(),
     trade: testTrade(),
     food: testFood(),
+    budget: testBudget(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

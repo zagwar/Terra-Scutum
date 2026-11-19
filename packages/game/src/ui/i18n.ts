@@ -89,16 +89,18 @@ export function formatPeopleShort(people: number): string {
   return Math.round(people).toLocaleString('en');
 }
 
-/** An amount of money in a table: "$1.07B", "$1.2M", "$64.7k", "$518". */
+/** An amount of money in a table: "$38.6T" (F09), "$1.07B", "$1.2M", "$64.7k", "$518". */
 export function formatMoneyShort(dollars: number): string {
   const amount =
-    dollars >= 1e9
-      ? t('NUMBER_SHORT_BILLION', { value: threeDigits(dollars / 1e9) })
-      : dollars >= 1e6
-        ? t('NUMBER_SHORT_MILLION', { value: threeDigits(dollars / 1e6) })
-        : dollars >= 1e4
-          ? t('NUMBER_SHORT_THOUSAND', { value: threeDigits(dollars / 1e3) })
-          : Math.round(dollars).toLocaleString('en');
+    dollars >= 1e12
+      ? t('NUMBER_SHORT_TRILLION', { value: threeDigits(dollars / 1e12) })
+      : dollars >= 1e9
+        ? t('NUMBER_SHORT_BILLION', { value: threeDigits(dollars / 1e9) })
+        : dollars >= 1e6
+          ? t('NUMBER_SHORT_MILLION', { value: threeDigits(dollars / 1e6) })
+          : dollars >= 1e4
+            ? t('NUMBER_SHORT_THOUSAND', { value: threeDigits(dollars / 1e3) })
+            : Math.round(dollars).toLocaleString('en');
   return t('MONEY_VALUE', { amount });
 }
 

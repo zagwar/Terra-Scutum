@@ -71,6 +71,20 @@ export function messageFromEvent(
         target: province === undefined ? null : { kind: 'province', index: province },
       };
     }
+    case 'countryDefaulted': {
+      // F09: any country's default is news; the player's own most of all.
+      const country = world.countryIndex.get(event.country);
+      const own = country !== undefined && country === playerCountry;
+      return {
+        id: newMessageId(),
+        typeId: 'country_defaulted',
+        date,
+        titleKey: own ? 'MESSAGE_DEFAULT_OWN_TITLE' : 'MESSAGE_DEFAULT_TITLE',
+        textKey: own ? 'MESSAGE_DEFAULT_OWN' : 'MESSAGE_DEFAULT',
+        params: { country: tKey(countryNameKey(event.country)) },
+        target: country === undefined ? null : { kind: 'country', index: country },
+      };
+    }
     case 'provinceOwnerChanged': {
       const province = world.provinceIndex.get(event.province);
       return {

@@ -14,6 +14,15 @@ import { MARKET_SAVED_ARRAYS, type MarketState } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
 import { type TradeState, pairList } from '../economy/trade';
 import { type FoodState, createFood } from '../economy/food';
+import {
+  BUDGET_SAVED_ARRAYS,
+  BUDGET_SAVED_TAX_ARRAYS,
+  BUDGET_LINES,
+  BUDGET_SETTINGS,
+  type BudgetState,
+} from '../economy/budget';
+
+const BUDGET_LINE_COUNT = BUDGET_LINES.length;
 
 /**
  * Save format versioning.
@@ -28,7 +37,7 @@ import { type FoodState, createFood } from '../economy/food';
  * message instead of loading wrongly.
  */
 export const SAVE_FORMAT = 'terra-scutum-save';
-export const SAVE_FORMAT_VERSION = 9;
+export const SAVE_FORMAT_VERSION = 10;
 
 const uint32 = z.number().int().min(0).max(0xffff_ffff);
 
@@ -65,6 +74,8 @@ const saveFileSchema = z.strictObject({
     standInJobs: z.array(z.number().min(0)),
     wealth: z.array(z.number().min(1).max(99)),
     income: z.array(z.number().min(0)),
+    /** F09: last week's income after taxes, plus benefits (US$ per worker per day, as goods cost it). */
+    netIncome: z.array(z.number().min(0)),
   }),
   /**
    * The buildings (F07, F85). `types` and `goods` are the building types' and
@@ -105,6 +116,8 @@ const saveFileSchema = z.strictObject({
     weekIncome: z.array(z.number().min(0)),
     dividend: z.array(z.number().min(0)),
     weekDays: z.number().int().min(0).max(7),
+    /** F09: per pop, this week's income after taxes, plus benefits. */
+    weekNet: z.array(z.number().min(0)),
   }),
   /**
    * Trade (F19): per country and good (country by country, the goods in the
@@ -153,6 +166,45 @@ const saveFileSchema = z.strictObject({
     starvationDeaths: z.array(z.number().min(0)),
     lostBirths: z.array(z.number().min(0)),
   }),
+  /**
+   * The budget (F09): `levels` and `settingIds` are the ids of the budget
+   * levels and settings, `printingLevels` of the money printing levels, in
+   * the order the numbers use. Per country and setting its level
+   * (`settings`); per country its printing level, automatic budget (1) or
+   * not (0), weeks before the automatic budget may act again, treasury and
+   * debt (US$), inflation (a share a year), the day of its last default
+   * (-1: never) and how many, the share of its spending it can pay, its GDP
+   * (US$ a day) and interest rate; per country and line last week's
+   * amounts (US$); this week's tariffs, taxes, benefits, the pops' income
+   * and the government's pay (per country and pop group) so far, and the
+   * days counted.
+   */
+  budget: z.strictObject({
+    levels: z.array(z.string()),
+    settingIds: z.array(z.string()),
+    printingLevels: z.array(z.string()),
+    settings: z.array(z.number().int().min(0)),
+    printing: z.array(z.number().int().min(0)),
+    automatic: z.array(z.number().int().min(0).max(1)),
+    cooldown: z.array(z.number().int()),
+    treasury: z.array(z.number().min(0)),
+    debt: z.array(z.number().min(0)),
+    inflation: z.array(z.number()),
+    defaultDay: z.array(z.number().int().min(-1)),
+    defaults: z.array(z.number().int().min(0)),
+    spendingCut: z.array(z.number().min(0).max(1)),
+    lines: z.array(z.number()),
+    gdp: z.array(z.number().min(0)),
+    interestRate: z.array(z.number().min(0)),
+    weekTariffs: z.array(z.number().min(0)),
+    weekDays: z.number().int().min(0).max(7),
+    weekIncomeTax: z.array(z.number().min(0)),
+    weekDividendTax: z.array(z.number().min(0)),
+    weekConsumptionTax: z.array(z.number().min(0)),
+    weekBenefits: z.array(z.number().min(0)),
+    weekGross: z.array(z.number().min(0)),
+    weekGovPay: z.array(z.number().min(0)),
+  }),
 });
 
 export type SaveFile = z.infer<typeof saveFileSchema>;
@@ -177,6 +229,14 @@ function mapIdsOf(data: GameData): { provinces: string[]; countries: string[] } 
   };
 }
 
+/** A new campaign's economy (for migrations: what an old save never stored). */
+function startingEconomyOf(data: GameData) {
+  const world = buildWorldMap(data);
+  const countryStart = buildCountryStartTable(data.countryStart, world);
+  const player = world.countryIndex.get(data.gameConfig.playerCountry) ?? 0;
+  return createStartingEconomy(data, world, countryStart, player);
+}
+
 /** Migrations for every older save version that can still be loaded. */
 export const SAVE_MIGRATIONS: SaveMigrations = {
   // Version 2 (F02) added province ownership. Version 1 saves are from before
@@ -197,12 +257,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // Version 4 (F06) stores the population. Older saves are from before people
   // were simulated: they get the starting population.
   3: (save, data) => {
-    const world = buildWorldMap(data);
-    const { population } = createStartingEconomy(
-      data,
-      world,
-      buildCountryStartTable(data.countryStart, world),
-    );
+    const { population } = startingEconomyOf(data);
     return {
       ...save,
       population: {
@@ -217,9 +272,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // stand-in economy offers. Older saves are from before buildings: they get
   // the starting buildings, which take over their jobs from the saved ones.
   4: (save, data) => {
-    const world = buildWorldMap(data);
-    const countryStart = buildCountryStartTable(data.countryStart, world);
-    const { population, buildings } = createStartingEconomy(data, world, countryStart);
+    const { population, buildings } = startingEconomyOf(data);
     const old = save.population as { jobs?: unknown } & UnknownRecord;
     const { jobs, ...rest } = old;
     const savedJobs = Array.isArray(jobs) ? (jobs as number[]) : [];
@@ -245,9 +298,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // stand-in economy offers the same share of every pop as at the start of a
   // new campaign.
   5: (save, data) => {
-    const world = buildWorldMap(data);
-    const countryStart = buildCountryStartTable(data.countryStart, world);
-    const { population, buildings } = createStartingEconomy(data, world, countryStart);
+    const { population, buildings } = startingEconomyOf(data);
     const old = save.population as { size?: unknown } & UnknownRecord;
     const sizes = Array.isArray(old.size) ? (old.size as number[]) : [];
     return {
@@ -273,9 +324,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // campaign (base prices, the starting wealth); their buildings pay the
   // going wage with empty reserves.
   6: (save, data) => {
-    const world = buildWorldMap(data);
-    const countryStart = buildCountryStartTable(data.countryStart, world);
-    const { population, market } = createStartingEconomy(data, world, countryStart);
+    const { population, market } = startingEconomyOf(data);
     const old = save.population as UnknownRecord;
     const buildings = save.buildings as { levels?: unknown } & UnknownRecord;
     const count = Array.isArray(buildings.levels) ? buildings.levels.length / 4 : 0;
@@ -296,9 +345,7 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
   // imports. Older saves get the trade of a new campaign (its plans, arrivals
   // and reference prices); their markets keep their prices until Monday.
   7: (save, data) => {
-    const world = buildWorldMap(data);
-    const countryStart = buildCountryStartTable(data.countryStart, world);
-    const { market, trade, buildings } = createStartingEconomy(data, world, countryStart);
+    const { market, trade, buildings } = startingEconomyOf(data);
     return { ...save, trade: tradeSave(trade, market, buildings.imports) };
   },
   // Version 9 (F08) adds food: food security, starvation, famines and
@@ -310,7 +357,44 @@ export const SAVE_MIGRATIONS: SaveMigrations = {
     const groups = data.pops.groups.length;
     return { ...save, food: foodSave(createFood(data, world, groups)) };
   },
+  // Version 10 (F09) adds the budget: the treasury, taxes, spending, debt and
+  // inflation. Older saves get a new campaign's budget (its real 2025
+  // figures); the pops' income after taxes starts as their income before.
+  9: (save, data) => {
+    const { budget, market } = startingEconomyOf(data);
+    const population = save.population as { income?: unknown } & UnknownRecord;
+    const markets = save.market as { weekIncome?: unknown } & UnknownRecord;
+    const player = mapIdsOf(data).countries.indexOf(String(save.playerCountry));
+    if (player >= 0) {
+      budget.automatic.fill(1);
+      budget.automatic[player] = 0;
+    }
+    return {
+      ...save,
+      population: { ...population, netIncome: population.income },
+      market: { ...markets, weekNet: markets.weekIncome },
+      budget: budgetSave(budget, market, data),
+    };
+  },
 };
+
+/** The budget as a save stores it. */
+function budgetSave(budget: BudgetState, market: MarketState, data: GameData): SaveFile['budget'] {
+  const arrays = Object.fromEntries(
+    BUDGET_SAVED_ARRAYS.map((key) => [key, Array.from(budget[key])]),
+  ) as Record<(typeof BUDGET_SAVED_ARRAYS)[number], number[]>;
+  const sums = Object.fromEntries(
+    BUDGET_SAVED_TAX_ARRAYS.map((key) => [key, Array.from(market.taxes[key])]),
+  ) as Record<(typeof BUDGET_SAVED_TAX_ARRAYS)[number], number[]>;
+  return {
+    levels: [...data.budget.levels],
+    settingIds: [...BUDGET_SETTINGS],
+    printingLevels: data.budget.inflation.printing.map((level) => level.id),
+    ...arrays,
+    ...sums,
+    weekDays: budget.weekDays,
+  };
+}
 
 /** Food as a save stores it. */
 function foodSave(food: FoodState): SaveFile['food'] {
@@ -356,7 +440,7 @@ function marketSave(market: MarketState): SaveFile['market'] {
   const out = Object.fromEntries(
     MARKET_SAVED_ARRAYS.map((key) => [key, Array.from(market[key])]),
   ) as Record<(typeof MARKET_SAVED_ARRAYS)[number], number[]>;
-  return { ...out, weekDays: market.weekDays };
+  return { ...out, weekDays: market.weekDays, weekNet: Array.from(market.weekNet) };
 }
 
 /** Writes the state as a plain JSON-compatible object. */
@@ -378,6 +462,7 @@ export function serializeGameState(state: GameState): SaveFile {
       standInJobs: Array.from(state.population.standInJobs),
       wealth: Array.from(state.population.wealth),
       income: Array.from(state.population.income),
+      netIncome: Array.from(state.population.netIncome),
     },
     buildings: {
       types: [...state.buildings.typeIds],
@@ -390,6 +475,7 @@ export function serializeGameState(state: GameState): SaveFile {
     market: marketSave(state.market),
     trade: tradeSave(state.trade, state.market, state.buildings.imports),
     food: foodSave(state.food),
+    budget: budgetSave(state.budget, state.market, state.data),
   };
 }
 
@@ -485,7 +571,8 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
     save.population.size.length !== pops ||
     save.population.standInJobs.length !== pops ||
     save.population.wealth.length !== pops ||
-    save.population.income.length !== pops
+    save.population.income.length !== pops ||
+    save.population.netIncome.length !== pops
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'population does not match the map');
   }
@@ -534,7 +621,8 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
     m.weekPopGot.length !== map.countries.length ||
     m.shortage.length !== map.countries.length ||
     m.weekIncome.length !== pops ||
-    m.dividend.length !== pops
+    m.dividend.length !== pops ||
+    m.weekNet.length !== pops
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'markets do not match the map and the goods');
   }
@@ -574,6 +662,42 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
   ) {
     throw new SimError('SAVE_ERROR_CORRUPT', {}, 'food does not match the map');
   }
+  const b = save.budget;
+  const countries = map.countries.length;
+  const budgetRules = options.data.budget;
+  const printingLevels = budgetRules.inflation.printing.map((level) => level.id);
+  const perCountry = [
+    b.printing,
+    b.automatic,
+    b.cooldown,
+    b.treasury,
+    b.debt,
+    b.inflation,
+    b.defaultDay,
+    b.defaults,
+    b.spendingCut,
+    b.gdp,
+    b.interestRate,
+    b.weekTariffs,
+    b.weekIncomeTax,
+    b.weekDividendTax,
+    b.weekConsumptionTax,
+    b.weekBenefits,
+    b.weekGross,
+  ];
+  if (
+    !sameIds(b.levels, budgetRules.levels) ||
+    !sameIds(b.settingIds, BUDGET_SETTINGS) ||
+    !sameIds(b.printingLevels, printingLevels) ||
+    b.settings.length !== countries * BUDGET_SETTINGS.length ||
+    b.settings.some((level) => level >= budgetRules.levels.length) ||
+    b.printing.some((level) => level >= printingLevels.length) ||
+    perCountry.some((values) => values.length !== countries) ||
+    b.lines.length !== countries * BUDGET_LINE_COUNT ||
+    b.weekGovPay.length !== countries * groups.length
+  ) {
+    throw new SimError('SAVE_ERROR_CORRUPT', {}, 'the budget does not match the map');
+  }
   return new GameState({
     data: options.data,
     seed: save.seed,
@@ -589,6 +713,7 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         standInJobs: Float64Array.from(save.population.standInJobs),
         wealth: Float64Array.from(save.population.wealth),
         income: Float64Array.from(save.population.income),
+        netIncome: Float64Array.from(save.population.netIncome),
       },
       buildings: {
         levels,
@@ -607,6 +732,7 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         weekIncome: Float64Array.from(m.weekIncome),
         dividend: Float64Array.from(m.dividend),
         weekDays: m.weekDays,
+        weekNet: Float64Array.from(m.weekNet),
       },
       trade: {
         imports: Float64Array.from(t.imports),
@@ -633,6 +759,29 @@ export function deserializeGameState(raw: unknown, options: LoadOptions): GameSt
         famineLostBirths: Float64Array.from(f.famineLostBirths),
         starvationDeaths: Float64Array.from(f.starvationDeaths),
         lostBirths: Float64Array.from(f.lostBirths),
+      },
+      budget: {
+        settings: Uint8Array.from(b.settings),
+        printing: Uint8Array.from(b.printing),
+        automatic: Uint8Array.from(b.automatic),
+        cooldown: Int16Array.from(b.cooldown),
+        treasury: Float64Array.from(b.treasury),
+        debt: Float64Array.from(b.debt),
+        inflation: Float64Array.from(b.inflation),
+        defaultDay: Int32Array.from(b.defaultDay),
+        defaults: Uint16Array.from(b.defaults),
+        spendingCut: Float64Array.from(b.spendingCut),
+        lines: Float64Array.from(b.lines),
+        gdp: Float64Array.from(b.gdp),
+        interestRate: Float64Array.from(b.interestRate),
+        weekTariffs: Float64Array.from(b.weekTariffs),
+        weekDays: b.weekDays,
+        weekIncomeTax: Float64Array.from(b.weekIncomeTax),
+        weekDividendTax: Float64Array.from(b.weekDividendTax),
+        weekConsumptionTax: Float64Array.from(b.weekConsumptionTax),
+        weekBenefits: Float64Array.from(b.weekBenefits),
+        weekGross: Float64Array.from(b.weekGross),
+        weekGovPay: Float64Array.from(b.weekGovPay),
       },
     },
   });
