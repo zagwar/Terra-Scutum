@@ -9,6 +9,9 @@ import {
   ensureBuildingsReport,
   ensurePopulationReport,
   foodReserveDays,
+  BUDGET_LINES,
+  INCOME_LINE_COUNT,
+  creditLimit,
   hashGameState,
   worldPopulation,
 } from '@terra-scutum/sim';
@@ -121,6 +124,23 @@ export interface CampaignSummary {
     readonly lostBirths: number;
     readonly rationing: readonly number[];
     readonly worst: { readonly country: string; readonly starving: number };
+  };
+  /**
+   * The budget on the last day (F09): the world's government debt and
+   * treasuries as shares of the world's GDP, last week's balance as a share
+   * of GDP a year, the countries by tax level (from very low), the
+   * countries that defaulted (and the first few of them), the highest
+   * inflation, and the country closest to its credit limit.
+   */
+  readonly budget: {
+    readonly debtShare: number;
+    readonly treasuryShare: number;
+    readonly balanceShare: number;
+    readonly taxLevels: readonly number[];
+    readonly defaulted: number;
+    readonly defaultedCountries: readonly string[];
+    readonly highestInflation: { readonly country: string; readonly inflation: number };
+    readonly closestToLimit: { readonly country: string; readonly used: number };
   };
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
@@ -254,6 +274,44 @@ function foodSummary(state: GameState): CampaignSummary['food'] {
   };
 }
 
+function budgetSummary(state: GameState): CampaignSummary['budget'] {
+  const { budget, world, data } = state;
+  const lineCount = BUDGET_LINES.length;
+  let gdp = 0;
+  let debt = 0;
+  let treasury = 0;
+  let balance = 0;
+  const taxLevels = data.budget.levels.map(() => 0);
+  const defaultedCountries: string[] = [];
+  let highestInflation = { country: '', inflation: -Infinity };
+  let closestToLimit = { country: '', used: 0 };
+  for (let c = 0; c < budget.countryCount; c++) {
+    const yearGdp = budget.gdp[c] * 365;
+    gdp += yearGdp;
+    debt += budget.debt[c];
+    treasury += budget.treasury[c];
+    for (let l = 0; l < lineCount; l++)
+      balance += (l < INCOME_LINE_COUNT ? 52 : -52) * budget.lines[c * lineCount + l];
+    taxLevels[budget.settings[c * 5]] += 1;
+    if (budget.defaults[c] > 0) defaultedCountries.push(world.countryIds[c]);
+    if (budget.inflation[c] > highestInflation.inflation)
+      highestInflation = { country: world.countryIds[c], inflation: budget.inflation[c] };
+    const limit = creditLimit(budget, c);
+    const used = limit > 0 ? budget.debt[c] / limit : 0;
+    if (used > closestToLimit.used) closestToLimit = { country: world.countryIds[c], used };
+  }
+  return {
+    debtShare: gdp > 0 ? debt / gdp : 0,
+    treasuryShare: gdp > 0 ? treasury / gdp : 0,
+    balanceShare: gdp > 0 ? balance / gdp : 0,
+    taxLevels,
+    defaulted: defaultedCountries.length,
+    defaultedCountries: defaultedCountries.slice(0, 8),
+    highestInflation,
+    closestToLimit,
+  };
+}
+
 /** The value `share` (0…1) of the way through the sorted values. */
 function percentile(sorted: Float64Array, share: number): number {
   if (sorted.length === 0) return 0;
@@ -291,6 +349,12 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     data: options.data,
     seed: options.seed,
     systems: options.systems,
+  });
+  // The AI runs every country, the player's too (F09: its budget).
+  state.applyCommand({
+    type: 'setAutomaticBudget',
+    country: state.world.countryIds[state.playerCountry],
+    on: true,
   });
   options.prepare?.(state);
   state.enableProfiling(clock);
@@ -359,6 +423,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     markets,
     trade: tradeSummary(state),
     food: foodSummary(state),
+    budget: budgetSummary(state),
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,

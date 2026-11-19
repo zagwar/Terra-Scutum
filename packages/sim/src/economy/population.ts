@@ -54,6 +54,12 @@ export interface PopulationState {
   readonly wealth: Float64Array;
   /** F65: each pop's income last week, in US$ per worker per day (wages, dividends). */
   readonly income: Float64Array;
+  /**
+   * F09: what each pop had to spend last week, US$ per worker per day: its
+   * income after income and dividends taxes, plus unemployment benefits, ÷
+   * (1 + the consumption tax). Its wealth follows this (`updateWealth`).
+   */
+  readonly netIncome: Float64Array;
 
   // ── Jobs (worked out from the state) ─────────────────────────────────────
   /** The jobs buildings offer each pop (F07): from their levels, kept up to date by `buildings.ts`. */
@@ -100,6 +106,10 @@ export interface PopulationState {
   readonly extraDeaths: Float32Array;
   /** F08: standard of living each pop loses to starvation and rationing (`food.ts`). */
   readonly livingPenalty: Float32Array;
+  /** F09: standard of living everyone in a country loses to inflation and a default (`budget.ts`), per country. */
+  readonly countryLivingPenalty: Float32Array;
+  /** F09: per province, how fast people train for better jobs (the education budget; 1 = as F06 set it). */
+  readonly trainingFactor: Float32Array;
   /** The share of each pop in work at the start: its country's real employment (1 for groups that are always employed). */
   readonly employmentTarget: Float64Array;
   /**
@@ -141,6 +151,8 @@ export interface PopulationState {
   readonly changeFrom: Int32Array;
   readonly changeTo: Int32Array;
   readonly changeShare: Float64Array;
+  /** F09: 1 for a job change that needs training (the education budget speeds it up). */
+  readonly changeTraining: Uint8Array;
   readonly jobsFollowWeekly: number;
 }
 
@@ -152,6 +164,8 @@ export interface PopulationRestore {
   /** F65; missing in older saves (the starting wealth stays). */
   readonly wealth?: Float64Array;
   readonly income?: Float64Array;
+  /** F09; missing in older saves (the income before taxes stands in until the next Monday). */
+  readonly netIncome?: Float64Array;
 }
 
 const DAYS_PER_YEAR = 365;
@@ -306,6 +320,7 @@ export function createPopulation(
     standInJobs: jobs.slice(),
     wealth: new Float64Array(provinces * groups).fill(1),
     income: new Float64Array(provinces * groups),
+    netIncome: new Float64Array(provinces * groups),
     buildingJobs: new Float64Array(provinces * groups),
     jobs,
     birthRate,
@@ -320,6 +335,8 @@ export function createPopulation(
     deathFactor: new Float32Array(provinces * groups).fill(1),
     extraDeaths: new Float32Array(provinces * groups),
     livingPenalty: new Float32Array(provinces * groups),
+    countryLivingPenalty: new Float32Array(countries),
+    trainingFactor: new Float32Array(provinces).fill(1),
     employmentTarget,
     standInTarget: employmentTarget.slice(),
     employed: new Float64Array(provinces * groups),
@@ -339,6 +356,7 @@ export function createPopulation(
     changeFrom: Int32Array.from(pops.jobChanges, (change) => groupIndex.get(change.from) ?? 0),
     changeTo: Int32Array.from(pops.jobChanges, (change) => groupIndex.get(change.to) ?? 0),
     changeShare: Float64Array.from(pops.jobChanges, (change) => change.weeklyShare),
+    changeTraining: Uint8Array.from(pops.jobChanges, (change) => (change.training ? 1 : 0)),
     jobsFollowWeekly: economy.jobsFollowWeekly,
   };
 }
@@ -367,6 +385,11 @@ export function restorePopulation(population: PopulationState, saved: Population
       throw new Error('Population: the restored incomes do not match the pops');
     population.income.set(saved.income);
   }
+  if (saved.netIncome) {
+    if (saved.netIncome.length !== population.netIncome.length)
+      throw new Error('Population: the restored incomes after taxes do not match the pops');
+    population.netIncome.set(saved.netIncome);
+  } else population.netIncome.set(population.income);
   for (let i = 0; i < population.jobs.length; i++)
     population.jobs[i] = population.standInJobs[i] + population.buildingJobs[i];
   population.reportOwnershipVersion = -1;
@@ -437,7 +460,7 @@ export function growPopulation(population: PopulationState): void {
  */
 export function updateJobs(population: PopulationState): void {
   const { size, jobs, wage, standInJobs, standInTarget, buildingJobs } = population;
-  const { changeFrom, changeTo, changeShare } = population;
+  const { changeFrom, changeTo, changeShare, changeTraining, trainingFactor } = population;
   const groups = population.groupCount;
   const follow = population.jobsFollowWeekly;
   const pops = size.length;
@@ -458,7 +481,9 @@ export function updateJobs(population: PopulationState): void {
       const unemployed = size[from] > jobs[from] ? size[from] - jobs[from] : 0;
       // The unemployed take any job; people with a job only move for better pay.
       const willing = wage[to] > wage[from] ? size[from] : unemployed;
-      let moving = changeShare[c] * size[from];
+      // F09: the education budget speeds training up or slows it down.
+      const speed = changeTraining[c] === 1 ? trainingFactor[p] : 1;
+      let moving = changeShare[c] * speed * size[from];
       if (moving > willing) moving = willing;
       if (moving > openJobs) moving = openJobs;
       if (moving <= 0) continue;
@@ -473,7 +498,8 @@ export function updateJobs(population: PopulationState): void {
  * Redoes the report from the state: who has a job, the standard of living
  * (F65: each pop's wealth, less `shortagePenalty` × the share of its
  * country's pops' goods that went undelivered last week, `shortage`; F08:
- * less what starvation and rationing take, `livingPenalty`), and
+ * less what starvation and rationing take, `livingPenalty`; F09: less what
+ * inflation and a default take, `countryLivingPenalty`), and
  * the totals per province and per country.
  */
 export function refreshPopulationReport(
@@ -498,7 +524,7 @@ export function refreshPopulationReport(
   for (let p = 0; p < provinces; p++) {
     const row = p * groups;
     const owner = provinceOwner[p];
-    const penalty = shortagePenalty * shortage[owner];
+    const penalty = shortagePenalty * shortage[owner] + population.countryLivingPenalty[owner];
     let workforce = 0;
     let working = 0;
     let living = 0;

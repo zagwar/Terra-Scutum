@@ -2,7 +2,8 @@
   "messageTypes": [
     { "id": "province_owner_changed", "defaultDelivery": "toast", "pauses": false },
     { "id": "famine_started", "defaultDelivery": "toast", "pauses": false },
-    { "id": "famine_ended", "defaultDelivery": "toast", "pauses": false }
+    { "id": "famine_ended", "defaultDelivery": "toast", "pauses": false },
+    { "id": "country_defaulted", "defaultDelivery": "toast", "pauses": false }
   ],
   "alertTypes": [
     { "id": "units_out_of_supply", "kind": "problem", "feature": "F75" },
@@ -14,6 +15,10 @@
     { "id": "layoffs", "kind": "problem", "feature": "F65" },
     { "id": "famine", "kind": "problem", "feature": "F08" },
     { "id": "food_reserves_low", "kind": "problem", "feature": "F08" },
+    { "id": "borrowing", "kind": "problem", "feature": "F09" },
+    { "id": "near_credit_limit", "kind": "problem", "feature": "F09" },
+    { "id": "default", "kind": "problem", "feature": "F09" },
+    { "id": "high_inflation", "kind": "problem", "feature": "F09" },
     { "id": "law_can_be_passed", "kind": "opportunity", "feature": "F120" },
     { "id": "un_emergency_session", "kind": "opportunity", "feature": "F114" }
   ]

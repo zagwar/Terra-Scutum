@@ -414,7 +414,7 @@ describe('food in saves and snapshots (F08)', () => {
     run(10);
     const { food: _food, ...old } = serializeGameState(state);
     void _food;
-    expect(SAVE_FORMAT_VERSION).toBe(9);
+    expect(SAVE_FORMAT_VERSION).toBe(10);
     const loaded = deserializeGameState({ ...old, saveVersion: 8 }, { data });
     expect(loaded.day).toBe(10);
     expect(Array.from(loaded.food.security).every((value) => value === 1)).toBe(true);

@@ -2739,10 +2739,70 @@ body {
 .food-rationing .button-row {
   margin-bottom: 4px;
 }
+.top-bar-value {
+  white-space: nowrap;
+}
 .top-bar-item.is-warn .top-bar-value {
   color: var(--color-pending);
 }
 .top-bar-item.is-bad .top-bar-value {
   color: var(--color-bad);
   font-weight: 600;
+}
+
+/* ── Budget (F09) ──────────────────────────────────────────────────────── */
+.budget-mood.is-fine {
+  color: var(--color-good);
+}
+.budget-mood.is-deficit {
+  color: var(--color-pending);
+}
+.budget-mood.is-near_limit,
+.budget-mood.is-default {
+  color: var(--color-bad);
+}
+.budget-mood.is-default {
+  font-weight: 600;
+}
+.budget-balance-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 10px;
+}
+.list-title-inline {
+  color: var(--color-text-dim);
+  font-size: 0.9em;
+}
+.budget-settings {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.budget-level-row {
+  display: grid;
+  grid-template-columns: 9.5em 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.budget-level-name[title] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.budget-level-row .button {
+  padding: 6px 4px;
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+}
+.budget-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.budget-lines tr.is-placeholder > * {
+  color: var(--color-text-dim);
+}
+.budget-screen tr.is-selected > * {
+  background: rgba(200, 168, 90, 0.12);
 }

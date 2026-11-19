@@ -6,6 +6,15 @@ import { HISTORY_WEEKS, type MarketState, reserveCap } from '../economy/market';
 import { ensurePopulationReport } from '../economy/population';
 import type { TradeState } from '../economy/trade';
 import { foodReserveDays } from '../economy/food';
+import {
+  BUDGET_HISTORY_WEEKS,
+  BUDGET_LINES,
+  BUDGET_SETTINGS,
+  INCOME_LINE_COUNT,
+  canBorrow,
+  creditLimit,
+  creditRating,
+} from '../economy/budget';
 
 /**
  * What the sim worker sends to the game after ticks and commands: a small,
@@ -50,6 +59,63 @@ export interface SimSnapshot {
   readonly trade?: TradeSnapshot;
   /** Food (F08), sent together with the buildings, the markets and trade. */
   readonly food?: FoodSnapshot;
+  /** The budget (F09), sent together with the buildings, the markets, trade and food. */
+  readonly budget?: BudgetSnapshot;
+}
+
+/**
+ * The budget as the game shows it (F09): every country's treasury, debt,
+ * credit, inflation, levels and last week's lines (per country and line at
+ * `c * lineIds.length + l`), and for the player's country its balance week
+ * by week and what its pop groups earn before and after taxes.
+ */
+export interface BudgetSnapshot {
+  /** The ids of the levels, the settings, the money printing levels, the lines (income first), the credit ratings (plus "D" after a default). */
+  readonly levels: readonly string[];
+  readonly settingIds: readonly string[];
+  readonly printingLevels: readonly string[];
+  readonly lineIds: readonly string[];
+  readonly incomeLineCount: number;
+  readonly ratings: readonly string[];
+  /** Budget lines that do nothing yet, with the feature that brings them. */
+  readonly placeholderLines: readonly { readonly id: string; readonly comesWith: string }[];
+  /** Per country, US$: treasury, debt, credit limit, GDP a year, last week's balance. */
+  readonly treasury: Float64Array;
+  readonly debt: Float64Array;
+  readonly creditLimit: Float64Array;
+  readonly gdp: Float64Array;
+  readonly balance: Float64Array;
+  /** Per country, a share a year: interest rate, inflation; its real 2025 revenue and spending as shares of GDP. */
+  readonly interestRate: Float32Array;
+  readonly inflation: Float32Array;
+  readonly realRevenueShare: Float32Array;
+  readonly realSpendingShare: Float32Array;
+  /** Per country: credit rating (index into `ratings`), 1 while it can't borrow after a default, defaults so far, the share of its spending it can pay. */
+  readonly rating: Uint8Array;
+  readonly defaulted: Uint8Array;
+  readonly defaults: Uint16Array;
+  readonly spendingCut: Float32Array;
+  /** Per country and setting: its level; per country its printing level and automatic budget (1). */
+  readonly settings: Uint8Array;
+  readonly printing: Uint8Array;
+  readonly automatic: Uint8Array;
+  /** Per country and line: last week's amounts (US$). */
+  readonly lines: Float64Array;
+  /** The player's weekly balance of the last weeks, oldest first. */
+  readonly history: Float32Array;
+  /** The player's taxes: income tax per pop group, dividends and consumption tax; the unemployment benefit (a share of the going wage). */
+  readonly incomeTax: Float32Array;
+  readonly dividendTax: number;
+  readonly consumptionTax: number;
+  readonly benefitShare: number;
+  /** The player's pop groups today: income before and after taxes (plus benefits), US$ per worker a day. */
+  readonly groupGross: Float32Array;
+  readonly groupNet: Float32Array;
+  /** The day the player's country last defaulted (-1: never). */
+  readonly playerDefaultDay: number;
+  /** Warnings: above this share of the credit limit used; above this inflation. */
+  readonly nearLimit: number;
+  readonly highInflation: number;
 }
 
 /**
@@ -310,8 +376,92 @@ export function createSnapshot(state: GameState, known?: SnapshotKnown): SimSnap
           market: marketSnapshot(state.market, buildings, state.playerCountry),
           trade: tradeSnapshot(state.trade, state.playerCountry),
           food: foodSnapshot(state),
+          budget: budgetSnapshot(state),
         }
       : {}),
+  };
+}
+
+function budgetSnapshot(state: GameState): BudgetSnapshot {
+  const { budget, data, market, population } = state;
+  const countries = budget.countryCount;
+  const lineCount = BUDGET_LINES.length;
+  const treasury = budget.treasury.slice();
+  const limit = new Float64Array(countries);
+  const balance = new Float64Array(countries);
+  const rating = new Uint8Array(countries);
+  const defaulted = new Uint8Array(countries);
+  const gdp = new Float64Array(countries);
+  for (let c = 0; c < countries; c++) {
+    limit[c] = creditLimit(budget, c);
+    gdp[c] = budget.gdp[c] * 365;
+    let total = 0;
+    for (let l = 0; l < lineCount; l++)
+      total += (l < INCOME_LINE_COUNT ? 1 : -1) * budget.lines[c * lineCount + l];
+    balance[c] = total;
+    rating[c] = creditRating(budget, data, c, state.day);
+    defaulted[c] = canBorrow(budget, data, c, state.day) ? 0 : 1;
+  }
+  const player = state.playerCountry;
+  const weeks = budget.historyCount;
+  const history = new Float32Array(weeks);
+  for (let w = 0; w < weeks; w++) {
+    const slot = (budget.historyNext - weeks + w + BUDGET_HISTORY_WEEKS) % BUDGET_HISTORY_WEEKS;
+    history[w] = budget.history[player * BUDGET_HISTORY_WEEKS + slot];
+  }
+  const groups = population.groupCount;
+  const taxes = market.taxes;
+  const groupGross = new Float32Array(groups);
+  const groupNet = new Float32Array(groups);
+  const groupPeople = new Float64Array(groups);
+  for (let p = 0; p < state.provinceOwner.length; p++) {
+    if (state.provinceOwner[p] !== player) continue;
+    for (let g = 0; g < groups; g++) {
+      const i = p * groups + g;
+      groupGross[g] += taxes.popGross[i];
+      groupNet[g] += taxes.popNet[i];
+      groupPeople[g] += population.size[i];
+    }
+  }
+  for (let g = 0; g < groups; g++) {
+    groupGross[g] = groupPeople[g] > 0 ? groupGross[g] / groupPeople[g] : 0;
+    groupNet[g] = groupPeople[g] > 0 ? groupNet[g] / groupPeople[g] : 0;
+  }
+  return {
+    levels: data.budget.levels,
+    settingIds: BUDGET_SETTINGS,
+    printingLevels: data.budget.inflation.printing.map((level) => level.id),
+    lineIds: BUDGET_LINES,
+    incomeLineCount: INCOME_LINE_COUNT,
+    ratings: [...data.budget.credit.ratings.map((r) => r.id), 'D'],
+    placeholderLines: data.budget.placeholderLines,
+    treasury,
+    debt: budget.debt.slice(),
+    creditLimit: limit,
+    gdp,
+    balance,
+    interestRate: Float32Array.from(budget.interestRate),
+    inflation: Float32Array.from(budget.inflation),
+    realRevenueShare: Float32Array.from(budget.realRevenueShare),
+    realSpendingShare: Float32Array.from(budget.realSpendingShare),
+    rating,
+    defaulted,
+    defaults: budget.defaults.slice(),
+    spendingCut: Float32Array.from(budget.spendingCut),
+    settings: budget.settings.slice(),
+    printing: budget.printing.slice(),
+    automatic: budget.automatic.slice(),
+    lines: budget.lines.slice(),
+    history,
+    incomeTax: Float32Array.from(taxes.incomeTax.subarray(player * groups, (player + 1) * groups)),
+    dividendTax: taxes.dividendTax[player],
+    consumptionTax: taxes.consumptionTax[player],
+    benefitShare: taxes.benefitShare[player],
+    groupGross,
+    groupNet,
+    playerDefaultDay: budget.defaultDay[player],
+    nearLimit: data.budget.alerts.nearLimit,
+    highInflation: data.budget.inflation.high,
   };
 }
 

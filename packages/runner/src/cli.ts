@@ -130,6 +130,14 @@ function runOne(data: GameData, days: number, seed: number): boolean {
       `${food.famines} provinces in famine; starvation deaths ${Math.round(food.deaths).toLocaleString('en-US')}, ` +
       `lost births ${Math.round(food.lostBirths).toLocaleString('en-US')}; rationing (none/light/strict/emergency) ${food.rationing.join('/')}`,
   );
+  const { budget } = summary;
+  console.log(
+    `Budget         world debt ${(budget.debtShare * 100).toFixed(0)} % of GDP, treasuries ${(budget.treasuryShare * 100).toFixed(1)} %, ` +
+      `balance ${(budget.balanceShare * 100).toFixed(1)} % of GDP a year; tax levels (very low … very high) ${budget.taxLevels.join('/')}; ` +
+      `${budget.defaulted} countries defaulted${budget.defaulted > 0 ? ` (${budget.defaultedCountries.join(', ')}${budget.defaulted > budget.defaultedCountries.length ? ', …' : ''})` : ''}; ` +
+      `highest inflation ${budget.highestInflation.country} ${(budget.highestInflation.inflation * 100).toFixed(1)} %; ` +
+      `closest to its credit limit ${budget.closestToLimit.country} ${(budget.closestToLimit.used * 100).toFixed(0)} %`,
+  );
   console.log(`State hash      ${summary.stateHash}`);
   return summary.dailyTicks.withinBudget && summary.weeklyTicks.withinBudget;
 }
@@ -158,7 +166,7 @@ function runStress(
   const provinces = data.provinces.provinces.length;
   const countries = data.countries.countries.length;
   console.log(
-    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07, the real markets since F65, the real trade since F19 and the real food since F08)',
+    'Terra Scutum sim stress test (placeholder load, with the real pops since F06, the real buildings since F07, the real markets since F65, the real trade since F19, the real food since F08 and the real budget since F09)',
   );
   console.log('────────────────────────────────────────────────────────────────────────────');
   console.log(

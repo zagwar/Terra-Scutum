@@ -11,23 +11,28 @@ import { calibrateMarkets } from './economy';
 import { type MarketState, createMarket } from './market';
 import { type TradeState, createTrade } from './trade';
 import { type PopulationState, createPopulation } from './population';
+import { type BudgetState, calibrateBudget, createBudget, finishStartingBudget } from './budget';
 
 /**
  * The economy at the start of a campaign: the population (F06), the
  * starting buildings (F07, F85), each province's pop mix fitted to its
  * buildings' jobs (`fitPopsToBuildings`), the buildings taking over
  * their jobs from the stand-in economy (`linkStartingBuildings`), and the
- * markets and trade between them in balance (F65, F19, `calibrateMarkets`).
+ * markets and trade between them in balance (F65, F19, `calibrateMarkets`),
+ * and the budget (F09): taxes settle with the markets, then every country's
+ * real revenue, spending, debt and inflation.
  */
 export function createStartingEconomy(
   data: GameData,
   world: WorldMap,
   countryStart: CountryStartTable,
+  playerCountry: number,
 ): {
   population: PopulationState;
   buildings: BuildingsState;
   market: MarketState;
   trade: TradeState;
+  budget: BudgetState;
 } {
   const population = createPopulation(data, world, countryStart);
   const buildings = createBuildings(data, world);
@@ -36,8 +41,12 @@ export function createStartingEconomy(
   linkStartingBuildings(buildings, population);
   const market = createMarket(data, world, population.groupCount);
   const trade = createTrade(data, world);
-  calibrateMarkets(data, world, population, buildings, market, trade);
-  return { population, buildings, market, trade };
+  const budget = createBudget(data, world, countryStart, market, population);
+  calibrateMarkets(data, world, population, buildings, market, trade, () =>
+    calibrateBudget(budget, market, data),
+  );
+  finishStartingBudget(budget, market, trade, data, countryStart, playerCountry);
+  return { population, buildings, market, trade, budget };
 }
 
 /**

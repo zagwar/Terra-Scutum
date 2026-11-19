@@ -754,7 +754,7 @@ describe('older saves (F85)', () => {
 });
 
 describe('the game starts with the building and market systems', () => {
-  it('runs production in the energy, resource production and industry slots, then the market, trade and food', () => {
+  it('runs production in the energy, resource production and industry slots, then the market, trade, food and the budget', () => {
     const { state } = newGame();
     state.enableProfiling(() => 0);
     state.advanceDay();
@@ -766,6 +766,7 @@ describe('the game starts with the building and market systems', () => {
       'market',
       'trade',
       'foodConsumption',
+      'budget',
     ]);
   });
 });

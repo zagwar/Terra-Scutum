@@ -1,6 +1,7 @@
 import { economySystems } from '../economy/economy';
 import { populationSystem } from '../economy/population';
 import { foodSystem } from '../economy/food';
+import { budgetSystem } from '../economy/budget';
 import type { GameState } from './game-state';
 
 /**
@@ -67,4 +68,6 @@ export const SYSTEMS: SystemRegistry = {
   ...economySystems,
   // Food (F08): food security, starvation, famine, rationing.
   foodConsumption: foodSystem,
+  // The budget (F09): taxes, spending, debt, inflation.
+  budget: budgetSystem,
 };

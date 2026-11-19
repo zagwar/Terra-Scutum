@@ -36,7 +36,7 @@ export const at = (feature: string, milestone: string): ComesWith => ({ feature,
 
 /** Every screen reachable from a lens (section 12.1), with the feature that builds it. */
 export const SCREENS = {
-  budget: { lens: 'economy', comesWith: at('F09', 'M2') },
+  budget: { lens: 'economy', comesWith: null },
   buildings: { lens: 'economy', comesWith: null },
   productionChains: { lens: 'economy', comesWith: at('F87', 'M3') },
   // Built in F65 (a first pass; F11 fills it out).

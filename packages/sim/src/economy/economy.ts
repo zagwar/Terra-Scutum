@@ -9,8 +9,10 @@ import {
   computeOrders,
   marketDay,
   marketWeek,
+  popMoneyDay,
   reserveCap,
   unitEconomics,
+  updateNetIncome,
   updateShares,
   updateWealth,
 } from './market';
@@ -56,7 +58,7 @@ function wholeDay(
   startDay(population, buildings, market, provinceOwner, data);
   for (let stage = 0; stage < BUILDING_STAGES.length; stage++)
     runStage(buildings, stage, stock, provinceOwner, market.price, population.groupCount);
-  marketDay(market, buildings, population, stock, false);
+  marketDay(market, buildings, population, stock, false, provinceOwner);
 }
 
 /** Runs one production step on the real stockpiles (the first step prepares the day). */
@@ -89,7 +91,14 @@ export const marketSystem: SimSystem = {
     marketWeek(state.market, state.buildings, state.population, state.provinceOwner, state.data);
   },
   daily(state) {
-    marketDay(state.market, state.buildings, state.population, state.buildings.stock, true);
+    marketDay(
+      state.market,
+      state.buildings,
+      state.population,
+      state.buildings.stock,
+      true,
+      state.provinceOwner,
+    );
     state.buildings.changes += 1;
   },
 };
@@ -187,6 +196,9 @@ function setRestReference(market: MarketState): void {
  *    tariffs). The pops' electricity comes out of the rest of the economy's
  *    (F85); the stockpiles start with `startingDays` of everyone's buying.
  * These settle together over a few rounds (each depends on the others).
+ * F09: wealth follows the income after taxes (plus benefits); `afterTrial`
+ * (the budget's start, `calibrateBudget`) runs after each round's trial day,
+ * so the taxes the budget sets settle with the rest.
  */
 export function calibrateMarkets(
   data: GameData,
@@ -195,6 +207,7 @@ export function calibrateMarkets(
   buildings: BuildingsState,
   market: MarketState,
   trade: TradeState,
+  afterTrial?: () => void,
 ): void {
   const owner = world.provinceCountry;
   const rules = data.market.buildings;
@@ -207,7 +220,7 @@ export function calibrateMarkets(
   const keep =
     rules.depositWhenEmpty -
     (rules.depositWhenEmpty - rules.depositAtFull) * rules.startingReserves;
-  const { size, standInJobs, wage, income } = population;
+  const { size, income } = population;
   const { goodCount, electricityGood, popOrder, sell, buy } = market;
   const { made, imports, ordered, otherPowerPerPerson } = buildings;
   const { countryPeople, popPower } = market;
@@ -239,14 +252,13 @@ export function calibrateMarkets(
       if (profit > 0)
         market.dividend[((cell / typeCount) | 0) * groups + ownersGroup] += profit * (1 - keep);
     }
-    for (let i = 0; i < size.length; i++)
-      income[i] =
-        size[i] > 0
-          ? (buildings.popPay[i] +
-              standInJobs[i] * buildings.standInFill[i] * wage[i] +
-              market.dividend[i]) /
-            size[i]
-          : 0;
+    // F09: incomes before and after taxes, with these dividends.
+    popMoneyDay(market, buildings, population, owner);
+    afterTrial?.();
+    popMoneyDay(market, buildings, population, owner);
+    const gross = market.taxes.popGross;
+    for (let i = 0; i < size.length; i++) income[i] = size[i] > 0 ? gross[i] / size[i] : 0;
+    updateNetIncome(market, population, owner, 0);
     for (let m = 0; m < sell.length; m++) {
       // As `marketDay` counts them: electricity is on sale as far as the
       // plants could make it, and its orders (everyone's) are what was asked.

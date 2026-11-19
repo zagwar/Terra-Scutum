@@ -1,4 +1,5 @@
 import type { RawGameData } from '@terra-scutum/sim';
+import budget from '../../../../data/budget.json';
 import buildingStart from '../../../../data/building_start.json';
 import buildings from '../../../../data/buildings.json';
 import countries from '../../../../data/countries.json';
@@ -43,6 +44,7 @@ export const RAW_GAME_DATA: RawGameData = {
   market,
   trade,
   food,
+  budget,
   mapView,
   terrainTiles,
   notifications,

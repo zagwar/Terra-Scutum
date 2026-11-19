@@ -23,6 +23,12 @@ import { type MarketRestore, type MarketState, restoreMarket } from '../economy/
 import { createStartingEconomy } from '../economy/starting-economy';
 import { type TradeRestore, type TradeState, restoreTrade } from '../economy/trade';
 import { type FoodRestore, type FoodState, createFood, restoreFood } from '../economy/food';
+import {
+  type BudgetRestore,
+  type BudgetState,
+  applyBudgetLiving,
+  restoreBudget,
+} from '../economy/budget';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -49,6 +55,8 @@ export interface GameStateOptions {
     readonly trade?: TradeRestore;
     /** Food (F08): rationing, food security, famines; missing in older saves. */
     readonly food?: FoodRestore;
+    /** The budget (F09): treasury, debt, levels, inflation; missing in older saves. */
+    readonly budget?: BudgetRestore;
   };
 }
 
@@ -120,6 +128,12 @@ export class GameState {
    * rationing. Changed by the food system and the `setRationing` command.
    */
   readonly food: FoodState;
+  /**
+   * The budget (F09, section 8.2): treasury, taxes, budget lines, debt,
+   * interest, default and inflation. Changed by the budget system and the
+   * budget commands.
+   */
+  readonly budget: BudgetState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -138,11 +152,21 @@ export class GameState {
     this.startEpochDay = dateToEpochDay(options.data.gameConfig.startDate);
     // The population and the starting buildings, which take over their jobs
     // from the stand-in economy (and give each province its pop mix).
-    const economy = createStartingEconomy(options.data, this.world, this.countryStart);
+    // The data checks make sure `playerCountry` is a country (`checkPlayerCountry`).
+    const startingPlayer = options.restore
+      ? options.restore.playerCountry
+      : (this.world.countryIndex.get(options.data.gameConfig.playerCountry) ?? 0);
+    const economy = createStartingEconomy(
+      options.data,
+      this.world,
+      this.countryStart,
+      startingPlayer,
+    );
     this.population = economy.population;
     this.buildings = economy.buildings;
     this.market = economy.market;
     this.trade = economy.trade;
+    this.budget = economy.budget;
     this.food = createFood(options.data, this.world, this.population.groupCount);
 
     if (options.restore) {
@@ -160,12 +184,22 @@ export class GameState {
       if (options.restore.trade)
         restoreTrade(this.trade, this.market, this.buildings, options.restore.trade);
       if (options.restore.food) restoreFood(this, options.restore.food);
+      if (options.restore.budget)
+        restoreBudget(
+          this.budget,
+          this.market,
+          this.population,
+          this.provinceOwner,
+          options.data,
+          options.restore.budget,
+        );
+      applyBudgetLiving(this);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);
       this.provinceOwner = startingOwners(this.world);
-      // The data checks make sure `playerCountry` is a country (`checkPlayerCountry`).
-      this.playerCountry = this.world.countryIndex.get(options.data.gameConfig.playerCountry) ?? 0;
+      this.playerCountry = startingPlayer;
+      applyBudgetLiving(this);
     }
 
     const systems = options.systems ?? SYSTEMS;
