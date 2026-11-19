@@ -280,7 +280,7 @@ export function calibrateMarkets(
   for (let m = 0; m < stock.length; m++) {
     if (m % goodCount === electricityGood) continue;
     const daily = capacityUse[m] + popOrder[m] + market.restOrder[m] + market.exportOrder[m];
-    stock[m] = Math.max(stock[m], startingDays * daily);
+    stock[m] = Math.max(stock[m], startingDays[m % goodCount] * daily);
   }
   buildings.changes += 1;
   population.reportOwnershipVersion = -1;

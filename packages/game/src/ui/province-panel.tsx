@@ -1,6 +1,8 @@
 import {
   type BuildingsConfig,
   type BuildingsSnapshot,
+  type CalendarDate,
+  type FoodSnapshot,
   type GoodsConfig,
   type PopsConfig,
   type PopulationSnapshot,
@@ -15,6 +17,7 @@ import { formatArea, t, tKey } from './i18n';
 import { ProvinceBuildings } from './buildings/province-buildings';
 import { LinkList } from './link-list';
 import { ProvincePopulation } from './population/province-population';
+import { ProvinceFood } from './food/province-food';
 import { PanelHeader, type PanelNav } from './shell/panel-header';
 
 export interface ProvincePanelProps {
@@ -28,6 +31,9 @@ export interface ProvincePanelProps {
   readonly buildings: BuildingsSnapshot | null;
   readonly buildingTypes: BuildingsConfig | null;
   readonly goods: GoodsConfig | null;
+  /** Food (F08) and today (date and day of the campaign); null until the sim has sent them. */
+  readonly food: FoodSnapshot | null;
+  readonly today: { readonly date: CalendarDate; readonly day: number } | null;
   /** Test tool: sets the level of this province's building of a type (by id). */
   readonly onSetBuildingLevel: (buildingId: string, level: number) => void;
   /** Index of the province to show. */
@@ -58,6 +64,8 @@ export function ProvincePanel({
   buildings,
   buildingTypes,
   goods,
+  food,
+  today,
   onSetBuildingLevel,
   province,
   nav,
@@ -122,6 +130,16 @@ export function ProvincePanel({
           pops={pops}
           province={province}
           areaKm2={world.provinceAreaKm2[province]}
+        />
+      )}
+
+      {food && population && today && (
+        <ProvinceFood
+          food={food}
+          population={population}
+          province={province}
+          today={today.date}
+          todayDay={today.day}
         />
       )}
 

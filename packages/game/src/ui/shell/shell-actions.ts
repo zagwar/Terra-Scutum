@@ -72,6 +72,14 @@ export interface ShellActions {
   readonly testFillStockpile: (country: number, days: number) => Promise<CommandResult>;
   /** Test tool (F19, until diplomacy, M6): starts or lifts an embargo between two countries. */
   readonly testSetEmbargo: (country: number, target: number, on: boolean) => Promise<CommandResult>;
+  /** F08: the player's rationing: a level (by id) or `null` for automatic. */
+  readonly setRationing: (level: string | null) => Promise<CommandResult>;
+  /**
+   * Test tool (F08): a food crisis in the player's country, to see hunger
+   * and famine come: every building that makes food closes, the food
+   * reserves are emptied and every other country stops trading with it.
+   */
+  readonly testFoodCrisis: () => Promise<CommandResult>;
 }
 
 export function createShellActions({
@@ -219,6 +227,51 @@ export function createShellActions({
       const world = state().world;
       if (!world) return { ok: false, reasonKey: 'COMMAND_INVALID' };
       return sendCommand({ type: 'debugFillStockpile', country: world.countryIds[country], days });
+    },
+    async setRationing(level) {
+      const { world, playerCountry } = state();
+      if (!world || playerCountry === null) return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      return sendCommand({ type: 'setRationing', country: world.countryIds[playerCountry], level });
+    },
+    async testFoodCrisis() {
+      const { world, playerCountry, food, goods, buildings, buildingTypes, provinceOwner } =
+        state();
+      if (
+        !world ||
+        playerCountry === null ||
+        !food ||
+        !goods ||
+        !buildings ||
+        !buildingTypes ||
+        !provinceOwner
+      )
+        return { ok: false, reasonKey: 'COMMAND_INVALID' };
+      const country = world.countryIds[playerCountry];
+      const foodIds = new Set(Array.from(food.foodGoods, (g) => goods.goods[g].id));
+      const makesFood = buildingTypes.buildings.map((type) =>
+        type.methods.some((method) => Object.keys(method.outputs).some((id) => foodIds.has(id))),
+      );
+      const commands: SimCommand[] = [];
+      buildings.cells.forEach((cell, i) => {
+        const province = Math.floor(cell / buildings.typeCount);
+        const type = cell - province * buildings.typeCount;
+        if (provinceOwner[province] !== playerCountry || !makesFood[type]) return;
+        if (buildings.level[i] === 0) return;
+        commands.push({
+          type: 'debugSetBuildingLevel',
+          province: world.provinceIds[province],
+          building: buildingTypes.buildings[type].id,
+          level: 0,
+        });
+      });
+      for (const id of foodIds)
+        commands.push({ type: 'debugSetStockpile', country, good: id, amount: 0 });
+      for (const target of world.countryIds)
+        if (target !== country)
+          commands.push({ type: 'debugSetEmbargo', country, target, on: true });
+      // Sent all at once, in order: the sim worker applies them before anything sent later.
+      const answers = await Promise.all(commands.map((command) => sendCommand(command)));
+      return answers.find((answer) => !answer.ok) ?? { ok: true };
     },
     async testSetEmbargo(country, target, on) {
       const world = state().world;

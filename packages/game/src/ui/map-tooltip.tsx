@@ -1,5 +1,6 @@
 import {
   type BuildingsSnapshot,
+  type FoodSnapshot,
   type PopulationSnapshot,
   type WorldMap,
   countryNameKey,
@@ -7,7 +8,7 @@ import {
   seaZoneNameKey,
 } from '@terra-scutum/sim';
 import { useLayoutEffect, useRef } from 'react';
-import { formatDensity, formatPopulation, t, tKey } from './i18n';
+import { formatDensity, formatPercent, formatPopulation, t, tKey } from './i18n';
 
 export interface MapTooltipProps {
   readonly world: WorldMap;
@@ -17,6 +18,8 @@ export interface MapTooltipProps {
   readonly population?: PopulationSnapshot | null;
   /** Given in the industry map mode: a province's tooltip then also shows the people at work in its buildings (F07). */
   readonly buildings?: BuildingsSnapshot | null;
+  /** Given in the food map mode: a province's tooltip then also shows its food security and famine (F08). */
+  readonly food?: FoodSnapshot | null;
   /** What is under the mouse: a province or a sea zone (by index). */
   readonly target: { readonly kind: 'province' | 'seaZone'; readonly index: number };
 }
@@ -41,6 +44,7 @@ export function MapTooltip({
   provinceOwner,
   population,
   buildings,
+  food,
   target,
 }: MapTooltipProps) {
   const element = useRef<HTMLDivElement>(null);
@@ -93,6 +97,14 @@ export function MapTooltip({
                 levels: provinceLevels(buildings, target.index).toLocaleString('en'),
               })
             : t('MAP_TOOLTIP_PROVINCE_NO_INDUSTRY')}
+        </span>
+      )}
+      {target.kind === 'province' && food && (
+        <span className="map-tooltip-line" data-testid="map-tooltip-food">
+          {t(food.famineSince[target.index] >= 0 ? 'MAP_TOOLTIP_FAMINE' : 'MAP_TOOLTIP_FOOD', {
+            security: formatPercent(food.provinceSecurity[target.index], 0),
+            starving: formatPercent(food.provinceStarving[target.index], 0),
+          })}
         </span>
       )}
     </div>

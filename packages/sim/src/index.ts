@@ -25,6 +25,8 @@ export * from './economy/market';
 export * from './economy/market-data';
 export * from './economy/trade';
 export * from './economy/trade-data';
+export * from './economy/food-data';
+export * from './economy/food';
 export * from './economy/building-start';
 export * from './economy/starting-economy';
 export * from './economy/pops-data';

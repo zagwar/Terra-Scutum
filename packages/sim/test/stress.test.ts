@@ -20,6 +20,7 @@ describe('the sim stress test’s placeholder load (F139)', () => {
       'combat',
       'diplomacyAi',
       'energy',
+      'foodConsumption',
       'industry',
       'laserCoverage',
       'market',

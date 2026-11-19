@@ -2713,3 +2713,36 @@ body {
 .trade-screen [data-status='bad'] {
   color: var(--color-bad);
 }
+
+/* ── Food (F08) ────────────────────────────────────────────────────────── */
+.food-mood {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.food-mood.is-fed {
+  color: var(--color-good);
+}
+.food-mood.is-low {
+  color: var(--color-pending);
+}
+.food-mood.is-short,
+.food-mood.is-famine {
+  color: var(--color-bad);
+}
+.food-mood.is-famine {
+  font-weight: 600;
+}
+.food-rationing .button-row {
+  margin-bottom: 4px;
+}
+.top-bar-item.is-warn .top-bar-value {
+  color: var(--color-pending);
+}
+.top-bar-item.is-bad .top-bar-value {
+  color: var(--color-bad);
+  font-weight: 600;
+}

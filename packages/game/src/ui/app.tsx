@@ -17,7 +17,9 @@ import { Outliner } from './shell/outliner';
 import type { PanelNav } from './shell/panel-header';
 import type { ShellActions } from './shell/shell-actions';
 import { ShellWindowView } from './shell/shell-window';
-import { TopBar } from './shell/top-bar';
+import { TopBar, type TopBarValue } from './shell/top-bar';
+import { foodTopBarValue } from './food/food-top-bar';
+import type { TopBarItemId } from './shell/catalog';
 import { TimeControl } from './time-control';
 
 export interface AppProps {
@@ -75,6 +77,7 @@ export function App({
             flagCodes={state.countryScreen?.flagCodes ?? null}
             onOpenCountry={(country) => actions.show({ kind: 'country', index: country })}
             onOpenWindow={actions.openWindow}
+            values={topBarValues(state)}
             timeControl={
               state.snapshot &&
               state.time && (
@@ -121,6 +124,7 @@ export function App({
           mode={state.mapMode}
           populationDensityColors={state.populationDensityColors}
           industryColors={state.industryColors}
+          foodColors={state.foodColors}
           onSetMapMode={onSetMapMode}
           onResetView={onResetView}
         />
@@ -141,6 +145,8 @@ export function App({
           population={state.mapMode === 'population' ? state.population : null}
           // The industry map mode's tooltip says how many people work in its buildings.
           buildings={state.mapMode === 'industry' ? state.buildings : null}
+          // The food map mode's tooltip says how well its people are fed (F08).
+          food={state.mapMode === 'food' ? state.food : null}
           target={{ kind: 'province', index: state.hoveredProvince }}
         />
       )}
@@ -226,6 +232,8 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
           buildings={state.buildings}
           buildingTypes={state.buildingTypes}
           goods={state.goods}
+          food={state.food}
+          today={state.snapshot && { date: state.snapshot.date, day: state.snapshot.day }}
           onSetBuildingLevel={(buildingId, level) =>
             void actions.testSetBuildingLevel(panel.index, buildingId, level)
           }
@@ -279,4 +287,10 @@ function InfoPanel({ state, actions }: { state: AppState; actions: ShellActions 
         />
       );
   }
+}
+
+/** The top bar's key numbers the sim has so far (F08: food). */
+function topBarValues(state: AppState): Partial<Record<TopBarItemId, TopBarValue>> {
+  const food = foodTopBarValue(state);
+  return food ? { food } : {};
 }

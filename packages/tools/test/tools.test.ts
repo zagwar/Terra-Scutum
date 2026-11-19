@@ -46,6 +46,7 @@ describe('loading game data from disk', () => {
       'data/building_start.json: file is missing',
       'data/market.json: file is missing',
       'data/trade.json: file is missing',
+      'data/food.json: file is missing',
       'data/map_view.json: file is missing',
       'data/terrain_tiles.json: file is missing',
       'data/notifications.json: file is missing',

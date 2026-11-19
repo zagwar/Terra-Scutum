@@ -364,7 +364,7 @@ describe('markets in saves and snapshots (F65)', () => {
     void _wealth;
     void _income;
     const old = { ...rest, saveVersion: 6, buildings, population };
-    expect(SAVE_FORMAT_VERSION).toBe(8);
+    expect(SAVE_FORMAT_VERSION).toBe(9);
     const loaded = deserializeGameState(old, { data });
     expect(loaded.day).toBe(10);
     expect([...loaded.market.price]).toEqual([...game({ start: COAL_ECONOMY }).state.market.price]);

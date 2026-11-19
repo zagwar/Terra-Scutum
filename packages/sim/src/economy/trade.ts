@@ -17,7 +17,7 @@ import { HISTORY_WEEKS, type MarketState, marketPrice } from './market';
  * - **How much** (weekly, Victoria 3's weekly trades): each country moves
  *   its import or export of a good by `gapShare` of its market's gap (what
  *   is wanted less what is on sale), plus what brings its stockpile back
- *   toward `stockTargetDays`. Imports are sold on its market, exports bought
+ *   toward its target days (`stockTargetDays`; F08: food has its own). Imports are sold on its market, exports bought
  *   from it, so prices meet.
  * - **Who sells to whom** (weekly): each importer buys from every exporter
  *   in proportion to what it offers, halved for every `halvingShare` of the
@@ -53,7 +53,8 @@ export interface TradeState {
 
   // ── From the data ────────────────────────────────────────────────────────
   readonly gapShare: number;
-  readonly stockTargetDays: number;
+  /** Per good: trade tops the stockpile up toward this many days of what is bought (F08: food goods have their own). */
+  readonly stockTargetDays: Float64Array;
   readonly restoreDays: number;
   readonly halvingShare: number;
   readonly rounds: number;
@@ -73,6 +74,9 @@ export interface TradeState {
   /** Per good: what the rest of the world sells on the World Market a day (what the world couldn't make at the start), and that per person of the world. */
   readonly restOfWorld: Float64Array;
   readonly restOfWorldPerPerson: Float64Array;
+
+  /** Per country and good: 1 while the country doesn't export it (F08: food, while it rations strictly; set by `food.ts`). */
+  readonly exportBan: Uint8Array;
 
   // ── The state (saved) ────────────────────────────────────────────────────
   /** Per country and good: what it imports and exports a day (this week's plan, after the split among partners). */
@@ -292,7 +296,12 @@ export function createTrade(data: GameData, world: WorldMap): TradeState {
     countryCount: countries,
     tradable: Uint8Array.from(goods, (good) => (local.has(good.id) ? 0 : 1)),
     gapShare: rules.volumes.gapShare,
-    stockTargetDays: rules.volumes.stockTargetDays,
+    stockTargetDays: Float64Array.from(goods, (good) =>
+      data.food.goods.includes(good.id)
+        ? data.food.reserves.targetDays
+        : rules.volumes.stockTargetDays,
+    ),
+    exportBan: new Uint8Array(countries * goodCount),
     restoreDays: rules.volumes.stockRestoreWeeks * 7,
     halvingShare: rules.partners.halvingShare,
     rounds: rules.partners.rounds,
@@ -592,13 +601,15 @@ export function tradeWeek(
       const home = lastSell[m] > arrived ? lastSell[m] - arrived : 0;
       const use = lastBuy[m] > exportOrder[m] ? lastBuy[m] - exportOrder[m] : 0;
       // The stockpile is refilled toward its target; spare stock is not pushed abroad.
-      const low = stockTargetDays * lastBuy[m] - stock[m];
+      const low = stockTargetDays[g] * lastBuy[m] - stock[m];
       const fix = low > 0 ? low / restoreDays : 0;
       let net = trade.imports[m] - trade.exports[m] + gapShare * (lastBuy[m] - lastSell[m] + fix);
       // A country imports at most what it uses (and refills), exports at most what it makes.
       const most = use + fix;
       if (net > most) net = most;
       if (net < -home) net = -home;
+      // F08: a country rationing strictly stops exporting food.
+      if (net < 0 && trade.exportBan[m] === 1) net = 0;
       want[c] = net > 0 ? net : 0;
       offer[c] = net < 0 ? -net : 0;
       worldBuy += use;

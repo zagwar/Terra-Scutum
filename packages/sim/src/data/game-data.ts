@@ -50,6 +50,7 @@ import {
 } from '../economy/buildings-data';
 import { type MarketConfig, checkMarket, marketSchema } from '../economy/market-data';
 import { type TradeConfig, checkTrade, tradeSchema } from '../economy/trade-data';
+import { type FoodConfig, checkFood, foodSchema } from '../economy/food-data';
 import {
   type BuildingStartFile,
   buildingStartFileSchema,
@@ -85,6 +86,7 @@ export const DATA_FILES = {
   buildingStart: { file: 'building_start.json', schema: buildingStartFileSchema },
   market: { file: 'market.json', schema: marketSchema },
   trade: { file: 'trade.json', schema: tradeSchema },
+  food: { file: 'food.json', schema: foodSchema },
   mapView: { file: 'map_view.json', schema: mapViewSchema },
   terrainTiles: { file: 'terrain_tiles.json', schema: terrainTilesFileSchema },
   notifications: { file: 'notifications.json', schema: notificationsSchema },
@@ -123,6 +125,8 @@ export interface GameData {
   readonly market: MarketConfig;
   /** How goods move between the national markets through the World Market (F19). */
   readonly trade: TradeConfig;
+  /** Food security, starvation, famine, food reserves and rationing (F08). */
+  readonly food: FoodConfig;
   /** How the map is drawn; used by the game, not by the sim's systems. */
   readonly mapView: MapViewConfig;
   /** Which terrain tiles exist (F125, written by the terrain import); used by the game, not by the sim's systems. */
@@ -267,6 +271,7 @@ const CROSS_CHECKS: readonly DataCrossCheck[] = [
   checkBuildingStart,
   checkMarket,
   checkTrade,
+  checkFood,
   checkNotifications,
   checkPlayerCountry,
   checkCountryScreen,

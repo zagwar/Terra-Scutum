@@ -1,7 +1,7 @@
 import type { MapViewConfig } from '@terra-scutum/sim';
 import { MAP_MODES, type MapMode } from '../render/map/map-colors';
 import { useState } from 'react';
-import { type TranslationKey, formatPeopleShort, t } from './i18n';
+import { type TranslationKey, formatPeopleShort, formatPercent, t } from './i18n';
 import { COMPACT_QUERY, TOUCH_QUERY, isCompactNow, useMedia } from './use-media';
 
 const MODE_TEXT: Record<MapMode, TranslationKey> = {
@@ -11,6 +11,7 @@ const MODE_TEXT: Record<MapMode, TranslationKey> = {
   seaZones: 'MAP_MODE_SEA_ZONES',
   population: 'MAP_MODE_POPULATION',
   industry: 'MAP_MODE_INDUSTRY',
+  food: 'MAP_MODE_FOOD',
 };
 
 export interface MapModeBarProps {
@@ -19,6 +20,8 @@ export interface MapModeBarProps {
   readonly populationDensityColors: MapViewConfig['colors']['populationDensity'];
   /** The industry map mode's colors by people at work in buildings, for its legend. */
   readonly industryColors: MapViewConfig['colors']['industry'];
+  /** The food map mode's colors by food security (F08), for its legend. */
+  readonly foodColors: MapViewConfig['colors']['food'] | null;
   readonly onSetMapMode: (mode: MapMode) => void;
   readonly onResetView: () => void;
 }
@@ -31,6 +34,7 @@ export function MapModeBar({
   mode,
   populationDensityColors,
   industryColors,
+  foodColors,
   onSetMapMode,
   onResetView,
 }: MapModeBarProps) {
@@ -97,6 +101,23 @@ export function MapModeBar({
                     {formatPeopleShort(step.workers)}
                   </li>
                 ))}
+              </ol>
+            </div>
+          )}
+          {mode === 'food' && foodColors && (
+            <div className="map-legend" data-testid="map-legend">
+              <span className="map-legend-title">{t('MAP_LEGEND_FOOD')}</span>
+              <ol>
+                {[...foodColors.steps].reverse().map((step) => (
+                  <li key={step.security}>
+                    <span className="map-legend-color" style={{ background: step.color }} />
+                    {formatPercent(step.security, 0)}
+                  </li>
+                ))}
+                <li>
+                  <span className="map-legend-color" style={{ background: foodColors.famine }} />
+                  {t('MAP_LEGEND_FAMINE')}
+                </li>
               </ol>
             </div>
           )}

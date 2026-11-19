@@ -32,6 +32,7 @@ import {
   type MapMode,
   applySeaHighlight,
   parseHexColor,
+  type ProvinceFood,
   provinceBaseColors,
   provinceHighlights,
   seaZoneColors,
@@ -164,6 +165,8 @@ export interface MapView {
   setProvincePopulation(provincePopulation: Float64Array): void;
   /** The people at work in each province's buildings (from the sim's snapshot, F07), for the industry map mode. */
   setProvinceIndustry(provinceWorkers: Float64Array): void;
+  /** Food security and famines per province (from the sim's snapshot, F08), for the food map mode. */
+  setProvinceFood(provinceFood: ProvinceFood): void;
   setSelectedProvince(province: number | null): void;
   setSelectedSeaZone(seaZone: number | null): void;
   /** Tints every province of a country (index), or none (null): the country picked while choosing (F05). */
@@ -479,8 +482,10 @@ export async function createMapView(
   let population: Float64Array | null = null;
   /** The people at work in each province's buildings, once the sim has said (the industry map mode's colors). */
   let industry: Float64Array | null = null;
+  /** Food security and famines per province (F08), once the sim has said (the food map mode's colors). */
+  let food: ProvinceFood | null = null;
   const colorsOf = () =>
-    provinceBaseColors(mode, world, config.colors, owners, population, industry);
+    provinceBaseColors(mode, world, config.colors, owners, population, industry, food);
   let baseColors = colorsOf();
   const highlights = new Uint8Array(baseColors.length);
   let selected: number | null = null;
@@ -1202,6 +1207,14 @@ export async function createMapView(
       if (provinceWorkers === industry) return;
       industry = provinceWorkers;
       if (mode === 'industry') {
+        baseColors = colorsOf();
+        refreshBaseColors();
+      }
+    },
+    setProvinceFood(provinceFood) {
+      if (provinceFood.security === food?.security) return;
+      food = provinceFood;
+      if (mode === 'food') {
         baseColors = colorsOf();
         refreshBaseColors();
       }

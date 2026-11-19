@@ -8,6 +8,7 @@ import {
   createPlaceholderLoad,
   ensureBuildingsReport,
   ensurePopulationReport,
+  foodReserveDays,
   hashGameState,
   worldPopulation,
 } from '@terra-scutum/sim';
@@ -104,6 +105,23 @@ export interface CampaignSummary {
     readonly highestWorld: { readonly good: string; readonly price: number };
     readonly leastDelivered: number;
   };
+  /**
+   * Food on the last day (F08): the world's food reserves (days, by people),
+   * the shares of the world's people starving and severely starving, the
+   * provinces in famine, deaths and lost births from starvation since the
+   * start, the countries rationing (by level, from none), and the country
+   * with the most people starving.
+   */
+  readonly food: {
+    readonly reserveDays: number;
+    readonly starving: number;
+    readonly severe: number;
+    readonly famines: number;
+    readonly deaths: number;
+    readonly lostBirths: number;
+    readonly rationing: readonly number[];
+    readonly worst: { readonly country: string; readonly starving: number };
+  };
   /** Fingerprint of the final state; equal for two runs with the same seed. */
   readonly stateHash: string;
   /** The most memory seen during the run and at its end, in bytes (null without a `memory` option). */
@@ -192,6 +210,47 @@ function tradeSummary(state: GameState): CampaignSummary['trade'] {
     lowestWorld,
     highestWorld,
     leastDelivered,
+  };
+}
+
+function foodSummary(state: GameState): CampaignSummary['food'] {
+  const { food, market, buildings, world } = state;
+  let people = 0;
+  let days = 0;
+  let counted = 0;
+  let starving = 0;
+  let severe = 0;
+  let famines = 0;
+  let deaths = 0;
+  let lostBirths = 0;
+  const rationing = food.levelIds.map(() => 0);
+  let worst = { country: '', starving: 0 };
+  for (let c = 0; c < food.countryCount; c++) {
+    const here = market.countryPeople[c];
+    people += here;
+    const reserve = foodReserveDays(food, market, buildings.stock, market.buy, c);
+    if (Number.isFinite(reserve)) {
+      days += reserve * here;
+      counted += here;
+    }
+    starving += here * food.countryStarving[c];
+    severe += here * food.countrySevere[c];
+    famines += food.famineCount[c];
+    deaths += food.starvationDeaths[c];
+    lostBirths += food.lostBirths[c];
+    rationing[food.rationing[c]] += 1;
+    if (food.countryStarving[c] > worst.starving)
+      worst = { country: world.countryIds[c], starving: food.countryStarving[c] };
+  }
+  return {
+    reserveDays: counted > 0 ? days / counted : 0,
+    starving: people > 0 ? starving / people : 0,
+    severe: people > 0 ? severe / people : 0,
+    famines,
+    deaths,
+    lostBirths,
+    rationing,
+    worst,
   };
 }
 
@@ -299,6 +358,7 @@ export function runCampaign(options: CampaignOptions): CampaignSummary {
     buildings,
     markets,
     trade: tradeSummary(state),
+    food: foodSummary(state),
     stateHash: hashGameState(state),
     peakMemoryBytes: memory ? peakMemory : null,
     endMemoryBytes: endMemory,

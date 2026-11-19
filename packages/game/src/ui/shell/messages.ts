@@ -7,7 +7,7 @@ import {
   countryNameKey,
   provinceNameKey,
 } from '@terra-scutum/sim';
-import { type TextParams, tKey } from '../i18n';
+import { type TextParams, formatPopulation, tKey } from '../i18n';
 import type { PanelTarget } from './panel-navigation';
 
 /**
@@ -48,8 +48,29 @@ export function messageFromEvent(
   event: SimEvent,
   world: WorldMap,
   date: CalendarDate,
+  /** The country (index) the player leads: famines (F08) are only told for it. */
+  playerCountry: number | null = null,
 ): GameMessage | null {
   switch (event.type) {
+    case 'famineStarted':
+    case 'famineEnded': {
+      const country = world.countryIndex.get(event.country);
+      if (country === undefined || country !== playerCountry) return null;
+      const province = world.provinceIndex.get(event.province);
+      const started = event.type === 'famineStarted';
+      return {
+        id: newMessageId(),
+        typeId: started ? 'famine_started' : 'famine_ended',
+        date,
+        titleKey: started ? 'MESSAGE_FAMINE_STARTED_TITLE' : 'MESSAGE_FAMINE_ENDED_TITLE',
+        textKey: started ? 'MESSAGE_FAMINE_STARTED' : 'MESSAGE_FAMINE_ENDED',
+        params: {
+          province: tKey(provinceNameKey(event.province)),
+          deaths: event.type === 'famineEnded' ? formatPopulation(event.deaths) : '',
+        },
+        target: province === undefined ? null : { kind: 'province', index: province },
+      };
+    }
     case 'provinceOwnerChanged': {
       const province = world.provinceIndex.get(event.province);
       return {

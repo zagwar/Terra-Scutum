@@ -2,6 +2,7 @@ import type { GameState } from '../core/game-state';
 import type { SystemRegistry } from '../core/systems';
 import { fillStockpile, setBuildingLevel } from '../economy/buildings';
 import { economySystems } from '../economy/economy';
+import { foodSystem } from '../economy/food';
 import { populationSystem } from '../economy/population';
 import { neighborsOf } from '../world/world-map';
 import type { SimStressConfig } from './stress-config';
@@ -93,6 +94,8 @@ export function createPlaceholderLoad(
         loadOf(state).updatePrices();
       },
     },
+    // The real food (F08): food security, starvation, famine, rationing.
+    foodConsumption: foodSystem,
     budget: { daily: (state) => loadOf(state).collectTaxes(state) },
     supply: { daily: (state) => loadOf(state).supply(state) },
     diplomacyAi: { weekly: (state) => loadOf(state).countryAi(state) },
@@ -140,7 +143,7 @@ function createLoad(
       if (real.level[province * real.typeCount + type] === 0)
         setBuildingLevel(state, province, type, 1);
   for (let country = 0; country < countries; country++)
-    fillStockpile(state, country, real.startingDays);
+    fillStockpile(state, country, state.data.buildings.stockpile.startingDays);
   const perProvince = Math.max(0, scaled(config.buildingsPerProvince) - real.typeCount);
   const inputs = config.inputsPerBuilding;
   const outputs = config.outputsPerBuilding;

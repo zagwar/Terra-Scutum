@@ -230,6 +230,28 @@ export function testTrade() {
   };
 }
 
+/**
+ * A valid `food.json` (F08) that changes nothing in older tests: coal stands
+ * in for food (heating for basic food; the test pops buy none), its
+ * reserves follow the test stockpile's rules, and there is no rationing to
+ * choose. Food tests build their own (`packages/sim/test/food.test.ts`).
+ */
+export function testFood() {
+  return {
+    goods: ['coal'],
+    basicNeed: 'heating',
+    betterNeed: 'heating',
+    security: { shortageWeight: 1.5, weeklyChange: 0.5, mild: 0.4, severe: 0.2 },
+    starvation: {
+      mild: { births: 0.35, deaths: 0.3, living: 5 },
+      severe: { births: 0.9, deaths: 1, extraDeathsPerYear: 0.05, living: 15 },
+    },
+    famine: { starvingShare: 0.35, severeShare: 0.15 },
+    reserves: { startingDays: 10, targetDays: 15, maxDays: 30, lowDays: 7 },
+    rationing: [{ id: 'none', restCut: 0, betterCut: 0, stopExports: false, living: 0 }],
+  };
+}
+
 /** A valid `goods.json` (F07, F65): the goods of the test buildings, with base prices. */
 export function testGoods() {
   return {
@@ -384,6 +406,13 @@ export function testMapView() {
         { workers: 100, color: '#ffffff' },
         { workers: 10000, color: '#0000ff' },
       ],
+      food: {
+        steps: [
+          { security: 0, color: '#ff0000' },
+          { security: 1, color: '#00ff00' },
+        ],
+        famine: '#000000',
+      },
     },
     lines: {
       provinceBorder: line,
@@ -610,6 +639,7 @@ export function testRawData(
     buildingStart: testBuildingStart(),
     market: testMarket(),
     trade: testTrade(),
+    food: testFood(),
     mapView: testMapView(),
     terrainTiles: testTerrainTiles(),
     notifications: testNotifications(),

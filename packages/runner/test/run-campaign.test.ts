@@ -21,6 +21,13 @@ describe('campaign runner', () => {
     expect(summary.buildings.count).toBeGreaterThan(10_000);
     expect(summary.buildings.averageOutput).toBeGreaterThan(0.99);
     expect(summary.buildings.heldBack).toBeLessThan(summary.buildings.count * 0.005);
+    // Food (F08): nobody starves in two years of the real world; reserves
+    // stay near their 30 days, and a few countries ration lightly.
+    expect(summary.food.starving).toBe(0);
+    expect(summary.food.famines).toBe(0);
+    expect(summary.food.deaths).toBe(0);
+    expect(summary.food.reserveDays).toBeGreaterThan(20);
+    expect(summary.food.rationing[0]).toBeGreaterThan(150);
     // Two years of the real world (F19: with trade's weekly split) take a few
     // seconds, more on CI's two-processor machines than Vitest's default 5 s.
   }, 30_000);

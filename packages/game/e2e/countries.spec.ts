@@ -67,6 +67,7 @@ test('the political map is the default; a province opens its country panel', asy
     'Sea zones',
     'Population',
     'Industry',
+    'Food',
   ]);
   await expect(page.getByTestId('map-mode-political')).toHaveAttribute('aria-pressed', 'true');
   await waitForFrames(page);

@@ -7,6 +7,7 @@ import {
   TOP_BAR_ITEM_IDS,
   type ComesWith,
   type ShellWindow,
+  type TopBarItemId,
   topBarHintKey,
   topBarNameKey,
 } from './catalog';
@@ -23,6 +24,15 @@ export interface TopBarProps {
   readonly timeControl: ReactNode;
   readonly onOpenCountry: (country: number) => void;
   readonly onOpenWindow: (window: ShellWindow) => void;
+  /** The key numbers the sim already has (F08: food), with their tone and tooltip lines; the others show "—". */
+  readonly values?: Partial<Record<TopBarItemId, TopBarValue>>;
+}
+
+/** A key number of the top bar: its text, how it is doing, and its tooltip's lines. */
+export interface TopBarValue {
+  readonly text: string;
+  readonly tone: 'ok' | 'warn' | 'bad';
+  readonly lines: readonly string[];
 }
 
 /** "Comes with F09 (M2)": the note for a number or screen that isn't built yet. */
@@ -33,9 +43,9 @@ export function comesWithText(comesWith: ComesWith): string {
 /**
  * The top bar (F122, section 12.1): the player's country (its flag since
  * F138; opens the country screen's Government view), the key numbers, the date and speed,
- * the message log and the settings. None of the key numbers exists in the sim
- * yet: each shows a dim "—" and its tooltip says which feature brings it
- * (designer decision). Clicking a number opens its screen.
+ * the message log and the settings. A key number the sim doesn't have yet
+ * shows a dim "—" and its tooltip says which feature brings it (designer
+ * decision); since F08 the food reserves show. Clicking a number opens its screen.
  */
 export function TopBar({
   world,
@@ -44,6 +54,7 @@ export function TopBar({
   timeControl,
   onOpenCountry,
   onOpenWindow,
+  values = {},
 }: TopBarProps) {
   const countryName =
     world && playerCountry !== null ? tKey(countryNameKey(world.countryIds[playerCountry])) : '';
@@ -72,6 +83,24 @@ export function TopBar({
         {TOP_BAR_ITEM_IDS.map((id) => {
           const item = TOP_BAR_ITEMS[id];
           const name = tKey(topBarNameKey(id));
+          const value = values[id];
+          if (value)
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`top-bar-item has-tip is-${value.tone}`}
+                data-testid={`top-bar-${id}`}
+                aria-label={name}
+                onClick={() => onOpenWindow(item.screen)}
+              >
+                <Icon name={id} />
+                <span className="top-bar-value" data-testid={`top-bar-${id}-value`}>
+                  {value.text}
+                </span>
+                <Tip title={name} lines={value.lines} testId={`top-bar-${id}-tip`} />
+              </button>
+            );
           return (
             <button
               key={id}

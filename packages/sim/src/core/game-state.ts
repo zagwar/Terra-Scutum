@@ -22,6 +22,7 @@ import {
 import { type MarketRestore, type MarketState, restoreMarket } from '../economy/market';
 import { createStartingEconomy } from '../economy/starting-economy';
 import { type TradeRestore, type TradeState, restoreTrade } from '../economy/trade';
+import { type FoodRestore, type FoodState, createFood, restoreFood } from '../economy/food';
 
 export interface GameStateOptions {
   /** The validated game data (see `parseGameData`). */
@@ -46,6 +47,8 @@ export interface GameStateOptions {
     readonly market?: MarketRestore;
     /** Trade (F19): plans, arrivals, world and reference prices, embargoes, agreements; missing in older saves. */
     readonly trade?: TradeRestore;
+    /** Food (F08): rationing, food security, famines; missing in older saves. */
+    readonly food?: FoodRestore;
   };
 }
 
@@ -112,6 +115,11 @@ export class GameState {
    * agreements. Changed by the trade system; its report shares the markets'.
    */
   readonly trade: TradeState;
+  /**
+   * Food (F08, section 8.5): food security, starvation, famines and
+   * rationing. Changed by the food system and the `setRationing` command.
+   */
+  readonly food: FoodState;
   /** Goes up by one every time a province changes owner, so hosts know when to resend the owners. */
   ownershipVersion = 0;
   /** Sim events since the host last called `drainEvents()`. */
@@ -135,6 +143,7 @@ export class GameState {
     this.buildings = economy.buildings;
     this.market = economy.market;
     this.trade = economy.trade;
+    this.food = createFood(options.data, this.world, this.population.groupCount);
 
     if (options.restore) {
       this.day = options.restore.day;
@@ -150,6 +159,7 @@ export class GameState {
       if (options.restore.market) restoreMarket(this.market, options.restore.market);
       if (options.restore.trade)
         restoreTrade(this.trade, this.market, this.buildings, options.restore.trade);
+      if (options.restore.food) restoreFood(this, options.restore.food);
     } else {
       this.day = 0;
       this.rng = Rng.fromSeed(this.seed);
